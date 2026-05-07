@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (user) {
-        navigator.sendBeacon && supabase.from("profiles").update({ is_online: false, last_seen: new Date().toISOString() }).eq("id", user.id);
+        supabase.from("profiles").update({ is_online: false, last_seen: new Date().toISOString() }).eq("id", user.id);
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
