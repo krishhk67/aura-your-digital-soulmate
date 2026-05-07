@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MessageCircle, Search, Plus, Settings, LogOut } from "lucide-react";
+import { MessageCircle, Search, Plus, Settings, LogOut, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "@tanstack/react-router";
 import { useMyChats } from "@/hooks/useRealtimeChat";
@@ -73,10 +73,19 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
             <div className="h-6 w-6 border-2 border-neon border-t-transparent rounded-full animate-spin" />
           </div>
         ) : filteredChats.length === 0 ? (
-          <div className="text-center py-12 px-4">
-            <MessageCircle className="h-10 w-10 text-muted-foreground mx-auto mb-3 opacity-40" />
-            <p className="text-sm text-muted-foreground">No chats yet</p>
-            <p className="text-xs text-muted-foreground mt-1">Tap + to start a conversation</p>
+          <div className="text-center py-12 px-6">
+            <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mx-auto mb-4 border border-primary/10">
+              <MessageCircle className="h-8 w-8 text-neon" />
+            </div>
+            <p className="text-sm font-semibold mb-1">No conversations yet</p>
+            <p className="text-xs text-muted-foreground mb-4">Find people to start your first conversation</p>
+            <button
+              onClick={onNewChat}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:shadow-[0_0_20px_var(--neon-glow)] transition-all"
+            >
+              <UserPlus className="h-4 w-4" />
+              Find People
+            </button>
           </div>
         ) : (
           filteredChats.map((chat) => {

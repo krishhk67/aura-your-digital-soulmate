@@ -54,10 +54,12 @@ export function ChatWindow({ chatId }: ChatWindowProps) {
   if (!chatId) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <Sparkles className="h-12 w-12 text-neon mx-auto mb-4 animate-pulse-neon" />
-          <h2 className="font-display text-xl font-semibold gradient-text">Select a chat</h2>
-          <p className="text-sm text-muted-foreground mt-2">Choose a conversation or start a new one</p>
+        <div className="text-center max-w-xs">
+          <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mx-auto mb-5 border border-primary/10">
+            <Sparkles className="h-10 w-10 text-neon animate-pulse-neon" />
+          </div>
+          <h2 className="font-display text-xl font-semibold gradient-text mb-2">Welcome to Aura</h2>
+          <p className="text-sm text-muted-foreground">Select a conversation from the sidebar or find new people to chat with.</p>
         </div>
       </div>
     );
