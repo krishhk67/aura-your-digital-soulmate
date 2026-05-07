@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Link } from "@tanstack/react-router";
 import { useMyChats } from "@/hooks/useRealtimeChat";
 import { useAuth } from "@/hooks/useAuth";
+import { SettingsPanel } from "./SettingsPanel";
 import { formatDistanceToNow } from "date-fns";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +19,7 @@ interface ChatSidebarProps {
 export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSidebarProps) {
   const { chats, loading } = useMyChats();
   const { user, signOut } = useAuth();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -134,10 +136,22 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
           )}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold truncate">{profile?.display_name ?? "Loading..."}</p>
+            {profile?.username && <p className="text-[10px] text-neon truncate">@{profile.username}</p>}
             <p className="text-xs text-muted-foreground">Online</p>
           </div>
+          <motion.button
+            whileHover={{ scale: 1.1, rotate: 45 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => setSettingsOpen(true)}
+            className="h-9 w-9 rounded-xl flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground hover:text-neon hover:shadow-[0_0_10px_var(--neon-glow)]"
+            title="Settings"
+          >
+            <Settings className="h-5 w-5" />
+          </motion.button>
         </div>
       </div>
+
+      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }

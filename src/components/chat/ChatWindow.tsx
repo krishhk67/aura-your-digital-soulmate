@@ -81,7 +81,10 @@ export function ChatWindow({ chatId }: ChatWindowProps) {
             )}
           </div>
           <div>
-            <h3 className="font-semibold text-sm">{chatPartner?.display_name ?? "Loading..."}</h3>
+            <div className="flex items-center gap-1.5">
+              <h3 className="font-semibold text-sm">{chatPartner?.display_name ?? "Loading..."}</h3>
+              {chatPartner?.username && <span className="text-[10px] text-neon">@{chatPartner.username}</span>}
+            </div>
             <p className="text-xs text-accent">
               {chatPartner?.is_online ? "online" : chatPartner?.last_seen ? `last seen ${formatDistanceToNow(new Date(chatPartner.last_seen), { addSuffix: true })}` : "offline"}
             </p>
