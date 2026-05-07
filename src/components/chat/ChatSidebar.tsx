@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MessageCircle, Search, Plus, Settings, LogOut } from "lucide-react";
+import { MessageCircle, Search, Plus, Settings, LogOut, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Link } from "@tanstack/react-router";
 import { useMyChats } from "@/hooks/useRealtimeChat";
