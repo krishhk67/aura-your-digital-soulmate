@@ -1,68 +1,54 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Send,
-  Smile,
-  Paperclip,
-  Mic,
-  Phone,
-  Video,
-  MoreVertical,
-  Sparkles,
-  ChevronDown,
-  Check,
-  CheckCheck,
-} from "lucide-react";
+import { Send, Smile, Paperclip, Mic, Phone, Video, MoreVertical, Sparkles, Check, CheckCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface Message {
-  id: string;
-  text: string;
-  sender: "me" | "them";
-  time: string;
-  status?: "sent" | "delivered" | "read";
-  reaction?: string;
-}
-
-const mockMessages: Message[] = [
-  { id: "1", text: "hey, have you seen the new update? 👀", sender: "them", time: "10:42 PM" },
-  { id: "2", text: "omg yes!! the mood themes are actually insane", sender: "me", time: "10:43 PM", status: "read" },
-  { id: "3", text: "right?? the rainy tokyo one hits different at 2am", sender: "them", time: "10:43 PM", reaction: "🔥" },
-  { id: "4", text: "bruh i've been using ghost mode all week, it's so cinematic", sender: "me", time: "10:44 PM", status: "read" },
-  { id: "5", text: "lmaooo the way messages dissolve is lowkey satisfying", sender: "them", time: "10:44 PM" },
-  { id: "6", text: "also the AI smart replies are scary accurate 😭", sender: "them", time: "10:45 PM" },
-  { id: "7", text: "it suggested 'that's so real' and i was literally about to type that", sender: "me", time: "10:45 PM", status: "delivered" },
-  { id: "8", text: "we are living in the future fr fr", sender: "them", time: "10:46 PM" },
-];
-
-const aiReplies = ["that's so real 😤", "no cap 🫡", "lowkey facts", "say less 🤝", "literally me"];
+import { useChatMessages, useSendMessage } from "@/hooks/useRealtimeChat";
+import { useAuth } from "@/hooks/useAuth";
+import { formatDistanceToNow } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import type { ProfileRow } from "@/hooks/useRealtimeChat";
 
 interface ChatWindowProps {
   chatId: string | null;
 }
 
 export function ChatWindow({ chatId }: ChatWindowProps) {
-  const [messages, setMessages] = useState(mockMessages);
+  const { messages, loading } = useChatMessages(chatId);
+  const sendMessage = useSendMessage();
+  const { user } = useAuth();
   const [input, setInput] = useState("");
-  const [showAiReplies, setShowAiReplies] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [chatPartner, setChatPartner] = useState<ProfileRow | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    const newMsg: Message = {
-      id: Date.now().toString(),
-      text: input,
-      sender: "me",
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      status: "sent",
-    };
-    setMessages((prev) => [...prev, newMsg]);
+  // Fetch chat partner info for header
+  useEffect(() => {
+    if (!chatId || !user) return;
+    (async () => {
+      const { data: members } = await supabase
+        .from("chat_members")
+        .select("user_id")
+        .eq("chat_id", chatId)
+        .neq("user_id", user.id);
+      if (members?.[0]) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", members[0].user_id)
+          .single();
+        if (profile) setChatPartner(profile as ProfileRow);
+      }
+    })();
+  }, [chatId, user]);
+
+  const handleSend = async () => {
+    if (!input.trim() || !chatId) return;
+    const text = input;
     setInput("");
-    setShowAiReplies(true);
+    await sendMessage(chatId, text);
   };
 
   if (!chatId) {
@@ -71,7 +57,7 @@ export function ChatWindow({ chatId }: ChatWindowProps) {
         <div className="text-center">
           <Sparkles className="h-12 w-12 text-neon mx-auto mb-4 animate-pulse-neon" />
           <h2 className="font-display text-xl font-semibold gradient-text">Select a chat</h2>
-          <p className="text-sm text-muted-foreground mt-2">Choose a conversation to start vibing</p>
+          <p className="text-sm text-muted-foreground mt-2">Choose a conversation or start a new one</p>
         </div>
       </div>
     );
@@ -83,12 +69,22 @@ export function ChatWindow({ chatId }: ChatWindowProps) {
       <div className="h-16 px-4 flex items-center justify-between border-b border-border glass-panel rounded-none flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center text-lg">🌙</div>
-            <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-accent border-2 border-surface" />
+            {chatPartner?.avatar_url ? (
+              <img src={chatPartner.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover" />
+            ) : (
+              <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center text-lg">
+                {chatPartner?.display_name?.charAt(0)?.toUpperCase() || "?"}
+              </div>
+            )}
+            {chatPartner?.is_online && (
+              <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-accent border-2 border-surface" />
+            )}
           </div>
           <div>
-            <h3 className="font-semibold text-sm">Luna K.</h3>
-            <p className="text-xs text-accent">online • vibing</p>
+            <h3 className="font-semibold text-sm">{chatPartner?.display_name ?? "Loading..."}</h3>
+            <p className="text-xs text-accent">
+              {chatPartner?.is_online ? "online" : chatPartner?.last_seen ? `last seen ${formatDistanceToNow(new Date(chatPartner.last_seen), { addSuffix: true })}` : "offline"}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -102,78 +98,53 @@ export function ChatWindow({ chatId }: ChatWindowProps) {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-6 space-y-3">
-        {messages.map((msg, i) => (
-          <motion.div
-            key={msg.id}
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className={cn("flex", msg.sender === "me" ? "justify-end" : "justify-start")}
-          >
-            <div className="relative max-w-[75%] group">
-              <div
-                className={cn(
-                  "px-4 py-2.5 rounded-2xl text-sm leading-relaxed",
-                  msg.sender === "me"
-                    ? "bg-primary/20 text-foreground rounded-br-md border border-primary/20"
-                    : "glass-panel text-foreground rounded-bl-md"
-                )}
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="h-6 w-6 border-2 border-neon border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-sm text-muted-foreground">No messages yet. Say hello! 👋</p>
+          </div>
+        ) : (
+          messages.map((msg) => {
+            const isMe = msg.sender_id === user?.id;
+            const time = new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+            return (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                className={cn("flex", isMe ? "justify-end" : "justify-start")}
               >
-                {msg.text}
-              </div>
-              <div className={cn(
-                "flex items-center gap-1 mt-1 text-[10px] text-muted-foreground",
-                msg.sender === "me" ? "justify-end" : "justify-start"
-              )}>
-                <span>{msg.time}</span>
-                {msg.sender === "me" && msg.status === "read" && <CheckCheck className="h-3 w-3 text-accent" />}
-                {msg.sender === "me" && msg.status === "delivered" && <CheckCheck className="h-3 w-3" />}
-                {msg.sender === "me" && msg.status === "sent" && <Check className="h-3 w-3" />}
-              </div>
-              {msg.reaction && (
-                <div className={cn(
-                  "absolute -bottom-2 text-xs bg-surface-elevated rounded-full px-1.5 py-0.5 border border-border",
-                  msg.sender === "me" ? "left-2" : "right-2"
-                )}>
-                  {msg.reaction}
+                <div className="relative max-w-[75%] group">
+                  <div className={cn(
+                    "px-4 py-2.5 rounded-2xl text-sm leading-relaxed",
+                    isMe
+                      ? "bg-primary/20 text-foreground rounded-br-md border border-primary/20"
+                      : "glass-panel text-foreground rounded-bl-md"
+                  )}>
+                    {!isMe && msg.sender && (
+                      <p className="text-[10px] text-neon mb-1 font-medium">{msg.sender.display_name}</p>
+                    )}
+                    {msg.content}
+                  </div>
+                  <div className={cn(
+                    "flex items-center gap-1 mt-1 text-[10px] text-muted-foreground",
+                    isMe ? "justify-end" : "justify-start"
+                  )}>
+                    <span>{time}</span>
+                    {isMe && <CheckCheck className="h-3 w-3 text-accent" />}
+                  </div>
                 </div>
-              )}
-            </div>
-          </motion.div>
-        ))}
+              </motion.div>
+            );
+          })
+        )}
         <div ref={bottomRef} />
       </div>
-
-      {/* AI Smart Replies */}
-      <AnimatePresence>
-        {showAiReplies && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="px-4 pb-2"
-          >
-            <div className="flex items-center gap-1.5 mb-2">
-              <Sparkles className="h-3 w-3 text-neon" />
-              <span className="text-[10px] text-neon uppercase tracking-wider font-medium">AI Suggests</span>
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-              {aiReplies.map((reply) => (
-                <button
-                  key={reply}
-                  onClick={() => {
-                    setInput(reply);
-                    setShowAiReplies(false);
-                  }}
-                  className="glass-panel px-3 py-1.5 rounded-full text-xs whitespace-nowrap hover:bg-primary/10 hover:border-primary/30 transition-all flex-shrink-0"
-                >
-                  {reply}
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Input area */}
       <div className="p-4 border-t border-border flex-shrink-0">
@@ -186,10 +157,7 @@ export function ChatWindow({ chatId }: ChatWindowProps) {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
+                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
               }}
               placeholder="Type a message..."
               rows={1}
