@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Link } from "@tanstack/react-router";
 import { useMyChats } from "@/hooks/useRealtimeChat";
 import { useAuth } from "@/hooks/useAuth";
+import { SettingsPanel } from "./SettingsPanel";
 import { formatDistanceToNow } from "date-fns";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
