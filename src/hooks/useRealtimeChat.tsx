@@ -1,0 +1,281 @@
+import { useEffect, useState, useCallback, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "./useAuth";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+
+export interface ChatRow {
+  id: string;
+  name: string | null;
+  is_group: boolean;
+  avatar_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatMemberRow {
+  id: string;
+  chat_id: string;
+  user_id: string;
+  role: string;
+  joined_at: string;
+}
+
+export interface MessageRow {
+  id: string;
+  chat_id: string;
+  sender_id: string;
+  content: string | null;
+  message_type: string;
+  media_url: string | null;
+  reply_to: string | null;
+  is_edited: boolean;
+  created_at: string;
+}
+
+export interface ProfileRow {
+  id: string;
+  username: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  status_text: string | null;
+  is_online: boolean;
+  last_seen: string;
+}
+
+export function useMyChats() {
+  const { user } = useAuth();
+  const [chats, setChats] = useState<(ChatRow & { last_message?: MessageRow; other_user?: ProfileRow; unread_count?: number })[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchChats = useCallback(async () => {
+    if (!user) return;
+    // Get chat memberships
+    const { data: memberships } = await supabase
+      .from("chat_members")
+      .select("chat_id")
+      .eq("user_id", user.id);
+
+    if (!memberships?.length) { setChats([]); setLoading(false); return; }
+
+    const chatIds = memberships.map(m => m.chat_id);
+
+    const { data: chatRows } = await supabase
+      .from("chats")
+      .select("*")
+      .in("id", chatIds)
+      .order("updated_at", { ascending: false });
+
+    if (!chatRows) { setChats([]); setLoading(false); return; }
+
+    // Get last message for each chat
+    const enriched = await Promise.all(chatRows.map(async (chat) => {
+      const { data: msgs } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("chat_id", chat.id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      // For DMs, get the other user's profile
+      let other_user: ProfileRow | undefined;
+      if (!chat.is_group) {
+        const { data: members } = await supabase
+          .from("chat_members")
+          .select("user_id")
+          .eq("chat_id", chat.id)
+          .neq("user_id", user.id);
+        if (members?.[0]) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", members[0].user_id)
+            .single();
+          other_user = profile as ProfileRow | undefined ?? undefined;
+        }
+      }
+
+      return { ...chat, last_message: msgs?.[0] as MessageRow | undefined, other_user };
+    }));
+
+    setChats(enriched as typeof chats);
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => { fetchChats(); }, [fetchChats]);
+
+  // Realtime: listen to chat_members and messages changes
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("my-chats")
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => fetchChats())
+      .on("postgres_changes", { event: "*", schema: "public", table: "chat_members" }, () => fetchChats())
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user, fetchChats]);
+
+  return { chats, loading, refetch: fetchChats };
+}
+
+export function useChatMessages(chatId: string | null) {
+  const [messages, setMessages] = useState<(MessageRow & { sender?: ProfileRow })[]>([]);
+  const [loading, setLoading] = useState(true);
+  const profileCache = useRef<Record<string, ProfileRow>>({});
+
+  const fetchMessages = useCallback(async () => {
+    if (!chatId) { setMessages([]); setLoading(false); return; }
+    const { data } = await supabase
+      .from("messages")
+      .select("*")
+      .eq("chat_id", chatId)
+      .order("created_at", { ascending: true });
+
+    if (!data) { setMessages([]); setLoading(false); return; }
+
+    // Fetch unique sender profiles
+    const senderIds = [...new Set(data.map(m => m.sender_id))];
+    const uncached = senderIds.filter(id => !profileCache.current[id]);
+    if (uncached.length) {
+      const { data: profiles } = await supabase.from("profiles").select("*").in("id", uncached);
+      profiles?.forEach(p => { profileCache.current[p.id] = p as ProfileRow; });
+    }
+
+    setMessages(data.map(m => ({ ...m, sender: profileCache.current[m.sender_id] })) as typeof messages);
+    setLoading(false);
+  }, [chatId]);
+
+  useEffect(() => { fetchMessages(); }, [fetchMessages]);
+
+  // Realtime messages
+  useEffect(() => {
+    if (!chatId) return;
+    const channel = supabase
+      .channel(`messages:${chatId}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+        filter: `chat_id=eq.${chatId}`,
+      }, async (payload) => {
+        const msg = payload.new as MessageRow;
+        if (!profileCache.current[msg.sender_id]) {
+          const { data: profile } = await supabase.from("profiles").select("*").eq("id", msg.sender_id).single();
+          if (profile) profileCache.current[profile.id] = profile as ProfileRow;
+        }
+        setMessages(prev => [...prev, { ...msg, sender: profileCache.current[msg.sender_id] }]);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [chatId]);
+
+  return { messages, loading, refetch: fetchMessages };
+}
+
+export function useSendMessage() {
+  const { user } = useAuth();
+
+  return useCallback(async (chatId: string, content: string, type = "text") => {
+    if (!user || !content.trim()) return;
+    const { error } = await supabase.from("messages").insert({
+      chat_id: chatId,
+      sender_id: user.id,
+      content: content.trim(),
+      message_type: type,
+    });
+    if (error) console.error("Send message error:", error);
+  }, [user]);
+}
+
+export function useCreateChat() {
+  const { user } = useAuth();
+
+  return useCallback(async (otherUserId: string) => {
+    if (!user) return null;
+
+    // Check if DM already exists
+    const { data: myMemberships } = await supabase
+      .from("chat_members")
+      .select("chat_id")
+      .eq("user_id", user.id);
+
+    if (myMemberships?.length) {
+      for (const m of myMemberships) {
+        const { data: otherMember } = await supabase
+          .from("chat_members")
+          .select("chat_id")
+          .eq("chat_id", m.chat_id)
+          .eq("user_id", otherUserId);
+
+        if (otherMember?.length) {
+          // Check it's a DM (not group)
+          const { data: chat } = await supabase.from("chats").select("*").eq("id", m.chat_id).eq("is_group", false).single();
+          if (chat) return chat.id;
+        }
+      }
+    }
+
+    // Create new chat
+    const { data: chat, error } = await supabase
+      .from("chats")
+      .insert({ created_by: user.id, is_group: false })
+      .select()
+      .single();
+
+    if (error || !chat) return null;
+
+    await supabase.from("chat_members").insert([
+      { chat_id: chat.id, user_id: user.id },
+      { chat_id: chat.id, user_id: otherUserId },
+    ]);
+
+    return chat.id;
+  }, [user]);
+}
+
+export function useOnlineProfiles() {
+  const [profiles, setProfiles] = useState<ProfileRow[]>([]);
+
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase.from("profiles").select("*").eq("is_online", true);
+      if (data) setProfiles(data as ProfileRow[]);
+    };
+    fetch();
+
+    const channel = supabase
+      .channel("online-profiles")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles" }, () => fetch())
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  return profiles;
+}
+
+export function useSearchUsers(query: string) {
+  const [results, setResults] = useState<ProfileRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!query.trim() || query.length < 2) { setResults([]); return; }
+    setLoading(true);
+    const timer = setTimeout(async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
+        .neq("id", user?.id ?? "")
+        .limit(10);
+      setResults((data ?? []) as ProfileRow[]);
+      setLoading(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query, user]);
+
+  return { results, loading };
+}
