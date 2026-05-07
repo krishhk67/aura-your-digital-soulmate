@@ -19,6 +19,7 @@ interface ChatSidebarProps {
 export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSidebarProps) {
   const { chats, loading } = useMyChats();
   const { user, signOut } = useAuth();
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
