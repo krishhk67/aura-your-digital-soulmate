@@ -19,6 +19,7 @@ export type Database = {
           chat_id: string
           id: string
           joined_at: string | null
+          last_read_at: string | null
           role: string | null
           user_id: string
         }
@@ -26,6 +27,7 @@ export type Database = {
           chat_id: string
           id?: string
           joined_at?: string | null
+          last_read_at?: string | null
           role?: string | null
           user_id: string
         }
@@ -33,6 +35,7 @@ export type Database = {
           chat_id?: string
           id?: string
           joined_at?: string | null
+          last_read_at?: string | null
           role?: string | null
           user_id?: string
         }
