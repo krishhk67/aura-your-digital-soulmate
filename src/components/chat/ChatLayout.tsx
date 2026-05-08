@@ -1,56 +1,132 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChatSidebar } from "./ChatSidebar";
 import { ChatWindow } from "./ChatWindow";
 import { NewChatDialog } from "./NewChatDialog";
-import { Menu } from "lucide-react";
+import { BottomNav, type NavTab } from "./BottomNav";
+import { SettingsPanel } from "./SettingsPanel";
+import { RoomsView } from "./RoomsView";
+import { ProfileView } from "./ProfileView";
 import { useAuth } from "@/hooks/useAuth";
 
 export function ChatLayout() {
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [newChatOpen, setNewChatOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<NavTab>("chats");
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const { user } = useAuth();
+
+  const handleSelectChat = useCallback((id: string) => {
+    setSelectedChat(id);
+  }, []);
+
+  const handleBack = useCallback(() => {
+    setSelectedChat(null);
+  }, []);
+
+  const handleTabChange = useCallback((tab: NavTab) => {
+    setActiveTab(tab);
+    if (tab !== "chats") setSelectedChat(null);
+    if (tab === "profile") setSettingsOpen(true);
+  }, []);
 
   if (!user) return null;
 
+  // Mobile: show either chat list or chat window (not both)
+  const showChatWindow = activeTab === "chats" && selectedChat;
+
   return (
-    <div className="h-screen flex bg-background overflow-hidden">
-      <AnimatePresence>
-        {sidebarOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-      </AnimatePresence>
-
-      <div className={`
-        fixed lg:relative inset-y-0 left-0 z-50 w-80 lg:w-80
-        transform transition-transform duration-300 ease-out
-        ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-      `}>
-        <ChatSidebar
-          selectedChat={selectedChat}
-          onSelectChat={(id) => { setSelectedChat(id); setSidebarOpen(false); }}
-          onNewChat={() => setNewChatOpen(true)}
-        />
+    <div className="h-[100dvh] flex flex-col bg-background overflow-hidden">
+      {/* Main content area */}
+      <div className="flex-1 min-h-0 relative">
+        <AnimatePresence mode="wait">
+          {showChatWindow ? (
+            <motion.div
+              key="chat-window"
+              initial={{ x: "100%", opacity: 0.8 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: "100%", opacity: 0.8 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="absolute inset-0 z-10"
+            >
+              <ChatWindow chatId={selectedChat} onBack={handleBack} />
+            </motion.div>
+          ) : activeTab === "rooms" ? (
+            <motion.div
+              key="rooms"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="absolute inset-0"
+            >
+              <RoomsView />
+            </motion.div>
+          ) : activeTab === "stories" ? (
+            <motion.div
+              key="stories"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="absolute inset-0 flex items-center justify-center"
+            >
+              <div className="text-center px-8">
+                <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <span className="text-3xl">📸</span>
+                </div>
+                <h2 className="font-display text-lg font-bold gradient-text mb-2">Stories</h2>
+                <p className="text-sm text-muted-foreground">Share moments that disappear in 24 hours</p>
+              </div>
+            </motion.div>
+          ) : activeTab === "calls" ? (
+            <motion.div
+              key="calls"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="absolute inset-0 flex items-center justify-center"
+            >
+              <div className="text-center px-8">
+                <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <span className="text-3xl">📞</span>
+                </div>
+                <h2 className="font-display text-lg font-bold gradient-text mb-2">Calls</h2>
+                <p className="text-sm text-muted-foreground">Crystal-clear voice & video calls coming soon</p>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="chat-list"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0"
+            >
+              <ChatSidebar
+                selectedChat={selectedChat}
+                onSelectChat={handleSelectChat}
+                onNewChat={() => setNewChatOpen(true)}
+                onOpenSettings={() => setSettingsOpen(true)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      <div className="flex-1 flex flex-col min-w-0">
-        <div className="lg:hidden flex items-center h-14 px-4 border-b border-border glass-panel rounded-none">
-          <button onClick={() => setSidebarOpen(true)} className="text-muted-foreground hover:text-foreground">
-            <Menu className="h-5 w-5" />
-          </button>
-          <span className="ml-3 font-display font-semibold gradient-text">Aura</span>
-        </div>
-        <ChatWindow chatId={selectedChat} />
-      </div>
+      {/* Bottom nav - hide when chat is open */}
+      {!showChatWindow && (
+        <BottomNav active={activeTab} onChange={handleTabChange} />
+      )}
 
-      <NewChatDialog open={newChatOpen} onOpenChange={setNewChatOpen} onChatCreated={(id) => { setSelectedChat(id); setNewChatOpen(false); }} />
+      {/* Safe area spacer for bottom nav */}
+      {!showChatWindow && <div className="h-[72px]" />}
+
+      <NewChatDialog
+        open={newChatOpen}
+        onOpenChange={setNewChatOpen}
+        onChatCreated={(id) => { setSelectedChat(id); setNewChatOpen(false); setActiveTab("chats"); }}
+      />
+
+      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }

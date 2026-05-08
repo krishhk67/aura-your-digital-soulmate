@@ -1,34 +1,22 @@
 import { motion } from "framer-motion";
-import { MessageCircle, Search, Plus, Settings, LogOut, UserPlus } from "lucide-react";
+import { MessageCircle, Search, Plus, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Link } from "@tanstack/react-router";
 import { useMyChats } from "@/hooks/useRealtimeChat";
 import { useAuth } from "@/hooks/useAuth";
-import { SettingsPanel } from "./SettingsPanel";
 import { formatDistanceToNow } from "date-fns";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import type { ProfileRow } from "@/hooks/useRealtimeChat";
+import { useState } from "react";
 
 interface ChatSidebarProps {
   selectedChat: string | null;
   onSelectChat: (id: string) => void;
   onNewChat: () => void;
+  onOpenSettings: () => void;
 }
 
 export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSidebarProps) {
   const { chats, loading } = useMyChats();
-  const { user, signOut } = useAuth();
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
-
-  useEffect(() => {
-    if (!user) return;
-    supabase.from("profiles").select("*").eq("id", user.id).single().then(({ data }) => {
-      if (data) setProfile(data as ProfileRow);
-    });
-  }, [user]);
 
   const filteredChats = searchQuery
     ? chats.filter(c => {
@@ -38,129 +26,106 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
     : chats;
 
   return (
-    <div className="h-full flex flex-col border-r border-border bg-surface">
-      <div className="p-4 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <MessageCircle className="h-6 w-6 text-neon" />
-          <span className="font-display font-bold text-xl gradient-text">Aura</span>
-        </Link>
-        <div className="flex items-center gap-1">
-          <button onClick={onNewChat} className="h-9 w-9 rounded-xl flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
+    <div className="h-full flex flex-col bg-background">
+      {/* Header */}
+      <div className="px-5 pt-[env(safe-area-inset-top,12px)] pb-2">
+        <div className="flex items-center justify-between py-3">
+          <div className="flex items-center gap-2">
+            <MessageCircle className="h-6 w-6 text-neon" />
+            <span className="font-display font-bold text-2xl gradient-text">Aura</span>
+          </div>
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={onNewChat}
+            className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-neon hover:bg-primary/30 transition-colors"
+          >
             <Plus className="h-5 w-5" />
-          </button>
-          <button onClick={signOut} className="h-9 w-9 rounded-xl flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground" title="Sign out">
-            <LogOut className="h-5 w-5" />
-          </button>
+          </motion.button>
         </div>
-      </div>
 
-      <div className="px-4 pb-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        {/* Search */}
+        <div className="relative mb-2">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search chats..."
+            placeholder="Search conversations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-10 rounded-xl bg-input/50 border border-border pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+            className="w-full h-11 rounded-2xl bg-secondary/50 border border-border pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
           />
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 space-y-0.5">
+      {/* Chat list */}
+      <div className="flex-1 overflow-y-auto px-3 space-y-1 pb-2">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
+          <div className="flex items-center justify-center py-16">
             <div className="h-6 w-6 border-2 border-neon border-t-transparent rounded-full animate-spin" />
           </div>
         ) : filteredChats.length === 0 ? (
-          <div className="text-center py-12 px-6">
-            <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mx-auto mb-4 border border-primary/10">
-              <MessageCircle className="h-8 w-8 text-neon" />
+          <div className="text-center py-16 px-6">
+            <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mx-auto mb-5 border border-primary/10">
+              <MessageCircle className="h-10 w-10 text-neon" />
             </div>
-            <p className="text-sm font-semibold mb-1">No conversations yet</p>
-            <p className="text-xs text-muted-foreground mb-4">Find people to start your first conversation</p>
-            <button
+            <p className="font-display font-semibold text-lg mb-2">Start Chatting</p>
+            <p className="text-sm text-muted-foreground mb-5">Find people and start your first conversation on Aura</p>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
               onClick={onNewChat}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:shadow-[0_0_20px_var(--neon-glow)] transition-all"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold hover:shadow-[0_0_20px_var(--neon-glow)] transition-all"
             >
               <UserPlus className="h-4 w-4" />
               Find People
-            </button>
+            </motion.button>
           </div>
         ) : (
-          filteredChats.map((chat) => {
+          filteredChats.map((chat, index) => {
             const displayName = chat.is_group ? chat.name : (chat.other_user?.display_name ?? chat.other_user?.username ?? "User");
-            const avatar = chat.is_group ? (chat.avatar_url || "👥") : (chat.other_user?.avatar_url || null);
+            const avatar = chat.is_group ? (chat.avatar_url || null) : (chat.other_user?.avatar_url || null);
             const isOnline = !chat.is_group && chat.other_user?.is_online;
             const lastMsg = chat.last_message?.content ?? "No messages yet";
             const timeAgo = chat.last_message?.created_at
               ? formatDistanceToNow(new Date(chat.last_message.created_at), { addSuffix: false })
               : "";
+            const isSelected = selectedChat === chat.id;
 
             return (
               <motion.button
                 key={chat.id}
-                whileTap={{ scale: 0.98 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.03 }}
+                whileTap={{ scale: 0.97 }}
                 onClick={() => onSelectChat(chat.id)}
                 className={cn(
-                  "w-full flex items-center gap-3 p-3 rounded-xl transition-all text-left",
-                  selectedChat === chat.id
-                    ? "bg-primary/10 border border-primary/20"
-                    : "hover:bg-secondary/50"
+                  "w-full flex items-center gap-3.5 p-3.5 rounded-2xl transition-all text-left active:bg-secondary/80",
+                  isSelected ? "bg-primary/10 border border-primary/20" : "hover:bg-secondary/40"
                 )}
               >
                 <div className="relative flex-shrink-0">
-                  {avatar && avatar.startsWith("http") ? (
-                    <img src={avatar} alt="" className="h-12 w-12 rounded-full object-cover" />
+                  {avatar?.startsWith("http") ? (
+                    <img src={avatar} alt="" className="h-14 w-14 rounded-full object-cover" />
                   ) : (
-                    <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center text-xl">
-                      {avatar || displayName?.charAt(0)?.toUpperCase() || "?"}
+                    <div className="h-14 w-14 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center text-lg font-bold">
+                      {chat.is_group ? "👥" : displayName?.charAt(0)?.toUpperCase() || "?"}
                     </div>
                   )}
                   {isOnline && (
-                    <div className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-accent border-2 border-surface" />
+                    <div className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full bg-accent border-2 border-background" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm truncate">{displayName}</span>
-                    <span className="text-xs text-muted-foreground flex-shrink-0">{timeAgo}</span>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="font-semibold text-[15px] truncate">{displayName}</span>
+                    <span className="text-[11px] text-muted-foreground flex-shrink-0 ml-2">{timeAgo}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground truncate mt-0.5">{lastMsg}</p>
+                  <p className="text-[13px] text-muted-foreground truncate">{lastMsg}</p>
                 </div>
               </motion.button>
             );
           })
         )}
       </div>
-
-      <div className="p-4 border-t border-border">
-        <div className="flex items-center gap-3">
-          {profile?.avatar_url ? (
-            <img src={profile.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover" />
-          ) : (
-            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-sm font-bold text-primary-foreground">
-              {profile?.display_name?.charAt(0)?.toUpperCase() || "?"}
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold truncate">{profile?.display_name ?? "Loading..."}</p>
-            {profile?.username && <p className="text-[10px] text-neon truncate">@{profile.username}</p>}
-            <p className="text-xs text-muted-foreground">Online</p>
-          </div>
-          <motion.button
-            whileHover={{ scale: 1.1, rotate: 45 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setSettingsOpen(true)}
-            className="h-9 w-9 rounded-xl flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground hover:text-neon hover:shadow-[0_0_10px_var(--neon-glow)]"
-            title="Settings"
-          >
-            <Settings className="h-5 w-5" />
-          </motion.button>
-        </div>
-      </div>
-
-      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }
