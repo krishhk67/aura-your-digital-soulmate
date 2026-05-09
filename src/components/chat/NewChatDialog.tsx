@@ -6,6 +6,7 @@ import { useSearchUsers, useCreateChat } from "@/hooks/useRealtimeChat";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import type { ProfileRow } from "@/hooks/useRealtimeChat";
+import { toast } from "sonner";
 
 interface NewChatDialogProps {
   open: boolean;
@@ -27,11 +28,20 @@ export function NewChatDialog({ open, onOpenChange, onChatCreated }: NewChatDial
   const [selectedUsers, setSelectedUsers] = useState<ProfileRow[]>([]);
   const [groupName, setGroupName] = useState("");
   const [groupStep, setGroupStep] = useState<"select" | "details">("select");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSelectDM = async (target: ProfileRow) => {
     setCreating(true);
-    const chatId = await createChat(target.id);
-    if (chatId) onChatCreated(chatId);
+    setErrorMessage(null);
+    const { chatId, error } = await createChat(target.id);
+    if (error || !chatId) {
+      const message = error?.message ?? "Could not start this conversation.";
+      setErrorMessage(message);
+      toast.error(message);
+      setCreating(false);
+      return;
+    }
+    onChatCreated(chatId);
     setCreating(false);
   };
 
@@ -71,7 +81,7 @@ export function NewChatDialog({ open, onOpenChange, onChatCreated }: NewChatDial
   };
 
   const handleClose = (val: boolean) => {
-    if (!val) { resetGroup(); setQuery(""); setTab("dm"); }
+    if (!val) { resetGroup(); setQuery(""); setTab("dm"); setErrorMessage(null); }
     onOpenChange(val);
   };
 
@@ -91,9 +101,7 @@ export function NewChatDialog({ open, onOpenChange, onChatCreated }: NewChatDial
             <h2 className="font-display text-lg font-bold gradient-text">
               {tab === "dm" ? "New Conversation" : groupStep === "details" ? "Group Details" : "Create Group"}
             </h2>
-            <button onClick={() => handleClose(false)} className="text-muted-foreground hover:text-foreground transition-colors">
-              <X className="h-5 w-5" />
-            </button>
+            <div className="h-5 w-5" />
           </div>
 
           {/* Tabs */}
@@ -145,6 +153,9 @@ export function NewChatDialog({ open, onOpenChange, onChatCreated }: NewChatDial
                 className="w-full h-10 rounded-xl bg-input/50 border border-border pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
               />
             </div>
+          )}
+          {errorMessage && (
+            <p className="mb-2 text-xs text-destructive">{errorMessage}</p>
           )}
         </div>
 

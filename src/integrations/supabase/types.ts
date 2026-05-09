@@ -299,6 +299,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_or_create_direct_chat: {
+        Args: { _other_user_id: string }
+        Returns: string
+      }
       is_chat_member: {
         Args: { _chat_id: string; _user_id: string }
         Returns: boolean
