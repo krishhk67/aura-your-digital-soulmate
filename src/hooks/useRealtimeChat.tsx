@@ -32,6 +32,16 @@ export interface MessageRow {
   created_at: string;
 }
 
+interface DirectChatResult {
+  chatId: string | null;
+  error: Error | null;
+}
+
+type DirectChatRpc = (
+  fn: "get_or_create_direct_chat",
+  args: { _other_user_id: string },
+) => Promise<{ data: string | null; error: { message: string; code?: string; details?: string; hint?: string } | null }>;
+
 export interface ProfileRow {
   id: string;
   username: string | null;
@@ -109,6 +119,7 @@ export function useMyChats() {
     if (!user) return;
     const channel = supabase
       .channel("my-chats")
+      .on("postgres_changes", { event: "*", schema: "public", table: "chats" }, () => fetchChats())
       .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => fetchChats())
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_members" }, () => fetchChats())
       .subscribe();
@@ -178,60 +189,40 @@ export function useSendMessage() {
   const { user } = useAuth();
 
   return useCallback(async (chatId: string, content: string, type = "text") => {
-    if (!user || !content.trim()) return;
+    if (!user || !content.trim()) return { error: new Error("You must be signed in to send messages.") };
+    console.info("[Aura] sending message", { chatId, type });
     const { error } = await supabase.from("messages").insert({
       chat_id: chatId,
       sender_id: user.id,
       content: content.trim(),
       message_type: type,
     });
-    if (error) console.error("Send message error:", error);
+    if (error) {
+      console.error("[Aura] send message failed", error);
+      return { error: new Error(error.message) };
+    }
+    return { error: null };
   }, [user]);
 }
 
 export function useCreateChat() {
   const { user } = useAuth();
 
-  return useCallback(async (otherUserId: string) => {
-    if (!user) return null;
+  return useCallback(async (otherUserId: string): Promise<DirectChatResult> => {
+    if (!user) return { chatId: null, error: new Error("You must be signed in to start a conversation.") };
 
-    // Check if DM already exists
-    const { data: myMemberships } = await supabase
-      .from("chat_members")
-      .select("chat_id")
-      .eq("user_id", user.id);
+    console.info("[Aura] starting direct chat", { currentUserId: user.id, otherUserId });
+    const { data, error } = await (supabase.rpc as unknown as DirectChatRpc)("get_or_create_direct_chat", {
+      _other_user_id: otherUserId,
+    });
 
-    if (myMemberships?.length) {
-      for (const m of myMemberships) {
-        const { data: otherMember } = await supabase
-          .from("chat_members")
-          .select("chat_id")
-          .eq("chat_id", m.chat_id)
-          .eq("user_id", otherUserId);
-
-        if (otherMember?.length) {
-          // Check it's a DM (not group)
-          const { data: chat } = await supabase.from("chats").select("*").eq("id", m.chat_id).eq("is_group", false).single();
-          if (chat) return chat.id;
-        }
-      }
+    if (error || !data) {
+      console.error("[Aura] direct chat creation failed", error);
+      return { chatId: null, error: new Error(error?.message ?? "Could not start this conversation.") };
     }
 
-    // Create new chat
-    const { data: chat, error } = await supabase
-      .from("chats")
-      .insert({ created_by: user.id, is_group: false })
-      .select()
-      .single();
-
-    if (error || !chat) return null;
-
-    await supabase.from("chat_members").insert([
-      { chat_id: chat.id, user_id: user.id },
-      { chat_id: chat.id, user_id: otherUserId },
-    ]);
-
-    return chat.id;
+    console.info("[Aura] direct chat ready", { chatId: data });
+    return { chatId: data, error: null };
   }, [user]);
 }
 
