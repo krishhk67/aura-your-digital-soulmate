@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import type { ProfileRow } from "@/hooks/useRealtimeChat";
+import { toast } from "sonner";
 
 interface ChatWindowProps {
   chatId: string | null;
@@ -29,6 +30,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   useEffect(() => {
     if (!chatId || !user) return;
     setChatPartner(null);
+    window.setTimeout(() => inputRef.current?.focus(), 250);
     (async () => {
       const { data: members } = await supabase
         .from("chat_members")
@@ -56,7 +58,11 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
     if (!input.trim() || !chatId) return;
     const text = input;
     setInput("");
-    await sendMessage(chatId, text);
+    const { error } = await sendMessage(chatId, text);
+    if (error) {
+      setInput(text);
+      toast.error(error.message);
+    }
     inputRef.current?.focus();
   };
 
@@ -116,7 +122,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
           </div>
         ) : messages.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-sm text-muted-foreground">No messages yet. Say hello! 👋</p>
+            <p className="text-sm text-muted-foreground">Start your conversation</p>
           </div>
         ) : (
           messages.map((msg) => {
