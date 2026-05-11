@@ -27,7 +27,7 @@ export function ChatProfileSheet({ open, onClose, partner, chatId }: Props) {
         .in("message_type", ["image", "video"])
         .order("created_at", { ascending: false })
         .limit(9);
-      setMedia((msgs ?? []).filter(m => m.media_url).map(m => ({ url: m.media_url as string, type: m.message_type })));
+      setMedia((msgs ?? []).filter(m => m.media_url).map(m => ({ url: m.media_url as string, type: m.message_type ?? "image" })));
       const { count: total } = await supabase.from("messages").select("id", { count: "exact", head: true }).eq("chat_id", chatId);
       setMsgCount(total ?? 0);
     })();
@@ -77,12 +77,6 @@ export function ChatProfileSheet({ open, onClose, partner, chatId }: Props) {
               <Stat icon={<Shield className="h-4 w-4" />} label="Status" value={partner?.is_online ? "Online" : "Away"} />
             </div>
 
-            {partner?.created_at && (
-              <div className="mx-4 mb-4 p-4 glass-panel rounded-2xl text-sm">
-                <span className="text-muted-foreground">Joined </span>
-                <span className="font-medium">{format(new Date(partner.created_at), "MMM d, yyyy")}</span>
-              </div>
-            )}
 
             <div className="mx-4 mb-6">
               <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Shared Media</p>

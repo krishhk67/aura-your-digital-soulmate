@@ -27,7 +27,7 @@ export function ChatActionsSheet({ open, onClose, chatId, onOpenProfile }: Props
     if (!chatId) return;
     const { data } = await supabase.from("messages").select("created_at,sender_id,content,message_type").eq("chat_id", chatId).order("created_at");
     if (!data) return;
-    const text = data.map(m => `[${new Date(m.created_at).toLocaleString()}] ${m.sender_id.slice(0, 8)}: ${m.content ?? `(${m.message_type})`}`).join("\n");
+    const text = data.map(m => `[${new Date(m.created_at!).toLocaleString()}] ${m.sender_id.slice(0, 8)}: ${m.content ?? `(${m.message_type})`}`).join("\n");
     const blob = new Blob([text], { type: "text/plain" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob); a.download = `aura-chat-${chatId.slice(0, 8)}.txt`; a.click();
