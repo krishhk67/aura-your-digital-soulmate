@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Bell, Image as ImageIcon, Shield, MessageSquare } from "lucide-react";
+import { X, Image as ImageIcon, Shield, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
 import type { ProfileRow } from "@/hooks/useRealtimeChat";
 
 interface Props {
