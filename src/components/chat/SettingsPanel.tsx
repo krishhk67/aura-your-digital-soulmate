@@ -27,6 +27,7 @@ const tabs: { id: Tab; label: string; icon: typeof User }[] = [
 
 export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
   const { user, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<Tab>("profile");
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [settings, setSettings] = useState<{
