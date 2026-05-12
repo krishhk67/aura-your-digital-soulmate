@@ -5,6 +5,7 @@ import {
   Eye, EyeOff, Ghost, Volume2, VolumeX, Sun, Moon, Sparkles, Save, Loader2
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme, THEMES, type ThemeId } from "@/hooks/useTheme";
 import { supabase } from "@/integrations/supabase/client";
 import type { ProfileRow } from "@/hooks/useRealtimeChat";
 import { toast } from "sonner";
@@ -26,6 +27,7 @@ const tabs: { id: Tab; label: string; icon: typeof User }[] = [
 
 export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
   const { user, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<Tab>("profile");
   const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [settings, setSettings] = useState<{
@@ -259,28 +261,47 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                     )}
 
                     {activeTab === "appearance" && (
-                      <div className="space-y-6">
-                        <h3 className="font-display font-semibold text-sm">Theme</h3>
-                        <div className="grid grid-cols-3 gap-3">
-                          {[
-                            { id: "midnight", label: "Midnight", colors: ["oklch(0.08 0.02 270)", "oklch(0.72 0.25 285)"] },
-                            { id: "aurora", label: "Aurora", colors: ["oklch(0.1 0.03 160)", "oklch(0.65 0.28 180)"] },
-                            { id: "sunset", label: "Sunset", colors: ["oklch(0.1 0.03 30)", "oklch(0.7 0.22 30)"] },
-                          ].map(theme => (
-                            <motion.button
-                              key={theme.id}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => saveSettings({ theme: theme.id })}
-                              className={`p-3 rounded-xl border transition-all text-center ${
-                                settings.theme === theme.id
-                                  ? "border-primary bg-primary/10"
-                                  : "border-border hover:border-muted-foreground"
-                              }`}
-                            >
-                              <div className="h-8 w-full rounded-lg mb-2" style={{ background: `linear-gradient(135deg, ${theme.colors[0]}, ${theme.colors[1]})` }} />
-                              <span className="text-xs font-medium">{theme.label}</span>
-                            </motion.button>
-                          ))}
+                      <div className="space-y-5">
+                        <div>
+                          <h3 className="font-display font-semibold text-sm">Theme</h3>
+                          <p className="text-xs text-muted-foreground mt-1">Pick the look that matches your vibe. Changes apply instantly.</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          {THEMES.map(t => {
+                            const active = theme === t.id;
+                            return (
+                              <motion.button
+                                key={t.id}
+                                whileHover={{ y: -2 }}
+                                whileTap={{ scale: 0.97 }}
+                                onClick={() => {
+                                  setTheme(t.id as ThemeId);
+                                  saveSettings({ theme: t.id });
+                                }}
+                                className={`relative p-3 rounded-2xl border text-left transition-all overflow-hidden ${
+                                  active
+                                    ? "border-primary shadow-[0_0_20px_var(--neon-glow)]"
+                                    : "border-border hover:border-muted-foreground"
+                                }`}
+                              >
+                                <div
+                                  className="h-16 w-full rounded-xl mb-2 relative overflow-hidden"
+                                  style={{ background: `linear-gradient(135deg, ${t.bg} 0%, ${t.accent} 140%)` }}
+                                >
+                                  <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 70% 30%, ${t.accent} 0%, transparent 60%)`, opacity: 0.7 }} />
+                                </div>
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-semibold truncate">{t.label}</p>
+                                    <p className="text-[10px] text-muted-foreground truncate">{t.description}</p>
+                                  </div>
+                                  {active && (
+                                    <span className="h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_var(--neon-glow)] flex-shrink-0 mt-1" />
+                                  )}
+                                </div>
+                              </motion.button>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
