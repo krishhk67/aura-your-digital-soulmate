@@ -161,21 +161,39 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
 
         <button onClick={() => setProfileOpen(true)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
           <div className="relative flex-shrink-0">
-            {chatPartner?.avatar_url ? (
+            {chatMeta?.is_group ? (
+              chatMeta.avatar_url ? (
+                <img src={chatMeta.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover" />
+              ) : (
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center text-sm font-bold">
+                  👥
+                </div>
+              )
+            ) : chatPartner?.avatar_url ? (
               <img src={chatPartner.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover" />
             ) : (
               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center text-sm font-bold">
                 {chatPartner?.display_name?.charAt(0)?.toUpperCase() || "?"}
               </div>
             )}
-            {chatPartner?.is_online && (
+            {!chatMeta?.is_group && chatPartner?.is_online && (
               <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-accent border-2 border-background" />
             )}
           </div>
           <div className="min-w-0">
-            <h3 className="font-semibold text-sm truncate">{chatPartner?.display_name ?? "Loading..."}</h3>
+            <h3 className="font-semibold text-sm truncate">
+              {chatMeta?.is_group
+                ? (chatMeta.name ?? "Group")
+                : (chatPartner?.display_name ?? (chatMeta ? "User" : "Loading..."))}
+            </h3>
             <p className="text-[11px] text-accent">
-              {chatPartner?.is_online ? "online" : chatPartner?.last_seen ? `last seen ${formatDistanceToNow(new Date(chatPartner.last_seen), { addSuffix: true })}` : ""}
+              {chatMeta?.is_group
+                ? `${memberCount} member${memberCount === 1 ? "" : "s"}`
+                : chatPartner?.is_online
+                  ? "online"
+                  : chatPartner?.last_seen
+                    ? `last seen ${formatDistanceToNow(new Date(chatPartner.last_seen), { addSuffix: true })}`
+                    : ""}
             </p>
           </div>
         </button>
