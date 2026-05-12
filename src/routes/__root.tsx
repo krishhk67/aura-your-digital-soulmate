@@ -95,6 +95,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: NO_FLASH_THEME }} />
       </head>
       <body>
         {children}
@@ -110,8 +111,10 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Outlet />
-        <Toaster />
+        <ThemeProvider>
+          <Outlet />
+          <Toaster />
+        </ThemeProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
