@@ -27,6 +27,8 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [chatPartner, setChatPartner] = useState<ProfileRow | null>(null);
+  const [chatMeta, setChatMeta] = useState<ChatRow | null>(null);
+  const [memberCount, setMemberCount] = useState<number>(0);
   const [recording, setRecording] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -40,22 +42,36 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
 
   useEffect(() => {
     if (!chatId || !user) return;
+    // Reset previous conversation state to avoid stale headers
     setChatPartner(null);
+    setChatMeta(null);
+    setMemberCount(0);
     window.setTimeout(() => inputRef.current?.focus(), 250);
+    console.info("[Aura] switching conversation", { chatId });
     (async () => {
+      const { data: chat } = await supabase.from("chats").select("*").eq("id", chatId).single();
+      if (!chat) return;
+      setChatMeta(chat as ChatRow);
+      console.info("[Aura] chat loaded", { chatId, is_group: chat.is_group, name: chat.name });
+
       const { data: members } = await supabase
         .from("chat_members")
         .select("user_id")
-        .eq("chat_id", chatId)
-        .neq("user_id", user.id);
-      if (members?.[0]) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", members[0].user_id)
-          .single();
-        if (profile) setChatPartner(profile as ProfileRow);
+        .eq("chat_id", chatId);
+      setMemberCount(members?.length ?? 0);
+
+      if (!chat.is_group) {
+        const other = members?.find(m => m.user_id !== user.id);
+        if (other) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", other.user_id)
+            .single();
+          if (profile) setChatPartner(profile as ProfileRow);
+        }
       }
+
       await supabase.from("chat_members")
         .update({ last_read_at: new Date().toISOString() })
         .eq("chat_id", chatId)
