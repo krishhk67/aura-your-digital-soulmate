@@ -6,7 +6,7 @@ import { useChatMessages, useSendMessage } from "@/hooks/useRealtimeChat";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import type { ProfileRow } from "@/hooks/useRealtimeChat";
+import type { ProfileRow, ChatRow } from "@/hooks/useRealtimeChat";
 import { toast } from "sonner";
 import { VoiceRecorder, MicButton } from "./VoiceRecorder";
 import { AudioMessage } from "./AudioMessage";
