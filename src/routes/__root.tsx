@@ -8,7 +8,10 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ThemeProvider } from "@/hooks/useTheme";
 import { Toaster } from "@/components/ui/sonner";
+
+const NO_FLASH_THEME = `(function(){try{var t=localStorage.getItem('aura-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`;
 
 import appCss from "../styles.css?url";
 
