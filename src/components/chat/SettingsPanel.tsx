@@ -5,6 +5,7 @@ import {
   Eye, EyeOff, Ghost, Volume2, VolumeX, Sun, Moon, Sparkles, Save, Loader2
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme, THEMES, type ThemeId } from "@/hooks/useTheme";
 import { supabase } from "@/integrations/supabase/client";
 import type { ProfileRow } from "@/hooks/useRealtimeChat";
 import { toast } from "sonner";
