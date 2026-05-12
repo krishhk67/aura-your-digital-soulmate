@@ -137,11 +137,14 @@ export function useChatMessages(chatId: string | null) {
 
   const fetchMessages = useCallback(async () => {
     if (!chatId) { setMessages([]); setLoading(false); return; }
+    setLoading(true);
+    setMessages([]);
     const { data } = await supabase
       .from("messages")
       .select("*")
       .eq("chat_id", chatId)
       .order("created_at", { ascending: true });
+    console.info("[Aura] messages fetched", { chatId, count: data?.length ?? 0 });
 
     if (!data) { setMessages([]); setLoading(false); return; }
 

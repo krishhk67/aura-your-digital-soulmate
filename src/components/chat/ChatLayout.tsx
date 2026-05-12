@@ -49,7 +49,7 @@ export function ChatLayout() {
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="absolute inset-0 z-10"
             >
-              <ChatWindow chatId={selectedChat} onBack={handleBack} />
+              <ChatWindow key={selectedChat} chatId={selectedChat} onBack={handleBack} />
             </motion.div>
           ) : activeTab === "rooms" ? (
             <motion.div

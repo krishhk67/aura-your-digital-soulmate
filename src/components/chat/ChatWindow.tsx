@@ -6,7 +6,7 @@ import { useChatMessages, useSendMessage } from "@/hooks/useRealtimeChat";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import type { ProfileRow } from "@/hooks/useRealtimeChat";
+import type { ProfileRow, ChatRow } from "@/hooks/useRealtimeChat";
 import { toast } from "sonner";
 import { VoiceRecorder, MicButton } from "./VoiceRecorder";
 import { AudioMessage } from "./AudioMessage";
@@ -27,6 +27,8 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [chatPartner, setChatPartner] = useState<ProfileRow | null>(null);
+  const [chatMeta, setChatMeta] = useState<ChatRow | null>(null);
+  const [memberCount, setMemberCount] = useState<number>(0);
   const [recording, setRecording] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -40,22 +42,36 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
 
   useEffect(() => {
     if (!chatId || !user) return;
+    // Reset previous conversation state to avoid stale headers
     setChatPartner(null);
+    setChatMeta(null);
+    setMemberCount(0);
     window.setTimeout(() => inputRef.current?.focus(), 250);
+    console.info("[Aura] switching conversation", { chatId });
     (async () => {
+      const { data: chat } = await supabase.from("chats").select("*").eq("id", chatId).single();
+      if (!chat) return;
+      setChatMeta(chat as ChatRow);
+      console.info("[Aura] chat loaded", { chatId, is_group: chat.is_group, name: chat.name });
+
       const { data: members } = await supabase
         .from("chat_members")
         .select("user_id")
-        .eq("chat_id", chatId)
-        .neq("user_id", user.id);
-      if (members?.[0]) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", members[0].user_id)
-          .single();
-        if (profile) setChatPartner(profile as ProfileRow);
+        .eq("chat_id", chatId);
+      setMemberCount(members?.length ?? 0);
+
+      if (!chat.is_group) {
+        const other = members?.find(m => m.user_id !== user.id);
+        if (other) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", other.user_id)
+            .single();
+          if (profile) setChatPartner(profile as ProfileRow);
+        }
       }
+
       await supabase.from("chat_members")
         .update({ last_read_at: new Date().toISOString() })
         .eq("chat_id", chatId)
@@ -145,21 +161,39 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
 
         <button onClick={() => setProfileOpen(true)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
           <div className="relative flex-shrink-0">
-            {chatPartner?.avatar_url ? (
+            {chatMeta?.is_group ? (
+              chatMeta.avatar_url ? (
+                <img src={chatMeta.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover" />
+              ) : (
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center text-sm font-bold">
+                  👥
+                </div>
+              )
+            ) : chatPartner?.avatar_url ? (
               <img src={chatPartner.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover" />
             ) : (
               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center text-sm font-bold">
                 {chatPartner?.display_name?.charAt(0)?.toUpperCase() || "?"}
               </div>
             )}
-            {chatPartner?.is_online && (
+            {!chatMeta?.is_group && chatPartner?.is_online && (
               <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-accent border-2 border-background" />
             )}
           </div>
           <div className="min-w-0">
-            <h3 className="font-semibold text-sm truncate">{chatPartner?.display_name ?? "Loading..."}</h3>
+            <h3 className="font-semibold text-sm truncate">
+              {chatMeta?.is_group
+                ? (chatMeta.name ?? "Group")
+                : (chatPartner?.display_name ?? (chatMeta ? "User" : "Loading..."))}
+            </h3>
             <p className="text-[11px] text-accent">
-              {chatPartner?.is_online ? "online" : chatPartner?.last_seen ? `last seen ${formatDistanceToNow(new Date(chatPartner.last_seen), { addSuffix: true })}` : ""}
+              {chatMeta?.is_group
+                ? `${memberCount} member${memberCount === 1 ? "" : "s"}`
+                : chatPartner?.is_online
+                  ? "online"
+                  : chatPartner?.last_seen
+                    ? `last seen ${formatDistanceToNow(new Date(chatPartner.last_seen), { addSuffix: true })}`
+                    : ""}
             </p>
           </div>
         </button>
