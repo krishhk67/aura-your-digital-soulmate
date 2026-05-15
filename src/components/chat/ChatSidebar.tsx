@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MessageCircle, Search, Plus, UserPlus } from "lucide-react";
+import { MessageCircle, Search, Plus, UserPlus, Pin, BellOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMyChats } from "@/hooks/useRealtimeChat";
 import { useAuth } from "@/hooks/useAuth";
