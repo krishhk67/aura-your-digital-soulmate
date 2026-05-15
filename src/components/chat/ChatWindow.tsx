@@ -12,6 +12,9 @@ import { VoiceRecorder, MicButton } from "./VoiceRecorder";
 import { AudioMessage } from "./AudioMessage";
 import { ChatProfileSheet } from "./ChatProfileSheet";
 import { ChatActionsSheet } from "./ChatActionsSheet";
+import { ChatSearchOverlay } from "./ChatSearchOverlay";
+import { useChatMemberState } from "@/hooks/useChatActions";
+import { Pin, BellOff } from "lucide-react";
 
 interface ChatWindowProps {
   chatId: string | null;
@@ -35,6 +38,17 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const [actionsOpen, setActionsOpen] = useState(false);
   const [acceptType, setAcceptType] = useState("image/*,video/*");
   const [uploading, setUploading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const { is_pinned, is_muted, cleared_at } = useChatMemberState(chatId);
+
+  const visibleMessages = cleared_at
+    ? messages.filter(m => new Date(m.created_at) > new Date(cleared_at))
+    : messages;
+
+  const jumpTo = (id: string) => {
+    const el = document.getElementById(`msg-${id}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -186,14 +200,18 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                 ? (chatMeta.name ?? "Group")
                 : (chatPartner?.display_name ?? (chatMeta ? "User" : "Loading..."))}
             </h3>
-            <p className="text-[11px] text-accent">
-              {chatMeta?.is_group
-                ? `${memberCount} member${memberCount === 1 ? "" : "s"}`
-                : chatPartner?.is_online
-                  ? "online"
-                  : chatPartner?.last_seen
-                    ? `last seen ${formatDistanceToNow(new Date(chatPartner.last_seen), { addSuffix: true })}`
-                    : ""}
+            <p className="text-[11px] text-accent flex items-center gap-1">
+              {is_pinned && <Pin className="h-2.5 w-2.5" />}
+              {is_muted && <BellOff className="h-2.5 w-2.5" />}
+              <span>
+                {chatMeta?.is_group
+                  ? `${memberCount} member${memberCount === 1 ? "" : "s"}`
+                  : chatPartner?.is_online
+                    ? "online"
+                    : chatPartner?.last_seen
+                      ? `last seen ${formatDistanceToNow(new Date(chatPartner.last_seen), { addSuffix: true })}`
+                      : ""}
+              </span>
             </p>
           </div>
         </button>
@@ -217,18 +235,21 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
           <div className="flex items-center justify-center py-16">
             <div className="h-6 w-6 border-2 border-neon border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : messages.length === 0 ? (
+        ) : visibleMessages.length === 0 ? (
           <div className="text-center py-16">
-            <p className="text-sm text-muted-foreground">Start your conversation</p>
+            <p className="text-sm text-muted-foreground">
+              {cleared_at ? "Chat cleared. New messages will appear here." : "Start your conversation"}
+            </p>
           </div>
         ) : (
-          messages.map((msg) => {
+          visibleMessages.map((msg) => {
             const isMe = msg.sender_id === user?.id;
             const time = new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
             return (
               <motion.div
                 key={msg.id}
+                id={`msg-${msg.id}`}
                 initial={{ opacity: 0, y: 8, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
@@ -336,8 +357,14 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
         )}
       </div>
 
+      <ChatSearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} messages={visibleMessages} onJump={jumpTo} />
       <ChatProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} partner={chatPartner} chatId={chatId} />
-      <ChatActionsSheet open={actionsOpen} onClose={() => setActionsOpen(false)} chatId={chatId} onOpenProfile={() => setProfileOpen(true)} />
+      <ChatActionsSheet
+        open={actionsOpen} onClose={() => setActionsOpen(false)}
+        chatId={chatId} partnerId={chatPartner?.id ?? null} isGroup={!!chatMeta?.is_group}
+        onOpenProfile={() => setProfileOpen(true)}
+        onSearch={() => setSearchOpen(true)}
+      />
     </div>
   );
 }
