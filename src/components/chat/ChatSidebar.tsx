@@ -116,8 +116,14 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-0.5">
-                    <span className="font-semibold text-[15px] truncate">{displayName}</span>
-                    <span className="text-[11px] text-muted-foreground flex-shrink-0 ml-2">{timeAgo}</span>
+                    <span className="font-semibold text-[15px] truncate flex items-center gap-1.5">
+                      {chat.is_pinned && <Pin className="h-3 w-3 text-neon flex-shrink-0" />}
+                      {displayName}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground flex-shrink-0 ml-2 flex items-center gap-1">
+                      {chat.is_muted && <BellOff className="h-3 w-3" />}
+                      {timeAgo}
+                    </span>
                   </div>
                   <p className="text-[13px] text-muted-foreground truncate">{lastMsg}</p>
                 </div>
