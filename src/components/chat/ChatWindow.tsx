@@ -12,6 +12,9 @@ import { VoiceRecorder, MicButton } from "./VoiceRecorder";
 import { AudioMessage } from "./AudioMessage";
 import { ChatProfileSheet } from "./ChatProfileSheet";
 import { ChatActionsSheet } from "./ChatActionsSheet";
+import { ChatSearchOverlay } from "./ChatSearchOverlay";
+import { useChatMemberState } from "@/hooks/useChatActions";
+import { Pin, BellOff } from "lucide-react";
 
 interface ChatWindowProps {
   chatId: string | null;
