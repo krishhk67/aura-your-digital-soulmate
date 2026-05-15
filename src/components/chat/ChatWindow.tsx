@@ -357,8 +357,14 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
         )}
       </div>
 
+      <ChatSearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} messages={visibleMessages} onJump={jumpTo} />
       <ChatProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} partner={chatPartner} chatId={chatId} />
-      <ChatActionsSheet open={actionsOpen} onClose={() => setActionsOpen(false)} chatId={chatId} onOpenProfile={() => setProfileOpen(true)} />
+      <ChatActionsSheet
+        open={actionsOpen} onClose={() => setActionsOpen(false)}
+        chatId={chatId} partnerId={chatPartner?.id ?? null} isGroup={!!chatMeta?.is_group}
+        onOpenProfile={() => setProfileOpen(true)}
+        onSearch={() => setSearchOpen(true)}
+      />
     </div>
   );
 }
