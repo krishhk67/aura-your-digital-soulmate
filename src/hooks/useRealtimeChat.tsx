@@ -60,14 +60,22 @@ export function useMyChats() {
 
   const fetchChats = useCallback(async () => {
     if (!user) return;
-    // Get chat memberships
+    // Get chat memberships (with per-user state)
     const { data: memberships } = await supabase
       .from("chat_members")
-      .select("chat_id")
+      .select("chat_id,is_pinned,is_muted,cleared_at")
       .eq("user_id", user.id);
 
     if (!memberships?.length) { setChats([]); setLoading(false); return; }
 
+    // Pull blocked users so we can hide their DMs
+    const { data: blockedRows } = await supabase
+      .from("blocked_users")
+      .select("blocked_id")
+      .eq("blocker_id", user.id);
+    const blockedIds = new Set((blockedRows ?? []).map(b => b.blocked_id));
+
+    const memberMap = new Map(memberships.map(m => [m.chat_id, m]));
     const chatIds = memberships.map(m => m.chat_id);
 
     const { data: chatRows } = await supabase
@@ -78,14 +86,12 @@ export function useMyChats() {
 
     if (!chatRows) { setChats([]); setLoading(false); return; }
 
-    // Get last message for each chat
+    // Get last message for each chat (respecting cleared_at)
     const enriched = await Promise.all(chatRows.map(async (chat) => {
-      const { data: msgs } = await supabase
-        .from("messages")
-        .select("*")
-        .eq("chat_id", chat.id)
-        .order("created_at", { ascending: false })
-        .limit(1);
+      const meta = memberMap.get(chat.id);
+      let q = supabase.from("messages").select("*").eq("chat_id", chat.id);
+      if (meta?.cleared_at) q = q.gt("created_at", meta.cleared_at);
+      const { data: msgs } = await q.order("created_at", { ascending: false }).limit(1);
 
       // For DMs, get the other user's profile
       let other_user: ProfileRow | undefined;
