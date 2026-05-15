@@ -125,7 +125,7 @@ export function useMyChats() {
     const visible = enriched.filter(c => c.is_group || !c.other_user || !blockedIds.has(c.other_user.id));
     visible.sort((a, b) => {
       if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
-      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      return new Date(b.updated_at ?? 0).getTime() - new Date(a.updated_at ?? 0).getTime();
     });
 
     setChats(visible as typeof chats);
