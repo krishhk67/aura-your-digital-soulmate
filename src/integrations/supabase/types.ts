@@ -14,10 +14,34 @@ export type Database = {
   }
   public: {
     Tables: {
+      blocked_users: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
       chat_members: {
         Row: {
           chat_id: string
+          cleared_at: string | null
           id: string
+          is_muted: boolean
+          is_pinned: boolean
           joined_at: string | null
           last_read_at: string | null
           role: string | null
@@ -25,7 +49,10 @@ export type Database = {
         }
         Insert: {
           chat_id: string
+          cleared_at?: string | null
           id?: string
+          is_muted?: boolean
+          is_pinned?: boolean
           joined_at?: string | null
           last_read_at?: string | null
           role?: string | null
@@ -33,7 +60,10 @@ export type Database = {
         }
         Update: {
           chat_id?: string
+          cleared_at?: string | null
           id?: string
+          is_muted?: boolean
+          is_pinned?: boolean
           joined_at?: string | null
           last_read_at?: string | null
           role?: string | null
@@ -237,6 +267,39 @@ export type Database = {
         }
         Relationships: []
       }
+      reports: {
+        Row: {
+          chat_id: string | null
+          created_at: string
+          details: string | null
+          id: string
+          reason: string
+          reported_user_id: string
+          reporter_id: string
+          status: string
+        }
+        Insert: {
+          chat_id?: string | null
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason: string
+          reported_user_id: string
+          reporter_id: string
+          status?: string
+        }
+        Update: {
+          chat_id?: string | null
+          created_at?: string
+          details?: string | null
+          id?: string
+          reason?: string
+          reported_user_id?: string
+          reporter_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       stories: {
         Row: {
           caption: string | null
@@ -302,6 +365,10 @@ export type Database = {
       get_or_create_direct_chat: {
         Args: { _other_user_id: string }
         Returns: string
+      }
+      is_blocked: {
+        Args: { _blocked: string; _blocker: string }
+        Returns: boolean
       }
       is_chat_member: {
         Args: { _chat_id: string; _user_id: string }
