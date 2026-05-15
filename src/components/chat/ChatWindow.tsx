@@ -200,14 +200,18 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                 ? (chatMeta.name ?? "Group")
                 : (chatPartner?.display_name ?? (chatMeta ? "User" : "Loading..."))}
             </h3>
-            <p className="text-[11px] text-accent">
-              {chatMeta?.is_group
-                ? `${memberCount} member${memberCount === 1 ? "" : "s"}`
-                : chatPartner?.is_online
-                  ? "online"
-                  : chatPartner?.last_seen
-                    ? `last seen ${formatDistanceToNow(new Date(chatPartner.last_seen), { addSuffix: true })}`
-                    : ""}
+            <p className="text-[11px] text-accent flex items-center gap-1">
+              {is_pinned && <Pin className="h-2.5 w-2.5" />}
+              {is_muted && <BellOff className="h-2.5 w-2.5" />}
+              <span>
+                {chatMeta?.is_group
+                  ? `${memberCount} member${memberCount === 1 ? "" : "s"}`
+                  : chatPartner?.is_online
+                    ? "online"
+                    : chatPartner?.last_seen
+                      ? `last seen ${formatDistanceToNow(new Date(chatPartner.last_seen), { addSuffix: true })}`
+                      : ""}
+              </span>
             </p>
           </div>
         </button>
