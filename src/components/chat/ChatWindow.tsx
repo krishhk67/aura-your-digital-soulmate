@@ -38,6 +38,17 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const [actionsOpen, setActionsOpen] = useState(false);
   const [acceptType, setAcceptType] = useState("image/*,video/*");
   const [uploading, setUploading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const { is_pinned, is_muted, cleared_at } = useChatMemberState(chatId);
+
+  const visibleMessages = cleared_at
+    ? messages.filter(m => new Date(m.created_at) > new Date(cleared_at))
+    : messages;
+
+  const jumpTo = (id: string) => {
+    const el = document.getElementById(`msg-${id}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
