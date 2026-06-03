@@ -45,6 +45,7 @@ export type Database = {
           joined_at: string | null
           last_read_at: string | null
           role: string | null
+          theme: string | null
           user_id: string
         }
         Insert: {
@@ -56,6 +57,7 @@ export type Database = {
           joined_at?: string | null
           last_read_at?: string | null
           role?: string | null
+          theme?: string | null
           user_id: string
         }
         Update: {
@@ -67,6 +69,7 @@ export type Database = {
           joined_at?: string | null
           last_read_at?: string | null
           role?: string | null
+          theme?: string | null
           user_id?: string
         }
         Relationships: [
@@ -84,6 +87,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string | null
           created_by: string | null
+          disappear_seconds: number | null
           id: string
           is_group: boolean | null
           name: string | null
@@ -93,6 +97,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           created_by?: string | null
+          disappear_seconds?: number | null
           id?: string
           is_group?: boolean | null
           name?: string | null
@@ -102,6 +107,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string | null
           created_by?: string | null
+          disappear_seconds?: number | null
           id?: string
           is_group?: boolean | null
           name?: string | null
@@ -146,6 +152,7 @@ export type Database = {
           chat_id: string
           content: string | null
           created_at: string | null
+          expires_at: string | null
           id: string
           is_edited: boolean | null
           media_url: string | null
@@ -158,6 +165,7 @@ export type Database = {
           chat_id: string
           content?: string | null
           created_at?: string | null
+          expires_at?: string | null
           id?: string
           is_edited?: boolean | null
           media_url?: string | null
@@ -170,6 +178,7 @@ export type Database = {
           chat_id?: string
           content?: string | null
           created_at?: string | null
+          expires_at?: string | null
           id?: string
           is_edited?: boolean | null
           media_url?: string | null
@@ -234,6 +243,7 @@ export type Database = {
           bio: string | null
           created_at: string | null
           display_name: string | null
+          ghost_mode: boolean
           id: string
           is_online: boolean | null
           last_seen: string | null
@@ -246,6 +256,7 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           display_name?: string | null
+          ghost_mode?: boolean
           id: string
           is_online?: boolean | null
           last_seen?: string | null
@@ -258,6 +269,7 @@ export type Database = {
           bio?: string | null
           created_at?: string | null
           display_name?: string | null
+          ghost_mode?: boolean
           id?: string
           is_online?: boolean | null
           last_seen?: string | null
@@ -362,6 +374,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_expired_messages: { Args: never; Returns: undefined }
       get_or_create_direct_chat: {
         Args: { _other_user_id: string }
         Returns: string
