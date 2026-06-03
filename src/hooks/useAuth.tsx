@@ -25,10 +25,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       setLoading(false);
 
-      // Update online status
+      // Update online status — respect ghost_mode
       if (session?.user) {
-        setTimeout(() => {
-          supabase.from("profiles").update({ is_online: true, last_seen: new Date().toISOString() }).eq("id", session.user.id).then();
+        const uid = session.user.id;
+        setTimeout(async () => {
+          const { data: prof } = await supabase.from("profiles").select("ghost_mode").eq("id", uid).maybeSingle();
+          const ghost = (prof as { ghost_mode?: boolean } | null)?.ghost_mode;
+          if (!ghost) {
+            await supabase.from("profiles").update({ is_online: true, last_seen: new Date().toISOString() }).eq("id", uid);
+          }
         }, 0);
       }
     });
@@ -41,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
 
   // Set offline on window close
   useEffect(() => {
