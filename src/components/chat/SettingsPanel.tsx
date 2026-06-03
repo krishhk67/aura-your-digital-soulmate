@@ -133,9 +133,9 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     if (!user) return;
     setGhostMode(val);
     // When entering ghost mode, immediately appear offline.
-    const patch: Record<string, unknown> = { ghost_mode: val };
-    if (val) patch.is_online = false;
+    const patch = val ? { ghost_mode: true, is_online: false } : { ghost_mode: false };
     const { error } = await supabase.from("profiles").update(patch).eq("id", user.id);
+
     if (error) { toast.error("Failed to update ghost mode"); setGhostMode(!val); return; }
     if (val) setShowOnline(false);
     toast.success(val ? "Ghost mode on — you appear offline" : "Ghost mode off");
