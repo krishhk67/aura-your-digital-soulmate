@@ -14,7 +14,8 @@ import { ChatProfileSheet } from "./ChatProfileSheet";
 import { ChatActionsSheet } from "./ChatActionsSheet";
 import { ChatSearchOverlay } from "./ChatSearchOverlay";
 import { useChatMemberState } from "@/hooks/useChatActions";
-import { Pin, BellOff } from "lucide-react";
+import { Pin, BellOff, Timer } from "lucide-react";
+
 
 interface ChatWindowProps {
   chatId: string | null;
@@ -39,7 +40,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const [acceptType, setAcceptType] = useState("image/*,video/*");
   const [uploading, setUploading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const { is_pinned, is_muted, cleared_at } = useChatMemberState(chatId);
+  const { is_pinned, is_muted, cleared_at, theme: chatTheme } = useChatMemberState(chatId);
 
   const visibleMessages = cleared_at
     ? messages.filter(m => new Date(m.created_at) > new Date(cleared_at))
@@ -160,7 +161,8 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   if (!chatId) return null;
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-background" {...(chatTheme ? { "data-theme": chatTheme } : {})}>
+
       <input ref={fileInputRef} type="file" accept={acceptType} onChange={handleFile} className="hidden" />
 
       {/* Header */}
@@ -190,7 +192,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                 {chatPartner?.display_name?.charAt(0)?.toUpperCase() || "?"}
               </div>
             )}
-            {!chatMeta?.is_group && chatPartner?.is_online && (
+            {!chatMeta?.is_group && chatPartner?.is_online && !chatPartner?.ghost_mode && (
               <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-accent border-2 border-background" />
             )}
           </div>
@@ -203,17 +205,21 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
             <p className="text-[11px] text-accent flex items-center gap-1">
               {is_pinned && <Pin className="h-2.5 w-2.5" />}
               {is_muted && <BellOff className="h-2.5 w-2.5" />}
+              {chatMeta?.disappear_seconds ? <Timer className="h-2.5 w-2.5" /> : null}
               <span>
                 {chatMeta?.is_group
                   ? `${memberCount} member${memberCount === 1 ? "" : "s"}`
-                  : chatPartner?.is_online
-                    ? "online"
-                    : chatPartner?.last_seen
-                      ? `last seen ${formatDistanceToNow(new Date(chatPartner.last_seen), { addSuffix: true })}`
-                      : ""}
+                  : chatPartner?.ghost_mode
+                    ? "👻 hidden"
+                    : chatPartner?.is_online
+                      ? "online"
+                      : chatPartner?.last_seen
+                        ? `last seen ${formatDistanceToNow(new Date(chatPartner.last_seen), { addSuffix: true })}`
+                        : ""}
               </span>
             </p>
           </div>
+
         </button>
 
         <div className="flex items-center gap-0.5">
@@ -286,8 +292,14 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                   </div>
                   <div className={cn("flex items-center gap-1 mt-0.5 text-[10px] text-muted-foreground px-1", isMe ? "justify-end" : "justify-start")}>
                     <span>{time}</span>
+                    {msg.expires_at && (
+                      <span className="inline-flex items-center gap-0.5 text-neon" title={`Expires ${new Date(msg.expires_at).toLocaleString()}`}>
+                        <Timer className="h-2.5 w-2.5" />
+                      </span>
+                    )}
                     {isMe && <CheckCheck className="h-3 w-3 text-accent" />}
                   </div>
+
                 </div>
               </motion.div>
             );

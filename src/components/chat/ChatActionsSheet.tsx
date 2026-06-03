@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Trash2, Image as ImageIcon, Pin, PinOff, Bell, BellOff, Download, Ban, Flag, Users } from "lucide-react";
+import { Search, Trash2, Image as ImageIcon, Pin, PinOff, Bell, BellOff, Download, Ban, Flag, Users, Timer, Palette } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useChatMemberState, useBlockUser, clearChatForMe } from "@/hooks/useChatActions";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ReportDialog } from "./ReportDialog";
+import { DisappearingMessagesDialog } from "./DisappearingMessagesDialog";
+import { ChatThemeDialog } from "./ChatThemeDialog";
+
 
 interface Props {
   open: boolean;
@@ -24,6 +27,10 @@ export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, on
   const { block } = useBlockUser();
   const [confirm, setConfirm] = useState<null | "clear" | "block">(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const [disappearOpen, setDisappearOpen] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(false);
+
+
 
   const togglePin = async () => {
     const { error } = await update({ is_pinned: !is_pinned });
@@ -73,6 +80,8 @@ export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, on
     { icon: ImageIcon, label: "Media gallery", onClick: () => { onOpenProfile(); onClose(); } },
     { icon: is_pinned ? PinOff : Pin, label: is_pinned ? "Unpin conversation" : "Pin conversation", onClick: togglePin },
     { icon: is_muted ? Bell : BellOff, label: is_muted ? "Unmute notifications" : "Mute notifications", onClick: toggleMute },
+    { icon: Timer, label: "Disappearing messages", onClick: () => { setDisappearOpen(true); onClose(); } },
+    { icon: Palette, label: "Chat theme", onClick: () => { setThemeOpen(true); onClose(); } },
     { icon: Download, label: "Export chat", onClick: exportChat },
     { icon: Trash2, label: "Clear chat", onClick: () => setConfirm("clear"), danger: true },
     ...(!isGroup && partnerId ? [
@@ -81,6 +90,7 @@ export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, on
     ] : []),
     ...(isGroup ? [{ icon: Users, label: "View members", onClick: () => { onOpenProfile(); onClose(); } }] : []),
   ];
+
 
   return (
     <>
@@ -130,6 +140,9 @@ export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, on
         confirmLabel="Block" destructive onConfirm={doBlock}
       />
       <ReportDialog open={reportOpen} onClose={() => setReportOpen(false)} reportedUserId={partnerId ?? null} chatId={chatId} />
+      <DisappearingMessagesDialog open={disappearOpen} onClose={() => setDisappearOpen(false)} chatId={chatId} />
+      <ChatThemeDialog open={themeOpen} onClose={() => setThemeOpen(false)} chatId={chatId} />
     </>
   );
 }
+

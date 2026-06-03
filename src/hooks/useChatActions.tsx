@@ -6,22 +6,31 @@ export interface ChatMemberState {
   is_pinned: boolean;
   is_muted: boolean;
   cleared_at: string | null;
+  theme: string | null;
 }
 
 export function useChatMemberState(chatId: string | null) {
   const { user } = useAuth();
-  const [state, setState] = useState<ChatMemberState>({ is_pinned: false, is_muted: false, cleared_at: null });
+  const [state, setState] = useState<ChatMemberState>({ is_pinned: false, is_muted: false, cleared_at: null, theme: null });
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     if (!chatId || !user) { setLoading(false); return; }
     const { data } = await supabase
       .from("chat_members")
-      .select("is_pinned,is_muted,cleared_at")
+      .select("is_pinned,is_muted,cleared_at,theme")
       .eq("chat_id", chatId)
       .eq("user_id", user.id)
       .maybeSingle();
-    if (data) setState({ is_pinned: !!data.is_pinned, is_muted: !!data.is_muted, cleared_at: data.cleared_at ?? null });
+    if (data) {
+      const d = data as { is_pinned?: boolean; is_muted?: boolean; cleared_at?: string | null; theme?: string | null };
+      setState({
+        is_pinned: !!d.is_pinned,
+        is_muted: !!d.is_muted,
+        cleared_at: d.cleared_at ?? null,
+        theme: d.theme ?? null,
+      });
+    }
     setLoading(false);
   }, [chatId, user]);
 
@@ -39,6 +48,33 @@ export function useChatMemberState(chatId: string | null) {
   }, [chatId, user]);
 
   return { ...state, loading, refresh, update };
+}
+
+export function useChatDisappear(chatId: string | null) {
+  const [seconds, setSeconds] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    if (!chatId) { setLoading(false); return; }
+    const { data } = await supabase
+      .from("chats")
+      .select("disappear_seconds")
+      .eq("id", chatId)
+      .maybeSingle();
+    setSeconds((data as { disappear_seconds?: number | null } | null)?.disappear_seconds ?? null);
+    setLoading(false);
+  }, [chatId]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const setDisappear = useCallback(async (s: number | null) => {
+    if (!chatId) return { error: new Error("No chat") };
+    const { error } = await supabase.from("chats").update({ disappear_seconds: s }).eq("id", chatId);
+    if (!error) setSeconds(s);
+    return { error: error ? new Error(error.message) : null };
+  }, [chatId]);
+
+  return { seconds, loading, setDisappear, refresh };
 }
 
 export function useBlockUser() {
