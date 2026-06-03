@@ -192,7 +192,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                 {chatPartner?.display_name?.charAt(0)?.toUpperCase() || "?"}
               </div>
             )}
-            {!chatMeta?.is_group && chatPartner?.is_online && (
+            {!chatMeta?.is_group && chatPartner?.is_online && !chatPartner?.ghost_mode && (
               <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-accent border-2 border-background" />
             )}
           </div>
@@ -205,17 +205,21 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
             <p className="text-[11px] text-accent flex items-center gap-1">
               {is_pinned && <Pin className="h-2.5 w-2.5" />}
               {is_muted && <BellOff className="h-2.5 w-2.5" />}
+              {chatMeta?.disappear_seconds ? <Timer className="h-2.5 w-2.5" /> : null}
               <span>
                 {chatMeta?.is_group
                   ? `${memberCount} member${memberCount === 1 ? "" : "s"}`
-                  : chatPartner?.is_online
-                    ? "online"
-                    : chatPartner?.last_seen
-                      ? `last seen ${formatDistanceToNow(new Date(chatPartner.last_seen), { addSuffix: true })}`
-                      : ""}
+                  : chatPartner?.ghost_mode
+                    ? "👻 hidden"
+                    : chatPartner?.is_online
+                      ? "online"
+                      : chatPartner?.last_seen
+                        ? `last seen ${formatDistanceToNow(new Date(chatPartner.last_seen), { addSuffix: true })}`
+                        : ""}
               </span>
             </p>
           </div>
+
         </button>
 
         <div className="flex items-center gap-0.5">
