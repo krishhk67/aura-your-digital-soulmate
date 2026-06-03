@@ -59,14 +59,16 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
         supabase.from("user_settings").select("*").eq("user_id", user.id).single(),
       ]);
       if (p) {
-        const prof = p as ProfileRow;
+        const prof = p as ProfileRow & { ghost_mode?: boolean };
         setProfile(prof);
         setDisplayName(prof.display_name ?? "");
         setUsername(prof.username ?? "");
         setBio(prof.bio ?? "");
         setStatusText(prof.status_text ?? "");
         setShowOnline(prof.is_online);
+        setGhostMode(!!prof.ghost_mode);
       }
+
       if (s) {
         setSettings({
           theme: (s as any).theme ?? "midnight",
@@ -126,6 +128,19 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     setShowOnline(val);
     await supabase.from("profiles").update({ is_online: val }).eq("id", user.id);
   };
+
+  const toggleGhostMode = async (val: boolean) => {
+    if (!user) return;
+    setGhostMode(val);
+    // When entering ghost mode, immediately appear offline.
+    const patch: Record<string, unknown> = { ghost_mode: val };
+    if (val) patch.is_online = false;
+    const { error } = await supabase.from("profiles").update(patch).eq("id", user.id);
+    if (error) { toast.error("Failed to update ghost mode"); setGhostMode(!val); return; }
+    if (val) setShowOnline(false);
+    toast.success(val ? "Ghost mode on — you appear offline" : "Ghost mode off");
+  };
+
 
   const handleDeleteAccount = async () => {
     if (!confirm("Are you sure? This action cannot be undone.")) return;
@@ -319,10 +334,11 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                         <ToggleSetting
                           icon={Ghost}
                           label="Ghost Mode"
-                          description="Hide from search and disable read receipts"
+                          description="Appear offline. Your online status and last seen are hidden from everyone."
                           value={ghostMode}
-                          onChange={setGhostMode}
+                          onChange={toggleGhostMode}
                         />
+
                       </div>
                     )}
 
