@@ -161,7 +161,8 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   if (!chatId) return null;
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-background" {...(chatTheme ? { "data-theme": chatTheme } : {})}>
+
       <input ref={fileInputRef} type="file" accept={acceptType} onChange={handleFile} className="hidden" />
 
       {/* Header */}
