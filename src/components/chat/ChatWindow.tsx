@@ -14,7 +14,8 @@ import { ChatProfileSheet } from "./ChatProfileSheet";
 import { ChatActionsSheet } from "./ChatActionsSheet";
 import { ChatSearchOverlay } from "./ChatSearchOverlay";
 import { useChatMemberState } from "@/hooks/useChatActions";
-import { Pin, BellOff } from "lucide-react";
+import { Pin, BellOff, Timer } from "lucide-react";
+
 
 interface ChatWindowProps {
   chatId: string | null;
@@ -39,7 +40,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const [acceptType, setAcceptType] = useState("image/*,video/*");
   const [uploading, setUploading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const { is_pinned, is_muted, cleared_at } = useChatMemberState(chatId);
+  const { is_pinned, is_muted, cleared_at, theme: chatTheme } = useChatMemberState(chatId);
 
   const visibleMessages = cleared_at
     ? messages.filter(m => new Date(m.created_at) > new Date(cleared_at))
