@@ -10,6 +10,7 @@ export interface ChatRow {
   avatar_url: string | null;
   created_at: string;
   updated_at: string;
+  disappear_seconds?: number | null;
 }
 
 export interface ChatMemberRow {
@@ -30,6 +31,7 @@ export interface MessageRow {
   reply_to: string | null;
   is_edited: boolean;
   created_at: string;
+  expires_at?: string | null;
 }
 
 interface DirectChatResult {
@@ -51,7 +53,9 @@ export interface ProfileRow {
   status_text: string | null;
   is_online: boolean;
   last_seen: string;
+  ghost_mode?: boolean;
 }
+
 
 export function useMyChats() {
   const { user } = useAuth();
@@ -182,7 +186,7 @@ export function useChatMessages(chatId: string | null) {
 
   useEffect(() => { fetchMessages(); }, [fetchMessages]);
 
-  // Realtime messages
+  // Realtime messages — handle inserts, updates and deletes (for disappearing)
   useEffect(() => {
     if (!chatId) return;
     const channel = supabase
@@ -200,10 +204,23 @@ export function useChatMessages(chatId: string | null) {
         }
         setMessages(prev => [...prev, { ...msg, sender: profileCache.current[msg.sender_id] }]);
       })
+      .on("postgres_changes", {
+        event: "DELETE",
+        schema: "public",
+        table: "messages",
+        filter: `chat_id=eq.${chatId}`,
+      }, (payload) => {
+        const old = payload.old as { id?: string };
+        if (old?.id) {
+          console.info("[Aura] message expired/deleted", { id: old.id });
+          setMessages(prev => prev.filter(m => m.id !== old.id));
+        }
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [chatId]);
+
 
   return { messages, loading, refetch: fetchMessages };
 }
