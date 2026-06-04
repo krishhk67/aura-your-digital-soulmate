@@ -227,10 +227,10 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
         </button>
 
         <div className="flex items-center gap-0.5">
-          <button onClick={() => toast("Voice calls — coming soon")} className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground">
+          <button disabled={blocked} onClick={() => toast("Voice calls — coming soon")} className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed">
             <Phone className="h-4 w-4" />
           </button>
-          <button onClick={() => toast("Video calls — coming soon")} className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground">
+          <button disabled={blocked} onClick={() => toast("Video calls — coming soon")} className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed">
             <Video className="h-4 w-4" />
           </button>
           <button onClick={() => setActionsOpen(true)} className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground">
