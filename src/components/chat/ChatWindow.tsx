@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { VoiceRecorder, MicButton } from "./VoiceRecorder";
 import { AudioMessage } from "./AudioMessage";
 import { ChatProfileSheet } from "./ChatProfileSheet";
+import { GroupInfoSheet } from "./GroupInfoSheet";
 import { ChatActionsSheet } from "./ChatActionsSheet";
 import { ChatSearchOverlay } from "./ChatSearchOverlay";
 import { useChatMemberState, useBlockUser, useIsBlocked, clearChatForMe } from "@/hooks/useChatActions";
