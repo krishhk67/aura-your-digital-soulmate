@@ -122,17 +122,17 @@ export function useMyChats() {
         is_pinned: meta?.is_pinned ?? false,
         is_muted: meta?.is_muted ?? false,
         cleared_at: meta?.cleared_at ?? null,
+        is_blocked: !!(other_user && blockedIds.has(other_user.id)),
       };
     }));
 
-    // Hide DMs with blocked users; sort pinned first, then by updated_at desc
-    const visible = enriched.filter(c => c.is_group || !c.other_user || !blockedIds.has(c.other_user.id));
-    visible.sort((a, b) => {
+    // Blocked chats stay visible — only restrict interaction inside.
+    enriched.sort((a, b) => {
       if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
       return new Date(b.updated_at ?? 0).getTime() - new Date(a.updated_at ?? 0).getTime();
     });
 
-    setChats(visible as typeof chats);
+    setChats(enriched as typeof chats);
     setLoading(false);
   }, [user]);
 
