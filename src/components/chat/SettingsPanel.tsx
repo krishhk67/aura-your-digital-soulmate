@@ -341,6 +341,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                           onChange={toggleGhostMode}
                         />
 
+                        <BlockedUsersSection />
                       </div>
                     )}
 
