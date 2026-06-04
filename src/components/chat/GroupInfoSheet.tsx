@@ -16,8 +16,8 @@ interface Props {
 
 interface MemberRow {
   user_id: string;
-  role: string;
-  joined_at: string;
+  role: string | null;
+  joined_at: string | null;
   profile: ProfileRow | null;
 }
 
@@ -84,7 +84,9 @@ export function GroupInfoSheet({ open, onClose, chat }: Props) {
   const saveField = async (field: "name" | "description") => {
     if (!chat) return;
     const value = field === "name" ? name.trim() : description.trim();
-    const { error } = await supabase.from("chats").update({ [field]: value || null }).eq("id", chat.id);
+    const payload: { name?: string | null; description?: string | null } =
+      field === "name" ? { name: value || null } : { description: value || null };
+    const { error } = await supabase.from("chats").update(payload).eq("id", chat.id);
     if (error) { toast.error(error.message); return; }
     toast.success("Updated");
     setEditing(null);
@@ -294,13 +296,14 @@ export function GroupInfoSheet({ open, onClose, chat }: Props) {
 
           <ConfirmDialog
             open={!!removeTarget}
-            onOpenChange={(v) => { if (!v) setRemoveTarget(null); }}
+            onClose={() => setRemoveTarget(null)}
             title="Remove member?"
             description={`${removeTarget?.profile?.display_name ?? "This member"} will be removed from the group.`}
             confirmLabel="Remove"
             destructive
-            onConfirm={() => removeTarget && removeMember(removeTarget)}
+            onConfirm={() => { if (removeTarget) removeMember(removeTarget); }}
           />
+
         </>
       )}
     </AnimatePresence>
