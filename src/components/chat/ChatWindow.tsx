@@ -42,6 +42,9 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const [uploading, setUploading] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const { is_pinned, is_muted, cleared_at, theme: chatTheme } = useChatMemberState(chatId);
+  const { blocked } = useIsBlocked(chatPartner?.id ?? null);
+  const { unblock } = useBlockUser();
+  const [clearOpen, setClearOpen] = useState(false);
 
   const visibleMessages = cleared_at
     ? messages.filter(m => new Date(m.created_at) > new Date(cleared_at))
