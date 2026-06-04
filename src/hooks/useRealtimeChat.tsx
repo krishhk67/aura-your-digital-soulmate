@@ -11,6 +11,8 @@ export interface ChatRow {
   created_at: string;
   updated_at: string;
   disappear_seconds?: number | null;
+  description?: string | null;
+  created_by?: string | null;
 }
 
 export interface ChatMemberRow {
