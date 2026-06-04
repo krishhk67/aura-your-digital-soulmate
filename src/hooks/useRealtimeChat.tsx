@@ -146,6 +146,7 @@ export function useMyChats() {
       .on("postgres_changes", { event: "*", schema: "public", table: "chats" }, () => fetchChats())
       .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => fetchChats())
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_members" }, () => fetchChats())
+      .on("postgres_changes", { event: "*", schema: "public", table: "blocked_users" }, () => fetchChats())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
