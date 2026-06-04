@@ -59,7 +59,7 @@ export interface ProfileRow {
 
 export function useMyChats() {
   const { user } = useAuth();
-  const [chats, setChats] = useState<(ChatRow & { last_message?: MessageRow; other_user?: ProfileRow; unread_count?: number; is_pinned?: boolean; is_muted?: boolean; cleared_at?: string | null })[]>([]);
+  const [chats, setChats] = useState<(ChatRow & { last_message?: MessageRow; other_user?: ProfileRow; unread_count?: number; is_pinned?: boolean; is_muted?: boolean; cleared_at?: string | null; is_blocked?: boolean })[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchChats = useCallback(async () => {
