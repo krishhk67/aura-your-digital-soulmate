@@ -13,8 +13,9 @@ import { AudioMessage } from "./AudioMessage";
 import { ChatProfileSheet } from "./ChatProfileSheet";
 import { ChatActionsSheet } from "./ChatActionsSheet";
 import { ChatSearchOverlay } from "./ChatSearchOverlay";
-import { useChatMemberState } from "@/hooks/useChatActions";
-import { Pin, BellOff, Timer } from "lucide-react";
+import { useChatMemberState, useBlockUser, useIsBlocked, clearChatForMe } from "@/hooks/useChatActions";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { Pin, BellOff, Timer, Ban, ShieldOff } from "lucide-react";
 
 
 interface ChatWindowProps {
