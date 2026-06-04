@@ -338,40 +338,82 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
         )}
       </AnimatePresence>
 
-      {/* Input bar */}
-      <div className="px-3 py-2 border-t border-border flex-shrink-0 bg-background/80 backdrop-blur-lg"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}>
-        {recording ? (
-          <VoiceRecorder onCancel={() => setRecording(false)} onSend={sendVoice} />
-        ) : (
-          <div className="flex items-end gap-2">
-            <button onClick={() => setAttachOpen(v => !v)} disabled={uploading}
-              className="h-10 w-10 rounded-full flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground flex-shrink-0 disabled:opacity-50">
-              {attachOpen ? <X className="h-5 w-5" /> : <Paperclip className="h-5 w-5" />}
-            </button>
-            <div className="flex-1 relative">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                placeholder={uploading ? "Uploading..." : "Message..."}
-                rows={1}
-                disabled={uploading}
-                className="w-full rounded-2xl bg-secondary/50 border border-border px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none max-h-24 disabled:opacity-60"
-              />
-            </div>
-            {input.trim() ? (
-              <motion.button initial={{ scale: 0 }} animate={{ scale: 1 }} whileTap={{ scale: 0.85 }} onClick={handleSend}
-                className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground hover:shadow-[0_0_15px_var(--neon-glow)] transition-all flex-shrink-0">
-                <Send className="h-4 w-4" />
-              </motion.button>
-            ) : (
-              <MicButton onClick={() => setRecording(true)} />
-            )}
+      {/* Input bar — or blocked actions */}
+      {blocked && !chatMeta?.is_group ? (
+        <div className="border-t border-border bg-background/85 backdrop-blur-lg px-4 py-3 space-y-3 flex-shrink-0"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 8px) + 8px)" }}>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-destructive/10 border border-destructive/30 rounded-xl px-3 py-2">
+            <Ban className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
+            <span>You blocked this user. Messaging, calls and media are disabled.</span>
           </div>
-        )}
-      </div>
+          <div className="grid grid-cols-2 gap-2">
+            <motion.button whileTap={{ scale: 0.97 }} onClick={() => setClearOpen(true)}
+              className="flex items-center justify-center gap-2 py-2.5 rounded-xl border border-border bg-secondary/40 hover:bg-secondary text-sm font-medium">
+              <Trash2 className="h-4 w-4 text-muted-foreground" />
+              Clear chat
+            </motion.button>
+            <motion.button whileTap={{ scale: 0.97 }}
+              onClick={async () => {
+                if (!chatPartner) return;
+                const { error } = await unblock(chatPartner.id);
+                if (error) return toast.error(error.message);
+                toast.success("User unblocked");
+              }}
+              className="flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:shadow-[0_0_15px_var(--neon-glow)] transition-all">
+              <ShieldOff className="h-4 w-4" />
+              Unblock
+            </motion.button>
+          </div>
+        </div>
+      ) : (
+        <div className="px-3 py-2 border-t border-border flex-shrink-0 bg-background/80 backdrop-blur-lg"
+          style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}>
+          {recording ? (
+            <VoiceRecorder onCancel={() => setRecording(false)} onSend={sendVoice} />
+          ) : (
+            <div className="flex items-end gap-2">
+              <button onClick={() => setAttachOpen(v => !v)} disabled={uploading}
+                className="h-10 w-10 rounded-full flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground flex-shrink-0 disabled:opacity-50">
+                {attachOpen ? <X className="h-5 w-5" /> : <Paperclip className="h-5 w-5" />}
+              </button>
+              <div className="flex-1 relative">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                  placeholder={uploading ? "Uploading..." : "Message..."}
+                  rows={1}
+                  disabled={uploading}
+                  className="w-full rounded-2xl bg-secondary/50 border border-border px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none max-h-24 disabled:opacity-60"
+                />
+              </div>
+              {input.trim() ? (
+                <motion.button initial={{ scale: 0 }} animate={{ scale: 1 }} whileTap={{ scale: 0.85 }} onClick={handleSend}
+                  className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground hover:shadow-[0_0_15px_var(--neon-glow)] transition-all flex-shrink-0">
+                  <Send className="h-4 w-4" />
+                </motion.button>
+              ) : (
+                <MicButton onClick={() => setRecording(true)} />
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={clearOpen} onClose={() => setClearOpen(false)}
+        title="Clear this chat?"
+        description="Messages will be hidden from your view. The other person will still see them."
+        confirmLabel="Clear" destructive
+        onConfirm={async () => {
+          if (!chatId || !user) return;
+          const { error } = await clearChatForMe(chatId, user.id);
+          if (error) return toast.error(error.message);
+          toast.success("Chat cleared from your view");
+        }}
+      />
+
 
       <ChatSearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} messages={visibleMessages} onJump={jumpTo} />
       <ChatProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} partner={chatPartner} chatId={chatId} />
