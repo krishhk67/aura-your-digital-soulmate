@@ -460,3 +460,57 @@ function ToggleSetting({ icon: Icon, iconOff, label, description, value, onChang
     </motion.button>
   );
 }
+
+function BlockedUsersSection() {
+  const { list, loading } = useBlockedList();
+  const { unblock } = useBlockUser();
+
+  return (
+    <div className="rounded-xl border border-border bg-secondary/20 overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+        <Shield className="h-4 w-4 text-neon" />
+        <p className="text-sm font-semibold">Blocked Users</p>
+        <span className="ml-auto text-[10px] text-muted-foreground">{list.length}</span>
+      </div>
+      {loading ? (
+        <div className="py-6 flex justify-center"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
+      ) : list.length === 0 ? (
+        <p className="text-xs text-muted-foreground px-4 py-5 text-center">You haven't blocked anyone.</p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {list.map(b => (
+            <li key={b.id} className="flex items-center gap-3 px-4 py-2.5">
+              {b.profile?.avatar_url ? (
+                <img src={b.profile.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover" />
+              ) : (
+                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center text-xs font-bold">
+                  {b.profile?.display_name?.charAt(0)?.toUpperCase() ?? "?"}
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium truncate">{b.profile?.display_name ?? "Unknown"}</p>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  {b.profile?.username ? `@${b.profile.username} · ` : ""}
+                  blocked {formatDistanceToNow(new Date(b.created_at), { addSuffix: true })}
+                </p>
+              </div>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={async () => {
+                  const { error } = await unblock(b.blocked_id);
+                  if (error) toast.error(error.message);
+                  else toast.success("User unblocked");
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/15 text-primary text-xs font-semibold hover:bg-primary/25 transition-colors"
+              >
+                <ShieldOff className="h-3.5 w-3.5" />
+                Unblock
+              </motion.button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
