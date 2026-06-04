@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Paperclip, ArrowLeft, Phone, Video, MoreVertical, CheckCheck, Image as ImageIcon, FileText, Film, X } from "lucide-react";
+import { Send, Paperclip, ArrowLeft, Phone, Video, MoreVertical, CheckCheck, Image as ImageIcon, FileText, Film, X, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useChatMessages, useSendMessage } from "@/hooks/useRealtimeChat";
 import { useAuth } from "@/hooks/useAuth";
