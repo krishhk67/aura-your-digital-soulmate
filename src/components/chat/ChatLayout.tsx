@@ -68,15 +68,9 @@ export function ChatLayout() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="absolute inset-0 flex items-center justify-center"
+              className="absolute inset-0"
             >
-              <div className="text-center px-8">
-                <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <span className="text-3xl">📸</span>
-                </div>
-                <h2 className="font-display text-lg font-bold gradient-text mb-2">Stories</h2>
-                <p className="text-sm text-muted-foreground">Share moments that disappear in 24 hours</p>
-              </div>
+              <StoriesView />
             </motion.div>
           ) : activeTab === "calls" ? (
             <motion.div
