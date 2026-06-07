@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Paperclip, ArrowLeft, Phone, Video, MoreVertical, CheckCheck, Image as ImageIcon, FileText, Film, X, Trash2 } from "lucide-react";
+import { Send, Paperclip, ArrowLeft, Phone, Video, MoreVertical, CheckCheck, Image as ImageIcon, FileText, Film, X, Trash2, Sparkles } from "lucide-react";
+import { AiToolsSheet } from "./AiToolsSheet";
 import { cn } from "@/lib/utils";
 import { useChatMessages, useSendMessage } from "@/hooks/useRealtimeChat";
 import { useAuth } from "@/hooks/useAuth";
@@ -46,6 +47,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const { blocked } = useIsBlocked(chatPartner?.id ?? null);
   const { unblock } = useBlockUser();
   const [clearOpen, setClearOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
 
   const visibleMessages = cleared_at
     ? messages.filter(m => new Date(m.created_at) > new Date(cleared_at))
@@ -377,6 +379,11 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                 className="h-10 w-10 rounded-full flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground flex-shrink-0 disabled:opacity-50">
                 {attachOpen ? <X className="h-5 w-5" /> : <Paperclip className="h-5 w-5" />}
               </button>
+              <button onClick={() => setAiOpen(true)} disabled={uploading}
+                className="h-10 w-10 rounded-full flex items-center justify-center hover:bg-secondary transition-colors text-neon flex-shrink-0 disabled:opacity-50"
+                title="AI tools">
+                <Sparkles className="h-5 w-5" />
+              </button>
               <div className="flex-1 relative">
                 <textarea
                   ref={inputRef}
@@ -427,6 +434,13 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
         chatId={chatId} partnerId={chatPartner?.id ?? null} isGroup={!!chatMeta?.is_group}
         onOpenProfile={() => setProfileOpen(true)}
         onSearch={() => setSearchOpen(true)}
+      />
+      <AiToolsSheet
+        open={aiOpen} onClose={() => setAiOpen(false)}
+        messages={visibleMessages} currentUserId={user?.id}
+        draft={input}
+        onUseReply={(t) => setInput(t)}
+        onUseRewrite={(t) => setInput(t)}
       />
     </div>
   );
