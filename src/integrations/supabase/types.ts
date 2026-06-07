@@ -321,6 +321,7 @@ export type Database = {
           created_at: string | null
           expires_at: string
           id: string
+          media_type: string
           media_url: string
           user_id: string
         }
@@ -329,6 +330,7 @@ export type Database = {
           created_at?: string | null
           expires_at?: string
           id?: string
+          media_type?: string
           media_url: string
           user_id: string
         }
@@ -337,10 +339,72 @@ export type Database = {
           created_at?: string | null
           expires_at?: string
           id?: string
+          media_type?: string
           media_url?: string
           user_id?: string
         }
         Relationships: []
+      }
+      story_reactions: {
+        Row: {
+          created_at: string
+          id: string
+          reaction: string
+          story_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reaction: string
+          story_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reaction?: string
+          story_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_reactions_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      story_views: {
+        Row: {
+          id: string
+          story_id: string
+          viewed_at: string
+          viewer_id: string
+        }
+        Insert: {
+          id?: string
+          story_id: string
+          viewed_at?: string
+          viewer_id: string
+        }
+        Update: {
+          id?: string
+          story_id?: string
+          viewed_at?: string
+          viewer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_views_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_settings: {
         Row: {
@@ -348,6 +412,9 @@ export type Database = {
           id: string
           notifications_enabled: boolean | null
           sound_enabled: boolean | null
+          stories_privacy: string
+          story_hidden_from: string[]
+          story_replies_privacy: string
           theme: string | null
           updated_at: string | null
           user_id: string
@@ -357,6 +424,9 @@ export type Database = {
           id?: string
           notifications_enabled?: boolean | null
           sound_enabled?: boolean | null
+          stories_privacy?: string
+          story_hidden_from?: string[]
+          story_replies_privacy?: string
           theme?: string | null
           updated_at?: string | null
           user_id: string
@@ -366,6 +436,9 @@ export type Database = {
           id?: string
           notifications_enabled?: boolean | null
           sound_enabled?: boolean | null
+          stories_privacy?: string
+          story_hidden_from?: string[]
+          story_replies_privacy?: string
           theme?: string | null
           updated_at?: string | null
           user_id?: string
@@ -377,6 +450,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_view_stories: {
+        Args: { _author: string; _viewer: string }
+        Returns: boolean
+      }
       cleanup_expired_messages: { Args: never; Returns: undefined }
       get_or_create_direct_chat: {
         Args: { _other_user_id: string }
@@ -390,6 +467,7 @@ export type Database = {
         Args: { _chat_id: string; _user_id: string }
         Returns: boolean
       }
+      users_share_dm: { Args: { _a: string; _b: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
