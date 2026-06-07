@@ -7,6 +7,7 @@ import { BottomNav, type NavTab } from "./BottomNav";
 import { SettingsPanel } from "./SettingsPanel";
 import { RoomsView } from "./RoomsView";
 import { ProfileView } from "./ProfileView";
+import { StoriesView } from "./StoriesView";
 import { useAuth } from "@/hooks/useAuth";
 
 export function ChatLayout() {
