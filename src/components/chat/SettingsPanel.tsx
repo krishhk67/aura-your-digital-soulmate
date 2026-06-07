@@ -9,6 +9,7 @@ import { useTheme, THEMES, type ThemeId } from "@/hooks/useTheme";
 import { supabase } from "@/integrations/supabase/client";
 import type { ProfileRow } from "@/hooks/useRealtimeChat";
 import { useBlockedList, useBlockUser } from "@/hooks/useChatActions";
+import { useStoryPrivacy } from "@/hooks/useStories";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
@@ -341,6 +342,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                           onChange={toggleGhostMode}
                         />
 
+                        <StoriesPrivacySection />
                         <BlockedUsersSection />
                       </div>
                     )}
@@ -510,6 +512,62 @@ function BlockedUsersSection() {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function StoriesPrivacySection() {
+  const { privacy, loading, update } = useStoryPrivacy();
+  if (loading) return null;
+  const opts: { value: "everyone" | "contacts" | "nobody"; label: string }[] = [
+    { value: "everyone", label: "Everyone" },
+    { value: "contacts", label: "Contacts" },
+    { value: "nobody", label: "Nobody" },
+  ];
+  return (
+    <div className="rounded-xl border border-border bg-secondary/20 overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
+        <Sparkles className="h-4 w-4 text-neon" />
+        <p className="text-sm font-semibold">Stories Privacy</p>
+      </div>
+      <div className="p-4 space-y-4">
+        <div>
+          <p className="text-xs text-muted-foreground mb-2">Who can view my stories</p>
+          <div className="grid grid-cols-3 gap-2">
+            {opts.map(o => (
+              <button
+                key={o.value}
+                onClick={() => update({ stories_privacy: o.value })}
+                className={`py-2 rounded-lg text-xs font-medium border transition-colors ${
+                  privacy.stories_privacy === o.value
+                    ? "bg-primary/20 text-primary border-primary/40"
+                    : "border-border text-muted-foreground hover:bg-secondary"
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground mb-2">Who can reply to my stories</p>
+          <div className="grid grid-cols-3 gap-2">
+            {opts.map(o => (
+              <button
+                key={o.value}
+                onClick={() => update({ story_replies_privacy: o.value })}
+                className={`py-2 rounded-lg text-xs font-medium border transition-colors ${
+                  privacy.story_replies_privacy === o.value
+                    ? "bg-primary/20 text-primary border-primary/40"
+                    : "border-border text-muted-foreground hover:bg-secondary"
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
