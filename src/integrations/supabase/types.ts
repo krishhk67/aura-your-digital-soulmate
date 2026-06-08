@@ -315,6 +315,154 @@ export type Database = {
         }
         Relationships: []
       }
+      room_members: {
+        Row: {
+          id: string
+          joined_at: string
+          role: string
+          room_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          role?: string
+          room_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          role?: string
+          room_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_members_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_message_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "room_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_messages: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          media_url: string | null
+          message_type: string
+          reply_to: string | null
+          room_id: string
+          sender_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          reply_to?: string | null
+          room_id: string
+          sender_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          reply_to?: string | null
+          room_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_messages_reply_to_fkey"
+            columns: ["reply_to"]
+            isOneToOne: false
+            referencedRelation: "room_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          invite_code: string | null
+          is_private: boolean
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          invite_code?: string | null
+          is_private?: boolean
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          invite_code?: string | null
+          is_private?: boolean
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stories: {
         Row: {
           caption: string | null
@@ -467,6 +615,16 @@ export type Database = {
         Args: { _chat_id: string; _user_id: string }
         Returns: boolean
       }
+      is_room_member: {
+        Args: { _room: string; _user: string }
+        Returns: boolean
+      }
+      join_room: {
+        Args: { _invite_code?: string; _room_id: string }
+        Returns: string
+      }
+      join_room_by_code: { Args: { _invite_code: string }; Returns: string }
+      room_role: { Args: { _room: string; _user: string }; Returns: string }
       users_share_dm: { Args: { _a: string; _b: string }; Returns: boolean }
     }
     Enums: {
