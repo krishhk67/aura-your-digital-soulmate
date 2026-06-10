@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Paperclip, ArrowLeft, Phone, Video, MoreVertical, CheckCheck, Image as ImageIcon, FileText, Film, X, Trash2, Sparkles } from "lucide-react";
 import { AiToolsSheet } from "./AiToolsSheet";
+import { SmartReplyBar } from "./SmartReplyBar";
+import { MoodIndicator, MOOD_META, type MoodId } from "./MoodIndicator";
 import { cn } from "@/lib/utils";
 import { useChatMessages, useSendMessage } from "@/hooks/useRealtimeChat";
 import { useAuth } from "@/hooks/useAuth";
@@ -48,6 +50,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const { unblock } = useBlockUser();
   const [clearOpen, setClearOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [mood, setMood] = useState<MoodId | null>(null);
 
   const visibleMessages = cleared_at
     ? messages.filter(m => new Date(m.created_at) > new Date(cleared_at))
@@ -113,6 +116,12 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
     inputRef.current?.focus();
   };
 
+  const sendText = async (text: string) => {
+    if (!text.trim() || !chatId) return;
+    const { error } = await sendMessage(chatId, text);
+    if (error) toast.error(error.message);
+  };
+
   const uploadAndSend = async (file: File) => {
     if (!chatId || !user) return;
     setUploading(true);
@@ -167,8 +176,14 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
 
   if (!chatId) return null;
 
+  const moodGlow = mood ? MOOD_META[mood].accent : undefined;
+
   return (
-    <div className="h-full flex flex-col bg-background" {...(chatTheme ? { "data-theme": chatTheme } : {})}>
+    <div className="h-full flex flex-col bg-background relative" {...(chatTheme ? { "data-theme": chatTheme } : {})}>
+      {moodGlow && (
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 -z-0 transition-opacity duration-700"
+          style={{ background: `radial-gradient(ellipse at top, ${moodGlow}, transparent 70%)` }} />
+      )}
 
       <input ref={fileInputRef} type="file" accept={acceptType} onChange={handleFile} className="hidden" />
 
@@ -204,10 +219,13 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
             )}
           </div>
           <div className="min-w-0">
-            <h3 className="font-semibold text-sm truncate">
-              {chatMeta?.is_group
-                ? (chatMeta.name ?? "Group")
-                : (chatPartner?.display_name ?? (chatMeta ? "User" : "Loading..."))}
+            <h3 className="font-semibold text-sm truncate flex items-center gap-1.5">
+              <span className="truncate">
+                {chatMeta?.is_group
+                  ? (chatMeta.name ?? "Group")
+                  : (chatPartner?.display_name ?? (chatMeta ? "User" : "Loading..."))}
+              </span>
+              <MoodIndicator messages={visibleMessages} currentUserId={user?.id} onMoodChange={setMood} />
             </h3>
             <p className="text-[11px] text-accent flex items-center gap-1">
               {is_pinned && <Pin className="h-2.5 w-2.5" />}
@@ -226,6 +244,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
               </span>
             </p>
           </div>
+
 
         </button>
 
@@ -369,7 +388,16 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
           </div>
         </div>
       ) : (
-        <div className="px-3 py-2 border-t border-border flex-shrink-0 bg-background/80 backdrop-blur-lg"
+        <div className="flex-shrink-0">
+          {!recording && (
+            <SmartReplyBar
+              messages={visibleMessages}
+              currentUserId={user?.id}
+              onInsert={(t) => { setInput(t); inputRef.current?.focus(); }}
+              onSend={(t) => void sendText(t)}
+            />
+          )}
+        <div className="px-3 py-2 border-t border-border bg-background/80 backdrop-blur-lg"
           style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}>
           {recording ? (
             <VoiceRecorder onCancel={() => setRecording(false)} onSend={sendVoice} />
@@ -406,6 +434,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
               )}
             </div>
           )}
+        </div>
         </div>
       )}
 
