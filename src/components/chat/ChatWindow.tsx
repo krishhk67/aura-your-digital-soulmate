@@ -170,8 +170,14 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
 
   if (!chatId) return null;
 
+  const moodGlow = mood ? MOOD_META[mood].accent : undefined;
+
   return (
-    <div className="h-full flex flex-col bg-background" {...(chatTheme ? { "data-theme": chatTheme } : {})}>
+    <div className="h-full flex flex-col bg-background relative" {...(chatTheme ? { "data-theme": chatTheme } : {})}>
+      {moodGlow && (
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 -z-0 transition-opacity duration-700"
+          style={{ background: `radial-gradient(ellipse at top, ${moodGlow}, transparent 70%)` }} />
+      )}
 
       <input ref={fileInputRef} type="file" accept={acceptType} onChange={handleFile} className="hidden" />
 
