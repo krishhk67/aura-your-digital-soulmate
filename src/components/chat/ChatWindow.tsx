@@ -213,10 +213,13 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
             )}
           </div>
           <div className="min-w-0">
-            <h3 className="font-semibold text-sm truncate">
-              {chatMeta?.is_group
-                ? (chatMeta.name ?? "Group")
-                : (chatPartner?.display_name ?? (chatMeta ? "User" : "Loading..."))}
+            <h3 className="font-semibold text-sm truncate flex items-center gap-1.5">
+              <span className="truncate">
+                {chatMeta?.is_group
+                  ? (chatMeta.name ?? "Group")
+                  : (chatPartner?.display_name ?? (chatMeta ? "User" : "Loading..."))}
+              </span>
+              <MoodIndicator messages={visibleMessages} currentUserId={user?.id} onMoodChange={setMood} />
             </h3>
             <p className="text-[11px] text-accent flex items-center gap-1">
               {is_pinned && <Pin className="h-2.5 w-2.5" />}
@@ -235,6 +238,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
               </span>
             </p>
           </div>
+
 
         </button>
 
