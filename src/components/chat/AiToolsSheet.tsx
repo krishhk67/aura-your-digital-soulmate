@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Wand2, FileText, Smile, Loader2, Copy, Check } from "lucide-react";
+import { Sparkles, Wand2, FileText, Smile, Loader2, Copy, Check, SpellCheck, Minimize2, Maximize2 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { smartReplies, rewriteTone, summarizeChat, detectMood } from "@/lib/ai-chat.functions";
+import {
+  smartReplies, rewriteTone, summarizeChat, detectMood,
+  fixGrammar, shortenMessage, expandMessage,
+} from "@/lib/ai-chat.functions";
 import type { MessageRow, ProfileRow } from "@/hooks/useRealtimeChat";
 
 interface Props {
@@ -16,16 +19,19 @@ interface Props {
   onUseRewrite: (text: string) => void;
 }
 
-type Tab = "replies" | "rewrite" | "summary" | "mood";
-type Tone = "friendly" | "professional" | "flirty" | "concise" | "funny" | "supportive";
+type Tab = "replies" | "rewrite" | "grammar" | "shorten" | "expand" | "summary" | "mood";
+type Tone = "friendly" | "professional" | "flirty" | "concise" | "funny" | "supportive" | "formal" | "confident" | "genz";
 
 const TONES: { id: Tone; label: string }[] = [
   { id: "friendly", label: "Friendly" },
   { id: "professional", label: "Professional" },
-  { id: "flirty", label: "Flirty" },
-  { id: "concise", label: "Concise" },
+  { id: "formal", label: "Formal" },
+  { id: "confident", label: "Confident" },
   { id: "funny", label: "Funny" },
+  { id: "flirty", label: "Flirty" },
   { id: "supportive", label: "Supportive" },
+  { id: "concise", label: "Concise" },
+  { id: "genz", label: "Gen-Z" },
 ];
 
 export function AiToolsSheet({ open, onClose, messages, currentUserId, draft, onUseReply, onUseRewrite }: Props) {
@@ -36,12 +42,16 @@ export function AiToolsSheet({ open, onClose, messages, currentUserId, draft, on
   const [tone, setTone] = useState<Tone>("friendly");
   const [summary, setSummary] = useState<string>("");
   const [mood, setMood] = useState<{ mood: string; emoji: string; summary: string } | null>(null);
+  const [singleOut, setSingleOut] = useState<string>("");
   const [copied, setCopied] = useState<string | null>(null);
 
   const fnReplies = useServerFn(smartReplies);
   const fnRewrite = useServerFn(rewriteTone);
   const fnSummary = useServerFn(summarizeChat);
   const fnMood = useServerFn(detectMood);
+  const fnGrammar = useServerFn(fixGrammar);
+  const fnShorten = useServerFn(shortenMessage);
+  const fnExpand = useServerFn(expandMessage);
 
   const transcript = messages.slice(-20)
     .filter((m) => (m.message_type === "text" || !m.message_type) && m.content)
@@ -71,6 +81,11 @@ export function AiToolsSheet({ open, onClose, messages, currentUserId, draft, on
         if (!transcript.length) { toast.error("No messages yet to analyze."); return; }
         const r = await fnMood({ data: { messages: transcript } });
         setMood(r);
+      } else if (which === "grammar" || which === "shorten" || which === "expand") {
+        if (!draft.trim()) { toast.error("Type a draft message first."); return; }
+        const fn = which === "grammar" ? fnGrammar : which === "shorten" ? fnShorten : fnExpand;
+        const r = await fn({ data: { text: draft } });
+        setSingleOut(r.text);
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "AI request failed");
@@ -88,9 +103,22 @@ export function AiToolsSheet({ open, onClose, messages, currentUserId, draft, on
   const tabs: { id: Tab; icon: typeof Sparkles; label: string }[] = [
     { id: "replies", icon: Sparkles, label: "Replies" },
     { id: "rewrite", icon: Wand2, label: "Rewrite" },
+    { id: "grammar", icon: SpellCheck, label: "Grammar" },
+    { id: "shorten", icon: Minimize2, label: "Shorten" },
+    { id: "expand", icon: Maximize2, label: "Expand" },
     { id: "summary", icon: FileText, label: "Summary" },
     { id: "mood", icon: Smile, label: "Mood" },
   ];
+
+  const runLabel: Record<Tab, string> = {
+    replies: "Suggest replies",
+    rewrite: "Rewrite my draft",
+    grammar: "Fix grammar",
+    shorten: "Shorten message",
+    expand: "Expand message",
+    summary: "Summarize chat",
+    mood: "Analyze mood",
+  };
 
   return (
     <AnimatePresence>
@@ -110,10 +138,10 @@ export function AiToolsSheet({ open, onClose, messages, currentUserId, draft, on
               <span className="text-[10px] text-muted-foreground ml-auto">Powered by Lovable AI</span>
             </div>
 
-            <div className="px-3 grid grid-cols-4 gap-1 mb-3">
+            <div className="px-3 flex gap-1 mb-3 overflow-x-auto scrollbar-none">
               {tabs.map((t) => (
                 <button key={t.id} onClick={() => setTab(t.id)}
-                  className={`flex flex-col items-center gap-1 py-2 rounded-xl text-[11px] font-medium transition-colors ${tab === t.id ? "bg-primary/20 text-neon" : "text-muted-foreground hover:bg-secondary/60"}`}>
+                  className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-[11px] font-medium transition-colors min-w-[64px] ${tab === t.id ? "bg-primary/20 text-neon" : "text-muted-foreground hover:bg-secondary/60"}`}>
                   <t.icon className="h-4 w-4" />
                   {t.label}
                 </button>
@@ -132,10 +160,16 @@ export function AiToolsSheet({ open, onClose, messages, currentUserId, draft, on
                 </div>
               )}
 
+              {(tab === "rewrite" || tab === "grammar" || tab === "shorten" || tab === "expand") && (
+                <div className="text-[11px] text-muted-foreground">
+                  Draft: <span className="text-foreground">{draft.trim() ? `"${draft.trim().slice(0, 80)}${draft.length > 80 ? "…" : ""}"` : "(empty — type in the input first)"}</span>
+                </div>
+              )}
+
               <button onClick={() => run(tab)} disabled={loading}
                 className="w-full h-10 rounded-xl bg-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-60 hover:shadow-[0_0_15px_var(--neon-glow)] transition-all">
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {loading ? "Thinking..." : tab === "replies" ? "Suggest replies" : tab === "rewrite" ? "Rewrite my draft" : tab === "summary" ? "Summarize chat" : "Analyze mood"}
+                {loading ? "Thinking..." : runLabel[tab]}
               </button>
 
               {tab === "replies" && replies.length > 0 && (
@@ -157,17 +191,11 @@ export function AiToolsSheet({ open, onClose, messages, currentUserId, draft, on
               )}
 
               {tab === "rewrite" && rewrite && (
-                <div className="glass-panel rounded-2xl p-3 border border-glass-border">
-                  <p className="text-sm mb-2 whitespace-pre-wrap">{rewrite}</p>
-                  <div className="flex gap-2">
-                    <button onClick={() => { onUseRewrite(rewrite); onClose(); }}
-                      className="flex-1 h-8 rounded-lg bg-primary/20 text-neon text-xs font-medium hover:bg-primary/30">Use rewrite</button>
-                    <button onClick={() => copy(rewrite)}
-                      className="h-8 px-3 rounded-lg bg-secondary text-xs hover:bg-secondary/80 flex items-center gap-1">
-                      {copied === rewrite ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                    </button>
-                  </div>
-                </div>
+                <ResultCard text={rewrite} copied={copied} onCopy={copy} onUse={() => { onUseRewrite(rewrite); onClose(); }} useLabel="Use rewrite" />
+              )}
+
+              {(tab === "grammar" || tab === "shorten" || tab === "expand") && singleOut && (
+                <ResultCard text={singleOut} copied={copied} onCopy={copy} onUse={() => { onUseRewrite(singleOut); onClose(); }} useLabel="Use in input" />
               )}
 
               {tab === "summary" && summary && (
@@ -192,5 +220,24 @@ export function AiToolsSheet({ open, onClose, messages, currentUserId, draft, on
         </>
       )}
     </AnimatePresence>
+  );
+}
+
+function ResultCard({ text, copied, onCopy, onUse, useLabel }: {
+  text: string; copied: string | null;
+  onCopy: (t: string) => void; onUse: () => void; useLabel: string;
+}) {
+  return (
+    <div className="glass-panel rounded-2xl p-3 border border-glass-border">
+      <p className="text-sm mb-2 whitespace-pre-wrap">{text}</p>
+      <div className="flex gap-2">
+        <button onClick={onUse}
+          className="flex-1 h-8 rounded-lg bg-primary/20 text-neon text-xs font-medium hover:bg-primary/30">{useLabel}</button>
+        <button onClick={() => onCopy(text)}
+          className="h-8 px-3 rounded-lg bg-secondary text-xs hover:bg-secondary/80 flex items-center gap-1">
+          {copied === text ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+        </button>
+      </div>
+    </div>
   );
 }
