@@ -116,6 +116,12 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
     inputRef.current?.focus();
   };
 
+  const sendText = async (text: string) => {
+    if (!text.trim() || !chatId) return;
+    const { error } = await sendMessage(chatId, text);
+    if (error) toast.error(error.message);
+  };
+
   const uploadAndSend = async (file: File) => {
     if (!chatId || !user) return;
     setUploading(true);
