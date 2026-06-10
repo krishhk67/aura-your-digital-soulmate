@@ -50,6 +50,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const { unblock } = useBlockUser();
   const [clearOpen, setClearOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [mood, setMood] = useState<MoodId | null>(null);
 
   const visibleMessages = cleared_at
     ? messages.filter(m => new Date(m.created_at) > new Date(cleared_at))
