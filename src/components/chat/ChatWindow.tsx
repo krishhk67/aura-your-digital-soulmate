@@ -435,6 +435,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
             </div>
           )}
         </div>
+        </div>
       )}
 
       <ConfirmDialog
