@@ -107,18 +107,20 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
                 <div className="relative flex-shrink-0">
                   {(() => {
                     const hasStory = !chat.is_group && chat.other_user && storyUsers.has(chat.other_user.id);
-                    const inner = avatar?.startsWith("http") ? (
-                      <img src={avatar} alt="" className="h-14 w-14 rounded-full object-cover" />
+                    const innerImg = avatar?.startsWith("http") ? (
+                      <img src={avatar} alt="" className="h-full w-full rounded-full object-cover" />
                     ) : (
-                      <div className="h-14 w-14 rounded-full bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center text-lg font-bold">
+                      <div className="h-full w-full rounded-full bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center text-lg font-bold">
                         {chat.is_group ? "👥" : displayName?.charAt(0)?.toUpperCase() || "?"}
                       </div>
                     );
                     return hasStory ? (
-                      <div className="h-[60px] w-[60px] rounded-full p-[2px] bg-gradient-to-tr from-primary via-accent to-primary">
-                        <div className="h-full w-full rounded-full bg-background p-[2px]">{inner}</div>
+                      <div className="h-14 w-14 rounded-full p-[2px] bg-gradient-to-tr from-primary via-accent to-primary">
+                        <div className="h-full w-full rounded-full bg-background p-[2px]">
+                          <div className="h-full w-full rounded-full overflow-hidden">{innerImg}</div>
+                        </div>
                       </div>
-                    ) : inner;
+                    ) : <div className="h-14 w-14">{innerImg}</div>;
                   })()}
                   {isOnline && (
                     <div className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full bg-accent border-2 border-background" />
