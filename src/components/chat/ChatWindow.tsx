@@ -388,7 +388,16 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
           </div>
         </div>
       ) : (
-        <div className="px-3 py-2 border-t border-border flex-shrink-0 bg-background/80 backdrop-blur-lg"
+        <div className="flex-shrink-0">
+          {!recording && (
+            <SmartReplyBar
+              messages={visibleMessages}
+              currentUserId={user?.id}
+              onInsert={(t) => { setInput(t); inputRef.current?.focus(); }}
+              onSend={(t) => void sendText(t)}
+            />
+          )}
+        <div className="px-3 py-2 border-t border-border bg-background/80 backdrop-blur-lg"
           style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}>
           {recording ? (
             <VoiceRecorder onCancel={() => setRecording(false)} onSend={sendVoice} />
