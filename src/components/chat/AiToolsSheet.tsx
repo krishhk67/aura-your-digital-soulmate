@@ -7,6 +7,7 @@ import {
   smartReplies, rewriteTone, summarizeChat, detectMood,
   fixGrammar, shortenMessage, expandMessage,
 } from "@/lib/ai-chat.functions";
+import { aiCall, AiError } from "@/lib/ai-client";
 import type { MessageRow, ProfileRow } from "@/hooks/useRealtimeChat";
 
 interface Props {
@@ -66,29 +67,30 @@ export function AiToolsSheet({ open, onClose, messages, currentUserId, draft, on
       setLoading(true);
       if (which === "replies") {
         if (!transcript.length) { toast.error("No messages yet to analyze."); return; }
-        const r = await fnReplies({ data: { messages: transcript } });
-        setReplies(r.replies);
-        if (!r.replies.length) toast("No replies suggested.");
+        const r = await aiCall("smartReplies", { messages: transcript }, fnReplies, { ttlMs: 90_000 });
+        setReplies((r as { replies: string[] }).replies);
+        if (!(r as { replies: string[] }).replies.length) toast("No replies suggested.");
       } else if (which === "rewrite") {
         if (!draft.trim()) { toast.error("Type a draft message first."); return; }
-        const r = await fnRewrite({ data: { text: draft, tone } });
-        setRewrite(r.text);
+        const r = await aiCall("rewriteTone", { text: draft, tone }, fnRewrite);
+        setRewrite((r as { text: string }).text);
       } else if (which === "summary") {
         if (!transcript.length) { toast.error("No messages yet to summarize."); return; }
-        const r = await fnSummary({ data: { messages: transcript } });
-        setSummary(r.summary);
+        const r = await aiCall("summarizeChat", { messages: transcript }, fnSummary, { ttlMs: 120_000 });
+        setSummary((r as { summary: string }).summary);
       } else if (which === "mood") {
         if (!transcript.length) { toast.error("No messages yet to analyze."); return; }
-        const r = await fnMood({ data: { messages: transcript } });
-        setMood(r);
+        const r = await aiCall("detectMood", { messages: transcript }, fnMood, { ttlMs: 120_000 });
+        setMood(r as { mood: string; emoji: string; summary: string });
       } else if (which === "grammar" || which === "shorten" || which === "expand") {
         if (!draft.trim()) { toast.error("Type a draft message first."); return; }
         const fn = which === "grammar" ? fnGrammar : which === "shorten" ? fnShorten : fnExpand;
-        const r = await fn({ data: { text: draft } });
-        setSingleOut(r.text);
+        const r = await aiCall(which, { text: draft }, fn);
+        setSingleOut((r as { text: string }).text);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "AI request failed");
+      const msg = e instanceof AiError ? e.userMessage : e instanceof Error ? e.message : "AI request failed";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
