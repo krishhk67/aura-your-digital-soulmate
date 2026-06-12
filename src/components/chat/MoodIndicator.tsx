@@ -33,7 +33,7 @@ export function MoodIndicator({ messages, currentUserId, onMoodChange }: Props) 
   const fn = useServerFn(detectMood);
 
   // Reset mood when switching chats — never auto-call AI on tab/chat change.
-  const conversationKey = messages[0]?.conversation_id ?? "";
+  const conversationKey = messages[0]?.chat_id ?? "";
   useEffect(() => {
     setMood(null);
     onMoodChange?.("neutral");
