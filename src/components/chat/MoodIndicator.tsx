@@ -1,7 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Loader2, Smile } from "lucide-react";
+import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { detectMood } from "@/lib/ai-chat.functions";
+import { aiCall, AiError } from "@/lib/ai-client";
 import type { MessageRow, ProfileRow } from "@/hooks/useRealtimeChat";
 
 export type MoodId =
@@ -26,53 +29,71 @@ interface Props {
 
 export function MoodIndicator({ messages, currentUserId, onMoodChange }: Props) {
   const [mood, setMood] = useState<MoodId | null>(null);
+  const [loading, setLoading] = useState(false);
   const fn = useServerFn(detectMood);
-  const lastSigRef = useRef<string>("");
 
+  // Reset mood when switching chats — never auto-call AI on tab/chat change.
+  const conversationKey = messages[0]?.chat_id ?? "";
   useEffect(() => {
-    const textMsgs = messages.filter((m) => (!m.message_type || m.message_type === "text") && m.content);
-    if (textMsgs.length < 3) return;
-    // Re-evaluate every 5 new messages, or when the last id changes substantially
-    const last = textMsgs[textMsgs.length - 1];
-    const sig = `${textMsgs.length - (textMsgs.length % 5)}:${last.id}`;
-    if (sig === lastSigRef.current) return;
-    // Only re-fetch on every 5th message after the first analysis
-    if (lastSigRef.current && textMsgs.length % 5 !== 0) return;
-    lastSigRef.current = sig;
+    setMood(null);
+    onMoodChange?.("neutral");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationKey]);
 
+  const analyze = async () => {
+    const textMsgs = messages.filter((m) => (!m.message_type || m.message_type === "text") && m.content);
+    if (textMsgs.length < 2) {
+      toast("Not enough messages yet to analyze mood.");
+      return;
+    }
     const transcript = textMsgs.slice(-14).map((m) => ({
       sender: m.sender_id === currentUserId ? "Me" : m.sender?.display_name ?? "Them",
       content: m.content as string,
     }));
+    setLoading(true);
+    try {
+      const r = await aiCall("detectMood", { messages: transcript }, fn, { ttlMs: 120_000 });
+      const parsed = r as { mood?: string };
+      const id = ((parsed.mood as MoodId) in MOOD_META ? parsed.mood : "neutral") as MoodId;
+      setMood(id);
+      onMoodChange?.(id);
+    } catch (e) {
+      toast.error(e instanceof AiError ? e.userMessage : "AI temporarily unavailable.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    (async () => {
-      try {
-        const r = await fn({ data: { messages: transcript } });
-        const id = (r.mood as MoodId) in MOOD_META ? (r.mood as MoodId) : "neutral";
-        setMood(id);
-        onMoodChange?.(id);
-      } catch {
-        /* silent */
-      }
-    })();
-  }, [messages, currentUserId, fn, onMoodChange]);
+  if (!mood) {
+    return (
+      <button
+        onClick={analyze}
+        disabled={loading}
+        className="inline-flex items-center gap-1 px-2 py-[2px] rounded-full text-[10px] border border-glass-border bg-background/60 text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors disabled:opacity-60"
+        title="Analyze chat mood"
+      >
+        {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Smile className="h-3 w-3" />}
+        {loading ? "Analyzing…" : "Mood"}
+      </button>
+    );
+  }
 
-  if (!mood) return null;
   const meta = MOOD_META[mood];
-
   return (
     <AnimatePresence>
-      <motion.div
+      <motion.button
         key={mood}
+        onClick={analyze}
+        disabled={loading}
         initial={{ opacity: 0, y: -4, scale: 0.9 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
-        className="inline-flex items-center gap-1 px-1.5 py-[2px] rounded-full text-[10px] border border-glass-border bg-background/60"
-        title={`Mood: ${meta.label}`}
+        className="inline-flex items-center gap-1 px-1.5 py-[2px] rounded-full text-[10px] border border-glass-border bg-background/60 hover:border-primary/40 transition-colors disabled:opacity-60"
+        title={`Mood: ${meta.label} — tap to re-analyze`}
       >
-        <span>{meta.emoji}</span>
+        {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <span>{meta.emoji}</span>}
         <span className="text-muted-foreground">{meta.label}</span>
-      </motion.div>
+      </motion.button>
     </AnimatePresence>
   );
 }

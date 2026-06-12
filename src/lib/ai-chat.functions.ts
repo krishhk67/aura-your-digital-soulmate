@@ -10,25 +10,45 @@ async function callGateway(messages: ChatMsg[], opts?: { json?: boolean }) {
   const key = process.env.LOVABLE_API_KEY;
   if (!key) throw new Error("AI is not configured (missing LOVABLE_API_KEY).");
 
-  const res = await fetch(GATEWAY_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Lovable-API-Key": key,
-    },
-    body: JSON.stringify({
-      model: MODEL,
-      messages,
-      ...(opts?.json ? { response_format: { type: "json_object" } } : {}),
-    }),
-  });
-
-  if (res.status === 429) throw new Error("AI rate limit reached. Try again in a moment.");
-  if (res.status === 402) throw new Error("AI credits exhausted. Please add credits to continue.");
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`AI request failed (${res.status}): ${text.slice(0, 200)}`);
+  let res: Response;
+  try {
+    res = await fetch(GATEWAY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": key,
+        "X-Lovable-AIG-SDK": "vercel-ai-sdk",
+      },
+      body: JSON.stringify({
+        model: MODEL,
+        messages,
+        ...(opts?.json ? { response_format: { type: "json_object" } } : {}),
+      }),
+    });
+  } catch (e) {
+    const raw = e instanceof Error ? e.message : String(e);
+    console.error(`[ai-gateway] network error model=${MODEL} source=Lovable AI Gateway raw="${raw}"`);
+    throw new Error(`Lovable AI Gateway network error: ${raw}`);
   }
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    // Source detection — Lovable AI Gateway proxies to upstream providers
+    // (OpenAI / Anthropic / Gemini). Surface that in the message so the
+    // client log can tell which side the rate limit came from.
+    const lower = `${text} ${MODEL}`.toLowerCase();
+    let source = "Lovable AI Gateway";
+    if (lower.includes("openai")) source = "OpenAI";
+    else if (lower.includes("anthropic") || lower.includes("claude")) source = "Anthropic";
+    else if (lower.includes("gemini") || lower.includes("google")) source = "Gemini";
+    console.warn(
+      `[ai-gateway] upstream error status=${res.status} model=${MODEL} source=${source} body="${text.slice(0, 240)}"`,
+    );
+    if (res.status === 429) throw new Error(`[${source}] 429 rate limit reached. Try again shortly.`);
+    if (res.status === 402) throw new Error(`[${source}] 402 credits exhausted. Please add credits.`);
+    throw new Error(`[${source}] AI request failed (${res.status}): ${text.slice(0, 200)}`);
+  }
+
   const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
   return data.choices?.[0]?.message?.content?.trim() ?? "";
 }
