@@ -454,7 +454,8 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
 
       <ChatSearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} messages={visibleMessages} onJump={jumpTo} />
       {chatMeta?.is_group ? (
-        <GroupInfoSheet open={profileOpen} onClose={() => setProfileOpen(false)} chat={chatMeta} />
+        <GroupInfoSheet open={profileOpen} onClose={() => setProfileOpen(false)} chat={chatMeta} onChatRemoved={onBack} />
+
       ) : (
         <ChatProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} partner={chatPartner} chatId={chatId} />
       )}
