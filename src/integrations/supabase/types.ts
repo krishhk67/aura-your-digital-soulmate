@@ -598,11 +598,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_chat_members: {
+        Args: { _chat_id: string; _user_ids: string[] }
+        Returns: number
+      }
       can_view_stories: {
         Args: { _author: string; _viewer: string }
         Returns: boolean
       }
       cleanup_expired_messages: { Args: never; Returns: undefined }
+      delete_chat: { Args: { _chat_id: string }; Returns: undefined }
       get_or_create_direct_chat: {
         Args: { _other_user_id: string }
         Returns: string
@@ -625,6 +630,10 @@ export type Database = {
       }
       join_room_by_code: { Args: { _invite_code: string }; Returns: string }
       room_role: { Args: { _room: string; _user: string }; Returns: string }
+      transfer_chat_ownership: {
+        Args: { _chat_id: string; _new_owner_id: string }
+        Returns: undefined
+      }
       users_share_dm: { Args: { _a: string; _b: string }; Returns: boolean }
     }
     Enums: {
