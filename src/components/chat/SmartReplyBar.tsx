@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Send, RefreshCw } from "lucide-react";
+import { Sparkles, Send, RefreshCw, Wand2 } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { smartReplies } from "@/lib/ai-chat.functions";
+import { aiCall, AiError } from "@/lib/ai-client";
+import { toast } from "sonner";
 import type { MessageRow, ProfileRow } from "@/hooks/useRealtimeChat";
 
 type Style = "chill" | "funny" | "savage" | "romantic" | "formal" | "genz";
@@ -27,7 +29,6 @@ export function SmartReplyBar({ messages, currentUserId, onInsert, onSend }: Pro
   const [style, setStyle] = useState<Style>("chill");
   const [replies, setReplies] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const lastKeyRef = useRef<string>("");
   const fn = useServerFn(smartReplies);
 
   const transcript = messages
@@ -41,26 +42,29 @@ export function SmartReplyBar({ messages, currentUserId, onInsert, onSend }: Pro
   const last = messages[messages.length - 1];
   const trigger = last && last.sender_id !== currentUserId ? last.id : "";
 
-  const fetchReplies = async (s: Style = style) => {
-    if (!transcript.length || !trigger) return;
+  // Clear stale replies when the active chat / last incoming message changes.
+  // We never auto-call AI — user must press Generate.
+  useEffect(() => { setReplies([]); }, [trigger]);
+
+  const fetchReplies = async (force = false) => {
+    if (!transcript.length || !trigger || loading) return;
     setLoading(true);
     try {
-      const r = await fn({ data: { messages: transcript, style: s } });
-      setReplies(r.replies);
-    } catch {
+      const r = await aiCall(
+        "smartReplies",
+        { messages: transcript, style },
+        fn,
+        { force, ttlMs: 90_000 },
+      );
+      setReplies((r as { replies: string[] }).replies ?? []);
+    } catch (e) {
+      const msg = e instanceof AiError ? e.userMessage : "AI temporarily unavailable.";
+      toast.error(msg);
       setReplies([]);
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    const key = `${trigger}:${style}`;
-    if (!trigger || key === lastKeyRef.current) return;
-    lastKeyRef.current = key;
-    void fetchReplies(style);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trigger, style]);
 
   if (!trigger) return null;
 
@@ -69,14 +73,16 @@ export function SmartReplyBar({ messages, currentUserId, onInsert, onSend }: Pro
       <div className="flex items-center gap-2 mb-1 px-1">
         <Sparkles className="h-3 w-3 text-neon" />
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Smart replies</span>
-        <button
-          onClick={() => fetchReplies(style)}
-          disabled={loading}
-          className="ml-auto h-6 w-6 rounded-full flex items-center justify-center hover:bg-secondary text-muted-foreground disabled:opacity-50"
-          title="Regenerate"
-        >
-          <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
-        </button>
+        {replies.length > 0 && (
+          <button
+            onClick={() => fetchReplies(true)}
+            disabled={loading}
+            className="ml-auto h-6 w-6 rounded-full flex items-center justify-center hover:bg-secondary text-muted-foreground disabled:opacity-50"
+            title="Regenerate"
+          >
+            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
+          </button>
+        )}
       </div>
 
       <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1.5 px-1">
@@ -96,10 +102,11 @@ export function SmartReplyBar({ messages, currentUserId, onInsert, onSend }: Pro
         ))}
       </div>
 
-      <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1 px-1 min-h-[36px]">
+      <div className="flex gap-1.5 overflow-x-auto scrollbar-none pb-1 px-1 min-h-[36px] items-center">
         <AnimatePresence mode="popLayout">
-          {loading && replies.length === 0 ? (
+          {loading ? (
             <motion.div
+              key="loading"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -110,6 +117,17 @@ export function SmartReplyBar({ messages, currentUserId, onInsert, onSend }: Pro
               <div className="h-1.5 w-1.5 rounded-full bg-neon animate-pulse" style={{ animationDelay: "240ms" }} />
               Thinking…
             </motion.div>
+          ) : replies.length === 0 ? (
+            <motion.button
+              key="generate"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => fetchReplies(false)}
+              className="flex items-center gap-1.5 text-[11px] text-neon px-3 py-1.5 rounded-full border border-primary/40 bg-primary/10 hover:bg-primary/20 transition-colors"
+            >
+              <Wand2 className="h-3 w-3" /> Generate replies
+            </motion.button>
           ) : (
             replies.map((r, i) => (
               <motion.div
