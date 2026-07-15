@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, Volume2, VolumeX, RefreshCw, PhoneIncoming } from "lucide-react";
 import { useCalls } from "@/hooks/useCalls";
 
@@ -21,7 +21,7 @@ function PeerAvatar({ url, name, size = 96 }: { url: string | null | undefined; 
 }
 
 export function CallOverlay() {
-  const { session, incoming, acceptCall, rejectCall, endCall, toggleMic, toggleCamera, toggleSpeaker, switchCamera } = useCalls();
+  const { session, incoming, acceptCall, rejectCall } = useCalls();
 
   // ---- Incoming ----
   if (incoming && !session) {
