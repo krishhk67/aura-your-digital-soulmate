@@ -8,6 +8,9 @@ import { SettingsPanel } from "./SettingsPanel";
 import { RoomsView } from "./RoomsView";
 import { ProfileView } from "./ProfileView";
 import { StoriesView } from "./StoriesView";
+import { CallProvider } from "@/hooks/useCalls";
+import { CallOverlay } from "@/components/calls/CallOverlay";
+import { CallsHistoryView } from "@/components/calls/CallsHistoryView";
 import { useAuth } from "@/hooks/useAuth";
 
 export function ChatLayout() {
@@ -78,15 +81,9 @@ export function ChatLayout() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="absolute inset-0 flex items-center justify-center"
+              className="absolute inset-0"
             >
-              <div className="text-center px-8">
-                <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                  <span className="text-3xl">📞</span>
-                </div>
-                <h2 className="font-display text-lg font-bold gradient-text mb-2">Calls</h2>
-                <p className="text-sm text-muted-foreground">Crystal-clear voice & video calls coming soon</p>
-              </div>
+              <CallsHistoryView />
             </motion.div>
           ) : (
             <motion.div
