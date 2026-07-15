@@ -40,6 +40,7 @@ export function ChatLayout() {
   const showChatWindow = activeTab === "chats" && selectedChat;
 
   return (
+    <CallProvider>
     <div className="h-[100dvh] flex flex-col bg-background overflow-hidden">
       {/* Main content area */}
       <div className="flex-1 min-h-0 relative">
@@ -120,5 +121,7 @@ export function ChatLayout() {
 
       <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
+    <CallOverlay />
+    </CallProvider>
   );
 }
