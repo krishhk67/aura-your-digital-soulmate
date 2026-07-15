@@ -20,6 +20,7 @@ import { ChatSearchOverlay } from "./ChatSearchOverlay";
 import { useChatMemberState, useBlockUser, useIsBlocked, clearChatForMe } from "@/hooks/useChatActions";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Pin, BellOff, Timer, Ban, ShieldOff } from "lucide-react";
+import { useCalls } from "@/hooks/useCalls";
 
 
 interface ChatWindowProps {
@@ -51,6 +52,14 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const [clearOpen, setClearOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
   const [mood, setMood] = useState<MoodId | null>(null);
+  const { startCall } = useCalls();
+
+  const initiateCall = (type: "voice" | "video") => {
+    if (chatMeta?.is_group) { toast("Group calls coming next update"); return; }
+    if (!chatPartner) { toast.error("Loading contact…"); return; }
+    if (blocked) return;
+    void startCall(chatPartner.id, type, chatId);
+  };
 
   const visibleMessages = cleared_at
     ? messages.filter(m => new Date(m.created_at) > new Date(cleared_at))
@@ -249,10 +258,10 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
         </button>
 
         <div className="flex items-center gap-0.5">
-          <button disabled={blocked} onClick={() => toast("Voice calls — coming soon")} className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed">
+          <button disabled={blocked} onClick={() => initiateCall("voice")} className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed">
             <Phone className="h-4 w-4" />
           </button>
-          <button disabled={blocked} onClick={() => toast("Video calls — coming soon")} className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed">
+          <button disabled={blocked} onClick={() => initiateCall("video")} className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed">
             <Video className="h-4 w-4" />
           </button>
           <button onClick={() => setActionsOpen(true)} className="h-9 w-9 rounded-full flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground">
