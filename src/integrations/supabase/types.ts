@@ -168,6 +168,62 @@ export type Database = {
         }
         Relationships: []
       }
+      listen_together_sessions: {
+        Row: {
+          album_art_url: string | null
+          artist: string
+          chat_id: string | null
+          created_at: string
+          external_url: string | null
+          guest_id: string
+          host_id: string
+          id: string
+          provider: string
+          status: string
+          track_id: string
+          track_name: string
+          updated_at: string
+        }
+        Insert: {
+          album_art_url?: string | null
+          artist: string
+          chat_id?: string | null
+          created_at?: string
+          external_url?: string | null
+          guest_id: string
+          host_id: string
+          id?: string
+          provider: string
+          status?: string
+          track_id: string
+          track_name: string
+          updated_at?: string
+        }
+        Update: {
+          album_art_url?: string | null
+          artist?: string
+          chat_id?: string | null
+          created_at?: string
+          external_url?: string | null
+          guest_id?: string
+          host_id?: string
+          id?: string
+          provider?: string
+          status?: string
+          track_id?: string
+          track_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "listen_together_sessions_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_reactions: {
         Row: {
           created_at: string | null
@@ -210,6 +266,7 @@ export type Database = {
           is_edited: boolean | null
           media_url: string | null
           message_type: string | null
+          metadata: Json | null
           reply_to: string | null
           sender_id: string
           updated_at: string | null
@@ -223,6 +280,7 @@ export type Database = {
           is_edited?: boolean | null
           media_url?: string | null
           message_type?: string | null
+          metadata?: Json | null
           reply_to?: string | null
           sender_id: string
           updated_at?: string | null
@@ -236,6 +294,7 @@ export type Database = {
           is_edited?: boolean | null
           media_url?: string | null
           message_type?: string | null
+          metadata?: Json | null
           reply_to?: string | null
           sender_id?: string
           updated_at?: string | null
@@ -256,6 +315,165 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      music_connections: {
+        Row: {
+          access_token: string
+          connected_at: string
+          display_name: string | null
+          expires_at: string | null
+          provider: string
+          refresh_token: string | null
+          scope: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          connected_at?: string
+          display_name?: string | null
+          expires_at?: string | null
+          provider: string
+          refresh_token?: string | null
+          scope?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          connected_at?: string
+          display_name?: string | null
+          expires_at?: string | null
+          provider?: string
+          refresh_token?: string | null
+          scope?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      music_presence: {
+        Row: {
+          album: string | null
+          album_art_url: string | null
+          artist: string
+          duration_ms: number | null
+          external_url: string | null
+          is_playing: boolean
+          progress_ms: number | null
+          provider: string
+          track_id: string
+          track_name: string
+          updated_at: string
+          uri: string | null
+          user_id: string
+        }
+        Insert: {
+          album?: string | null
+          album_art_url?: string | null
+          artist: string
+          duration_ms?: number | null
+          external_url?: string | null
+          is_playing?: boolean
+          progress_ms?: number | null
+          provider: string
+          track_id: string
+          track_name: string
+          updated_at?: string
+          uri?: string | null
+          user_id: string
+        }
+        Update: {
+          album?: string | null
+          album_art_url?: string | null
+          artist?: string
+          duration_ms?: number | null
+          external_url?: string | null
+          is_playing?: boolean
+          progress_ms?: number | null
+          provider?: string
+          track_id?: string
+          track_name?: string
+          updated_at?: string
+          uri?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      music_recent_tracks: {
+        Row: {
+          album: string | null
+          album_art_url: string | null
+          artist: string
+          external_url: string | null
+          id: string
+          played_at: string
+          provider: string
+          track_id: string
+          track_name: string
+          user_id: string
+        }
+        Insert: {
+          album?: string | null
+          album_art_url?: string | null
+          artist: string
+          external_url?: string | null
+          id?: string
+          played_at?: string
+          provider: string
+          track_id: string
+          track_name: string
+          user_id: string
+        }
+        Update: {
+          album?: string | null
+          album_art_url?: string | null
+          artist?: string
+          external_url?: string | null
+          id?: string
+          played_at?: string
+          provider?: string
+          track_id?: string
+          track_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      music_settings: {
+        Row: {
+          allow_friends_see: boolean
+          allow_listen_together: boolean
+          auto_share: boolean
+          hide_activity: boolean
+          preferred_provider: string
+          show_album_art: boolean
+          show_current_song: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allow_friends_see?: boolean
+          allow_listen_together?: boolean
+          auto_share?: boolean
+          hide_activity?: boolean
+          preferred_provider?: string
+          show_album_art?: boolean
+          show_current_song?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allow_friends_see?: boolean
+          allow_listen_together?: boolean
+          auto_share?: boolean
+          hide_activity?: boolean
+          preferred_provider?: string
+          show_album_art?: boolean
+          show_current_song?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -481,6 +699,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          current_track: Json | null
           description: string | null
           id: string
           invite_code: string | null
@@ -492,6 +711,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          current_track?: Json | null
           description?: string | null
           id?: string
           invite_code?: string | null
@@ -503,6 +723,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          current_track?: Json | null
           description?: string | null
           id?: string
           invite_code?: string | null
@@ -651,6 +872,10 @@ export type Database = {
       add_chat_members: {
         Args: { _chat_id: string; _user_ids: string[] }
         Returns: number
+      }
+      can_view_music: {
+        Args: { _author: string; _viewer: string }
+        Returns: boolean
       }
       can_view_stories: {
         Args: { _author: string; _viewer: string }
