@@ -242,6 +242,15 @@ export function RoomChat({ roomId, onBack }: Props) {
       </div>
 
       <RoomInfoSheet roomId={roomId} open={infoOpen} onClose={() => setInfoOpen(false)} onLeft={onBack} />
+      {reactionTarget && (
+        <ReactionPicker
+          anchorRect={reactionTarget.rect}
+          mine={reactionTarget.mine}
+          myEmojis={new Set((reactionsByMessage.get(reactionTarget.msgId) ?? []).filter(r => r.user_id === user?.id).map(r => r.emoji))}
+          onPick={(emoji) => { void toggleReaction(reactionTarget.msgId, emoji); setReactionTarget(null); }}
+          onClose={() => setReactionTarget(null)}
+        />
+      )}
     </div>
   );
 }
