@@ -468,7 +468,7 @@ function FeaturedRoom({ room, onOpen }: { room: Room; onOpen: (r: Room) => void 
         <span className="text-[11px] text-muted-foreground">
           {room.is_member ? "You're in" : room.is_private ? "Private community" : "Open to everyone"}
         </span>
-        <span className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground text-[12.5px] font-semibold shadow-[0_0_20px_var(--neon-glow)] group-hover:shadow-[0_0_30px_var(--neon-glow)] transition-shadow">
+        <span className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground text-[12.5px] font-semibold shadow-[0_0_20px_var(--neon-glow)]">
           {room.is_member ? "Enter" : "Join"} <LogIn className="h-3.5 w-3.5" />
         </span>
       </div>
