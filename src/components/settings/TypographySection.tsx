@@ -36,18 +36,34 @@ export function TypographySection() {
   useEffect(() => { filtered.slice(0, 12).forEach(ensureFontLoaded); }, [filtered]);
   useEffect(() => { recentFonts.forEach(ensureFontLoaded); }, [recentFonts]);
 
-  const active = getFontById(fontId);
+  const isDefault = isDefaultFont(fontId);
+  const active = isDefault ? null : getFontById(fontId);
+
+  const handleReset = () => {
+    setFont(AURIX_DEFAULT_ID);
+    toast.success("Typography restored to Aurix Default.");
+  };
 
   return (
     <div className="space-y-5">
-      <div>
-        <h3 className="font-display font-semibold text-sm flex items-center gap-2">
-          <Sparkles className="h-3.5 w-3.5 text-primary" /> Typography
-        </h3>
-        <p className="text-xs text-muted-foreground mt-1">
-          Change the font used across the entire app. Applies instantly, no reload.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="font-display font-semibold text-sm flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-primary" /> Typography
+          </h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            Change the font used across the entire app. Applies instantly, no reload.
+          </p>
+        </div>
+        <button
+          onClick={handleReset}
+          disabled={isDefault}
+          className="shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-medium border border-border/60 text-muted-foreground hover:text-foreground hover:border-primary/60 disabled:opacity-40 disabled:cursor-not-allowed transition"
+        >
+          <RotateCcw className="h-3.5 w-3.5" /> Reset
+        </button>
       </div>
+
 
       {/* Search */}
       <div className="relative">
