@@ -23,7 +23,7 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
   const [groupIdx, setGroupIdx] = useState(startGroupIndex);
   const [storyIdx, setStoryIdx] = useState(0);
   const [progress, setProgress] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [holdPaused, setHoldPaused] = useState(false);
   const [reply, setReply] = useState("");
   const [showViewers, setShowViewers] = useState(false);
   const [sending, setSending] = useState(false);
@@ -45,6 +45,11 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
   const isOwner = !!user && story?.user_id === user.id;
 
   const { viewers, reactions } = useStoryAudience(story?.id ?? null, isOwner && open);
+
+  // Any overlay opened on top of the viewer must pause the whole story lifecycle
+  // (timers, progress, media, auto-next, gestures). Add future overlays to this list.
+  const overlayOpen = showViewers;
+  const paused = holdPaused || overlayOpen;
 
   const next = () => {
     if (!group) return;
@@ -148,10 +153,10 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        drag="y"
+        drag={overlayOpen ? false : "y"}
         dragConstraints={{ top: 0, bottom: 0 }}
         dragElastic={0.4}
-        onDragEnd={(_, info) => { if (info.offset.y > 120) onClose(); }}
+        onDragEnd={(_, info) => { if (!overlayOpen && info.offset.y > 120) onClose(); }}
         className="fixed inset-0 z-[90] bg-black flex flex-col"
       >
         {/* progress bars */}
@@ -192,10 +197,10 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
         {/* media + tap zones */}
         <div
           className="flex-1 relative select-none"
-          onPointerDown={() => setPaused(true)}
-          onPointerUp={() => setPaused(false)}
-          onPointerLeave={() => setPaused(false)}
-          onClick={handleTap}
+          onPointerDown={() => !overlayOpen && setHoldPaused(true)}
+          onPointerUp={() => setHoldPaused(false)}
+          onPointerLeave={() => setHoldPaused(false)}
+          onClick={overlayOpen ? undefined : handleTap}
         >
           {story.media_type === "video" ? (
             <video
@@ -245,8 +250,8 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
                 <input
                   value={reply}
                   onChange={e => setReply(e.target.value)}
-                  onFocus={() => setPaused(true)}
-                  onBlur={() => setPaused(false)}
+                  onFocus={() => setHoldPaused(true)}
+                  onBlur={() => setHoldPaused(false)}
                   placeholder={`Reply to ${group.user.display_name ?? "story"}…`}
                   className="flex-1 h-11 rounded-2xl bg-white/15 backdrop-blur px-4 text-sm text-white placeholder:text-white/60 focus:outline-none"
                 />
