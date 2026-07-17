@@ -353,6 +353,11 @@ function MessageRow({
             } ${grouped ? (mine ? "rounded-tr-[6px]" : "rounded-tl-[6px]") : ""} ${
               isText ? "shadow-[0_1px_2px_rgba(0,0,0,0.25)]" : ""
             }`}
+            onPointerDown={startLongPress}
+            onPointerUp={cancelLongPress}
+            onPointerCancel={cancelLongPress}
+            onPointerLeave={cancelLongPress}
+            onContextMenu={(e) => { e.preventDefault(); onLongPress((e.currentTarget as Element).getBoundingClientRect()); }}
           >
             {replyMsg && (
               <div className={`text-[11px] opacity-75 border-l-2 border-current pl-2 mb-1 truncate ${isMedia ? "mx-1 mt-0.5" : ""}`}>
@@ -362,6 +367,12 @@ function MessageRow({
             <RoomMsgBody m={m} />
           </div>
 
+          <ReactionChips
+            reactions={reactions}
+            currentUserId={currentUserId}
+            mine={mine}
+            onToggle={onToggleReaction}
+          />
 
 
           {/* Reply icon outside bubble (bottom-right / bottom-left depending on side) */}
