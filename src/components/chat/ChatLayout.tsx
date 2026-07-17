@@ -32,6 +32,7 @@ function ChatLayoutInner() {
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<NavTab>("chats");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [roomActive, setRoomActive] = useState(false);
   const { user } = useAuth();
 
   const handleSelectChat = useCallback((id: string) => {
@@ -52,6 +53,7 @@ function ChatLayoutInner() {
 
   // Mobile: show either chat list or chat window (not both)
   const showChatWindow = activeTab === "chats" && selectedChat;
+  const hideNav = !!showChatWindow || (activeTab === "rooms" && roomActive);
 
   return (
     <CallProvider>
