@@ -4,7 +4,7 @@ import { X, Send, Eye, Trash2, Heart, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { useCreateChat, useSendMessage } from "@/hooks/useRealtimeChat";
+// (createChat/sendMessage now handled inside useSendStoryMessage)
 import { useDeleteStory, useReactToStory, useRecordStoryView, useSendStoryMessage, useStoryAudience, type StoryGroup } from "@/hooks/useStories";
 import { formatDistanceToNow } from "date-fns";
 
