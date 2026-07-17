@@ -1,7 +1,23 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Send, Image as ImageIcon, Smile, X, Reply, Info } from "lucide-react";
 import { motion, useMotionValue, useTransform, animate, type PanInfo } from "framer-motion";
 import { useRoom, useRoomMessages, useRoomActions, useSignedRoomMedia, type RoomMessageRow } from "@/hooks/useRooms";
+
+const ScrollingContext = createContext(false);
+
+function formatMsgTime(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  const yest = new Date(now); yest.setDate(now.getDate() - 1);
+  const isYest = d.toDateString() === yest.toDateString();
+  const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  if (sameDay) return time;
+  if (isYest) return `Yesterday ${time}`;
+  const diff = (now.getTime() - d.getTime()) / 86400000;
+  if (diff < 7) return `${d.toLocaleDateString([], { weekday: "short" })} ${time}`;
+  return `${d.toLocaleDateString([], { month: "short", day: "numeric" })} ${time}`;
+}
 import { useAuth } from "@/hooks/useAuth";
 import { VoiceRecorder, MicButton } from "./VoiceRecorder";
 import { AudioMessage } from "./AudioMessage";
@@ -73,9 +89,27 @@ export function RoomChat({ roomId, onBack }: Props) {
     });
   }, [messages]);
 
+  // Scroll detection for fading timestamps
+  const [scrolling, setScrolling] = useState(false);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollingRef = useRef(false);
+  const onScroll = () => {
+    if (!scrollingRef.current) {
+      scrollingRef.current = true;
+      setScrolling(true);
+    }
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = setTimeout(() => {
+      scrollingRef.current = false;
+      setScrolling(false);
+    }, 1700);
+  };
+  useEffect(() => () => { if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current); }, []);
+
   if (!room) return <div className="h-full flex items-center justify-center text-muted-foreground text-sm">Loading…</div>;
 
   return (
+
     <div className="h-[100dvh] flex flex-col bg-background">
       {/* Header — compact */}
       <div
@@ -105,7 +139,9 @@ export function RoomChat({ roomId, onBack }: Props) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-2.5 py-2 space-y-0.5 overscroll-contain">
+      <ScrollingContext.Provider value={scrolling}>
+      <div onScroll={onScroll} className="flex-1 overflow-y-auto px-2.5 py-2 space-y-0.5 overscroll-contain">
+
         {loading && <div className="text-center text-xs text-muted-foreground py-4">Loading…</div>}
         {!loading && messages.length === 0 && (
           <div className="text-center text-sm text-muted-foreground py-10">Start the conversation 👋</div>
@@ -126,6 +162,9 @@ export function RoomChat({ roomId, onBack }: Props) {
         })}
         <div ref={endRef} />
       </div>
+      </ScrollingContext.Provider>
+
+
 
       {/* Reply preview */}
       {reply && (
@@ -262,29 +301,31 @@ function MessageRow({
           <div className="w-7 flex-shrink-0" />
         ) : null}
 
-        <div className="relative min-w-0">
+        <div className="relative min-w-0 flex flex-col">
+          {/* Metadata row: sender name (left) + timestamp (right, fades with scroll).
+              Shown only for the first message in a group. */}
+          {!grouped && (
+            <MetaRow
+              mine={mine}
+              name={mine ? "You" : (m.sender?.display_name ?? m.sender?.username ?? "Member")}
+              time={formatMsgTime(m.created_at)}
+            />
+          )}
           <div
             className={`rounded-2xl px-2.5 py-1.5 ${
               mine
-                ? "bg-primary text-primary-foreground rounded-br-md"
-                : "bg-secondary rounded-bl-md"
+                ? "bg-primary text-primary-foreground rounded-br-md self-end"
+                : "bg-secondary rounded-bl-md self-start"
             } ${grouped ? (mine ? "rounded-tr-md" : "rounded-tl-md") : ""}`}
           >
-            {!mine && !grouped && (
-              <div className="text-[11px] font-semibold text-neon leading-tight mb-0.5 truncate">
-                {m.sender?.display_name ?? m.sender?.username ?? "Member"}
-              </div>
-            )}
             {replyMsg && (
               <div className="text-[11px] opacity-75 border-l-2 border-current pl-2 mb-1 truncate">
                 ↪ {replyMsg.content ?? replyMsg.message_type}
               </div>
             )}
             <RoomMsgBody m={m} />
-            <span className="block text-[10px] opacity-55 mt-0.5 text-right leading-none">
-              {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-            </span>
           </div>
+
 
           {/* Reply icon outside bubble (bottom-right / bottom-left depending on side) */}
           <button
@@ -299,6 +340,27 @@ function MessageRow({
     </div>
   );
 }
+
+/* Sender name + right-aligned timestamp. Timestamp fades in during scroll. */
+function MetaRow({ mine, name, time }: { mine: boolean; name: string; time: string }) {
+  const scrolling = useContext(ScrollingContext);
+  return (
+    <div className={`flex items-baseline gap-2 mb-0.5 px-1 ${mine ? "flex-row-reverse" : ""}`}>
+      <span className={`text-[11px] font-semibold leading-tight truncate ${mine ? "text-muted-foreground" : "text-neon"}`}>
+        {name}
+      </span>
+      <span
+        aria-hidden={!scrolling}
+        className="text-[10px] text-muted-foreground leading-tight tabular-nums transition-opacity duration-300 ease-out"
+        style={{ opacity: scrolling ? 0.4 : 0 }}
+      >
+        {time}
+      </span>
+    </div>
+  );
+}
+
+
 
 function RoomMsgBody({ m }: { m: RoomMessageRow }) {
   const url = useSignedRoomMedia(m.media_url);
