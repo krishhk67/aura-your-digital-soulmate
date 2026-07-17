@@ -7,6 +7,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useCurrentProfile } from "@/hooks/useCurrentProfile";
 import { useTheme, THEMES, type ThemeId } from "@/hooks/useTheme";
+import { TypographySection } from "@/components/settings/TypographySection";
 import { supabase } from "@/integrations/supabase/client";
 import { useBlockedList, useBlockUser } from "@/hooks/useChatActions";
 import { useStoryPrivacy } from "@/hooks/useStories";
