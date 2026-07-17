@@ -71,6 +71,11 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const { allDeliveredAt, allReadAt } = useChatReceipts(chatId);
   const [infoMsg, setInfoMsg] = useState<MessageRow | null>(null);
   const longPressTimer = useRef<number | null>(null);
+  const [reactionTarget, setReactionTarget] = useState<{ msg: MessageRow; rect: DOMRect } | null>(null);
+
+  const messageIds = visibleMessagesIds(messages, cleared_at);
+  const { byMessage: reactionsByMessage } = useMessageReactions("chat", chatId, messageIds);
+  const toggleReaction = useToggleReaction("chat");
 
 
   const initiateCall = (type: "voice" | "video") => {
