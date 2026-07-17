@@ -111,14 +111,15 @@ export function useRoom(roomId: string | null) {
 
   useEffect(() => { fetch(); }, [fetch]);
 
+  const chanId = useMemo(() => crypto.randomUUID(), []);
   useEffect(() => {
     if (!roomId) return;
-    const ch = supabase.channel(`room:${roomId}`)
+    const ch = supabase.channel(`room:${roomId}:${chanId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "rooms", filter: `id=eq.${roomId}` }, () => fetch())
       .on("postgres_changes", { event: "*", schema: "public", table: "room_members", filter: `room_id=eq.${roomId}` }, () => fetch())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [roomId, fetch]);
+  }, [roomId, fetch, chanId]);
 
   return { room, members, refetch: fetch };
 }
