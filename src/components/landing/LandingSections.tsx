@@ -58,7 +58,7 @@ export function HeroSection() {
           </motion.div>
 
           <motion.h1 variants={fadeUp} custom={1} className="text-5xl sm:text-6xl lg:text-7xl font-bold font-display tracking-tight leading-[1.1]">
-            <span className="gradient-text">Aura</span>
+            <span className="gradient-text">Aurix</span>
             <br />
             <span className="text-foreground">Chat that feels</span>
             <br />
