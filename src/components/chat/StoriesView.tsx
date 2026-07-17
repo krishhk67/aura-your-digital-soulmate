@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Plus, Sparkles, Loader2 } from "lucide-react";
 import { useStoriesFeed, type StoryGroup } from "@/hooks/useStories";
@@ -7,6 +7,8 @@ import { StoryComposer } from "./StoryComposer";
 import { StoryViewer } from "./StoryViewer";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+
 
 export function StoriesView() {
   const { user } = useAuth();
@@ -14,6 +16,38 @@ export function StoriesView() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [viewerGroups, setViewerGroups] = useState<StoryGroup[] | null>(null);
   const [viewerStart, setViewerStart] = useState(0);
+  const [myAvatar, setMyAvatar] = useState<string | null>(null);
+  const [myDisplayName, setMyDisplayName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) { setMyAvatar(null); return; }
+    let cancelled = false;
+    const load = async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("avatar_url,display_name,username")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      setMyAvatar(data.avatar_url ?? null);
+      setMyDisplayName(data.display_name ?? data.username ?? null);
+    };
+    load();
+    const ch = supabase
+      .channel(`me-profile-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${user.id}` },
+        (payload) => {
+          const row = payload.new as { avatar_url: string | null; display_name: string | null; username: string | null };
+          setMyAvatar(row.avatar_url ?? null);
+          setMyDisplayName(row.display_name ?? row.username ?? null);
+        },
+      )
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, [user]);
+
 
   const openViewer = (gs: StoryGroup[], idx: number) => {
     setViewerGroups(gs);
@@ -29,7 +63,7 @@ export function StoriesView() {
       [{
         user: {
           id: user.id,
-          username: null, display_name: "Your Story", avatar_url: null,
+          username: null, display_name: myDisplayName ?? "Your Story", avatar_url: myAvatar,
           bio: null, status_text: null, is_online: true, last_seen: new Date().toISOString(),
         },
         stories: myStories,
@@ -37,6 +71,7 @@ export function StoriesView() {
       }],
       0,
     );
+
   };
 
   return (
@@ -62,11 +97,12 @@ export function StoriesView() {
               myStories.length > 0 ? "bg-gradient-to-tr from-primary via-accent to-primary animate-pulse-neon" : "bg-secondary",
             )}>
               <div className="h-full w-full rounded-full bg-background flex items-center justify-center overflow-hidden">
-                {user?.user_metadata?.avatar_url ? (
-                  <img src={user.user_metadata.avatar_url as string} alt="" className="h-full w-full object-cover" />
+                {myAvatar ? (
+                  <img src={myAvatar} alt="" className="h-full w-full object-cover" />
                 ) : (
                   <span className="text-xl font-bold">{(user?.email ?? "?").charAt(0).toUpperCase()}</span>
                 )}
+
               </div>
             </div>
             <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center border-2 border-background">
