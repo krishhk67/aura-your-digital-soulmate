@@ -71,6 +71,7 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
     const onEnd = () => {
       setPlaying(false);
       playingRef.current = false;
+      try { a.currentTime = 0; } catch {}
       setProgress(0);
       progressSecondsRef.current = 0;
       progressRef.current = 0;
@@ -268,6 +269,7 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
 
   const onPointerDown = (e: React.PointerEvent) => {
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    draggingRef.current = true;
     setDragging(true);
     seekFromEvent(e.clientX);
   };
@@ -276,6 +278,7 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
     seekFromEvent(e.clientX);
   };
   const onPointerUp = (e: React.PointerEvent) => {
+    draggingRef.current = false;
     setDragging(false);
     try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
   };
