@@ -121,6 +121,9 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
     const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
     await supabase.from("profiles").update({ avatar_url: avatarUrl }).eq("id", user.id);
+    // Mirror onto auth user_metadata so every subscriber to useAuth (StoriesView,
+    // etc.) re-renders instantly via the USER_UPDATED event — single source of truth.
+    await supabase.auth.updateUser({ data: { avatar_url: avatarUrl } });
     setProfile(prev => prev ? { ...prev, avatar_url: avatarUrl } : prev);
     toast.success("Avatar updated");
     setUploading(false);
