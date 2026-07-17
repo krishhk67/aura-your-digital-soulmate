@@ -98,7 +98,8 @@ export function SmartAvatarButton({
     }
   };
 
-  const updateMember = useCallback(async (patch: Record<string, boolean>) => {
+  type MemberPatch = { is_muted?: boolean; is_pinned?: boolean; is_archived?: boolean };
+  const updateMember = useCallback(async (patch: MemberPatch) => {
     if (!user) return;
     const { error } = await supabase
       .from("chat_members")
