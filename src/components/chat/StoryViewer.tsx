@@ -258,7 +258,7 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
                   <button
                     key={e}
                     onClick={() => handleReact(e)}
-                    className="h-8 w-8 rounded-full flex items-center justify-center text-[18px] leading-none bg-white/10 backdrop-blur hover:bg-white/20 active:scale-90 transition"
+                    className="h-10 w-10 rounded-full flex items-center justify-center text-[24px] leading-none bg-white/10 backdrop-blur hover:bg-white/20 active:scale-90 transition"
                   >
                     {e}
                   </button>
