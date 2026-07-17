@@ -106,7 +106,10 @@ export function RoomChat({ roomId, onBack }: Props) {
   };
   useEffect(() => () => { if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current); }, []);
 
+  if (!room) return <div className="h-full flex items-center justify-center text-muted-foreground text-sm">Loading…</div>;
+
   return (
+
     <div className="h-[100dvh] flex flex-col bg-background">
       {/* Header — compact */}
       <div
