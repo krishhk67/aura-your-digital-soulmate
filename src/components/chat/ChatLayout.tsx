@@ -8,9 +8,11 @@ import { SettingsPanel } from "./SettingsPanel";
 import { RoomsView } from "./RoomsView";
 import { ProfileView } from "./ProfileView";
 import { StoriesView } from "./StoriesView";
+import { HiddenSpaceView } from "./HiddenSpaceView";
 import { CallProvider } from "@/hooks/useCalls";
 import { CallOverlay } from "@/components/calls/CallOverlay";
 import { CallsHistoryView } from "@/components/calls/CallsHistoryView";
+import { HiddenSpaceProvider, useHiddenSpace } from "@/hooks/useHiddenSpace";
 import { useAuth } from "@/hooks/useAuth";
 
 export function ChatLayout() {
