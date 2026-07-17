@@ -114,6 +114,8 @@ export function TypographySection() {
 
       {/* Font list */}
       <div className="grid grid-cols-1 gap-2.5">
+        <AurixDefaultCard active={isDefault} onSelect={() => setFont(AURIX_DEFAULT_ID)} />
+
         <AnimatePresence initial={false}>
           {filtered.map(f => (
             <FontCard
