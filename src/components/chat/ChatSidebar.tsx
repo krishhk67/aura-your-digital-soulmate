@@ -63,7 +63,7 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
             type="text"
             placeholder="Search conversations..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => onSearchChange(e.target.value)}
             className="w-full h-11 rounded-2xl bg-secondary/50 border border-border pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
           />
         </div>
