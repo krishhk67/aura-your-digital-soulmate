@@ -22,12 +22,14 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
   const { user } = useAuth();
   const [groupIdx, setGroupIdx] = useState(startGroupIndex);
   const [storyIdx, setStoryIdx] = useState(0);
-  const [progress, setProgress] = useState(0);
+  const [, forceProgressReset] = useState(0);
   const [holdPaused, setHoldPaused] = useState(false);
   const [reply, setReply] = useState("");
   const [showViewers, setShowViewers] = useState(false);
   const [sending, setSending] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const activeBarRef = useRef<HTMLDivElement | null>(null);
+  const progressRef = useRef(0);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number>(0);
   const elapsedRef = useRef<number>(0);
@@ -62,48 +64,68 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
     else if (groupIdx > 0) { setGroupIdx(i => i - 1); setStoryIdx((groups[groupIdx - 1]?.stories.length ?? 1) - 1); }
   };
 
-  // record view + progress
+  // Direct DOM writer — avoids re-rendering the whole viewer every animation frame.
+  const writeProgress = (p: number) => {
+    const clamped = p < 0 ? 0 : p > 1 ? 1 : p;
+    progressRef.current = clamped;
+    if (activeBarRef.current) activeBarRef.current.style.width = `${clamped * 100}%`;
+  };
+
+  // record view + reset progress on story change
   useEffect(() => {
     if (!open || !story) return;
     recordView(story.id);
-    setProgress(0);
+    writeProgress(0);
     elapsedRef.current = 0;
     setShowViewers(false);
+    forceProgressReset(v => v + 1);
   }, [open, story?.id, recordView]);
 
+  // Unified RAF loop: drives both image timers and video progress at 60fps
+  // by reading directly from the video element each frame (never depending on
+  // the coarse `timeupdate` event).
   useEffect(() => {
     if (!open || !story || paused) {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
       return;
     }
-    if (story.media_type === "video") return; // video drives via timeupdate
+    const isVideo = story.media_type === "video";
     startRef.current = performance.now();
+
     const tick = (now: number) => {
-      const elapsed = elapsedRef.current + (now - startRef.current);
-      const p = Math.min(1, elapsed / IMAGE_DURATION);
-      setProgress(p);
+      let p = 0;
+      if (isVideo) {
+        const v = videoRef.current;
+        if (v && v.duration > 0 && !v.paused && v.readyState >= 2) {
+          p = v.currentTime / v.duration;
+        } else {
+          p = progressRef.current; // buffering / not ready — freeze
+        }
+      } else {
+        const elapsed = elapsedRef.current + (now - startRef.current);
+        p = Math.min(1, elapsed / IMAGE_DURATION);
+      }
+      writeProgress(p);
       if (p >= 1) { next(); return; }
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      elapsedRef.current += performance.now() - startRef.current;
+      rafRef.current = null;
+      if (!isVideo) elapsedRef.current += performance.now() - startRef.current;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, story?.id, paused]);
 
-  // video handlers
+  // video playback pause/resume
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     if (paused) v.pause(); else v.play().catch(() => {});
   }, [paused, story?.id]);
 
-  const handleVideoTime = () => {
-    const v = videoRef.current; if (!v?.duration) return;
-    setProgress(v.currentTime / v.duration);
-  };
 
   const handleTap = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -164,8 +186,9 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
           {group.stories.map((_, i) => (
             <div key={i} className="flex-1 h-0.5 bg-white/25 rounded-full overflow-hidden">
               <div
-                className="h-full bg-white"
-                style={{ width: `${i < storyIdx ? 100 : i === storyIdx ? progress * 100 : 0}%`, transition: i === storyIdx ? "none" : undefined }}
+                ref={i === storyIdx ? activeBarRef : undefined}
+                className="h-full bg-white will-change-[width]"
+                style={{ width: `${i < storyIdx ? 100 : 0}%` }}
               />
             </div>
           ))}
@@ -209,7 +232,6 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
               className="absolute inset-0 h-full w-full object-contain"
               autoPlay
               playsInline
-              onTimeUpdate={handleVideoTime}
               onEnded={next}
             />
           ) : (
