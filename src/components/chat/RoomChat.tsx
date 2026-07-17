@@ -162,6 +162,9 @@ export function RoomChat({ roomId, onBack }: Props) {
         })}
         <div ref={endRef} />
       </div>
+      </ScrollingContext.Provider>
+
+
 
       {/* Reply preview */}
       {reply && (
