@@ -8,7 +8,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCurrentProfile } from "@/hooks/useCurrentProfile";
 import { useTheme, THEMES, type ThemeId } from "@/hooks/useTheme";
 import { supabase } from "@/integrations/supabase/client";
-import type { ProfileRow } from "@/hooks/useRealtimeChat";
 import { useBlockedList, useBlockUser } from "@/hooks/useChatActions";
 import { useStoryPrivacy } from "@/hooks/useStories";
 import { useHiddenSpace } from "@/hooks/useHiddenSpace";
