@@ -20,7 +20,7 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState(""); // username or email (login) / email (signup)
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
@@ -36,11 +36,11 @@ function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    if (!identifier || (!resetMode && !password)) return;
     setLoading(true);
 
     if (resetMode) {
-      const { error } = await resetPassword(email);
+      const { error } = await resetPassword(identifier);
       if (error) toast.error(error.message);
       else toast.success("Password reset email sent! Check your inbox.");
       setLoading(false);
@@ -48,11 +48,12 @@ function LoginPage() {
     }
 
     if (isSignUp) {
-      const { error } = await signUp(email, password, username || undefined);
+      if (!username.trim()) { toast.error("Please choose a username"); setLoading(false); return; }
+      const { error } = await signUp(identifier, password, username);
       if (error) toast.error(error.message);
       else toast.success("Account created! Check your email to verify.");
     } else {
-      const { error } = await signIn(email, password);
+      const { error } = await signIn(identifier, password);
       if (error) toast.error(error.message);
       else navigate({ to: "/chat" });
     }
