@@ -64,13 +64,11 @@ export function ProfilePhotoPreview({
             <motion.button
               onClick={() => avatar && setFullscreen(true)}
               className="relative z-10 rounded-full overflow-hidden shadow-[0_20px_60px_-10px_rgba(0,0,0,0.6)]"
-              layoutId="avatar-hero"
-              initial={{ scale: 0.4, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.4, opacity: 0 }}
+              layoutId={heroId}
               transition={{ type: "spring", stiffness: 260, damping: 26 }}
               whileTap={{ scale: 0.97 }}
             >
+
               {avatar ? (
                 <img
                   src={avatar}
