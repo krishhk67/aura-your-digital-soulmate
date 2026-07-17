@@ -50,7 +50,7 @@ export function MessageInfoSheet({ message, onClose, isGroup }: Props) {
   const anyDelivered = rows.some((r) => !!r.delivered_at);
   const anyRead = rows.some((r) => !!r.read_at);
   const allRead = rows.length > 0 && rows.every((r) => !!r.read_at);
-  const singleRow = !isGroup && rows[0];
+  const singleRow: Receipt | null = !isGroup && rows[0] ? rows[0] : null;
 
   return (
     <AnimatePresence>
