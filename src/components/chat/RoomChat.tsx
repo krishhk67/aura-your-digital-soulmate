@@ -41,9 +41,14 @@ export function RoomChat({ roomId, onBack }: Props) {
   const [reply, setReply] = useState<RoomMessageRow | null>(null);
   const [recording, setRecording] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [reactionTarget, setReactionTarget] = useState<{ msgId: string; mine: boolean; rect: DOMRect } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+
+  const messageIds = useMemo(() => messages.map(m => m.id), [messages]);
+  const { byMessage: reactionsByMessage } = useMessageReactions("room", roomId, messageIds);
+  const toggleReaction = useToggleReaction("room");
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.length]);
 
