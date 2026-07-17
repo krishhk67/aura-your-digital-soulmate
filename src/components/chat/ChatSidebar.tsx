@@ -6,7 +6,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useMyChats } from "@/hooks/useRealtimeChat";
 import { useAuth } from "@/hooks/useAuth";
-import { useUsersWithActiveStories } from "@/hooks/useStories";
+import { useAllStoryGroups } from "@/hooks/useAllStoryGroups";
+import { SmartAvatarButton } from "./SmartAvatarButton";
 import { useHiddenSpace } from "@/hooks/useHiddenSpace";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
@@ -48,7 +49,7 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
   const hs = useHiddenSpace();
   const { chats: hiddenChats } = useMyChats({ hiddenOnly: hs.unlocked });
   const { user } = useAuth();
-  const storyUsers = useUsersWithActiveStories();
+  const storyGroups = useAllStoryGroups();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
   const [callChatIds, setCallChatIds] = useState<Set<string>>(new Set());
@@ -272,42 +273,27 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
               const isSelected = selectedChat === chat.id;
 
               return (
-                <motion.button
+                <motion.div
                   key={chat.id}
                   layout
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.22, delay: Math.min(index * 0.02, 0.15) }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => onSelectChat(chat.id)}
                   className={cn(
-                    "w-full flex items-center gap-3.5 p-3.5 rounded-2xl transition-all text-left active:bg-secondary/80",
+                    "w-full flex items-center gap-3.5 p-3.5 rounded-2xl transition-all text-left",
                     isSelected ? "bg-primary/10 border border-primary/20" : "hover:bg-secondary/40"
                   )}
                 >
-                  <div className="relative flex-shrink-0">
-                    {(() => {
-                      const hasStory = !chat.is_group && chat.other_user && storyUsers.has(chat.other_user.id);
-                      const innerImg = avatar?.startsWith("http") ? (
-                        <img src={avatar} alt="" className="h-full w-full rounded-full object-cover" />
-                      ) : (
-                        <div className="h-full w-full rounded-full bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center text-lg font-bold">
-                          {chat.is_group ? "👥" : displayName?.charAt(0)?.toUpperCase() || "?"}
-                        </div>
-                      );
-                      return hasStory ? (
-                        <div className="h-14 w-14 rounded-full p-[2px] bg-gradient-to-tr from-primary via-accent to-primary">
-                          <div className="h-full w-full rounded-full bg-background p-[2px]">
-                            <div className="h-full w-full rounded-full overflow-hidden">{innerImg}</div>
-                          </div>
-                        </div>
-                      ) : <div className="h-14 w-14">{innerImg}</div>;
-                    })()}
-                    {isOnline && (
-                      <div className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full bg-accent border-2 border-background" />
-                    )}
-                  </div>
+                  <SmartAvatarButton
+                    chat={chat}
+                    displayName={displayName}
+                    avatarUrl={avatar}
+                    isOnline={!!isOnline}
+                    otherUser={chat.is_group ? null : (chat.other_user ?? null)}
+                    storyGroup={chat.is_group ? undefined : (chat.other_user ? storyGroups.get(chat.other_user.id) : undefined)}
+                    onOpenChat={() => onSelectChat(chat.id)}
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
                       <span className={cn(
