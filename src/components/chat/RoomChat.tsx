@@ -341,6 +341,27 @@ function MessageRow({
   );
 }
 
+/* Sender name + right-aligned timestamp. Timestamp fades in during scroll. */
+function MetaRow({ mine, name, time }: { mine: boolean; name: string; time: string }) {
+  const scrolling = useContext(ScrollingContext);
+  return (
+    <div className={`flex items-baseline gap-2 mb-0.5 px-1 ${mine ? "flex-row-reverse" : ""}`}>
+      <span className={`text-[11px] font-semibold leading-tight truncate ${mine ? "text-muted-foreground" : "text-neon"}`}>
+        {name}
+      </span>
+      <span
+        aria-hidden={!scrolling}
+        className="text-[10px] text-muted-foreground leading-tight tabular-nums transition-opacity duration-300 ease-out"
+        style={{ opacity: scrolling ? 0.4 : 0 }}
+      >
+        {time}
+      </span>
+    </div>
+  );
+}
+
+
+
 function RoomMsgBody({ m }: { m: RoomMessageRow }) {
   const url = useSignedRoomMedia(m.media_url);
   if (m.message_type === "image" && url) {
