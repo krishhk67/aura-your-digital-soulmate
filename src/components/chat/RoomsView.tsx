@@ -263,15 +263,15 @@ function GlassIconButton({
 }: { children: React.ReactNode; onClick: () => void; label: string; primary?: boolean }) {
   return (
     <motion.button
-      whileTap={{ scale: 0.9 }}
-      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.92 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
       onClick={onClick}
       aria-label={label}
       title={label}
-      className={`h-10 w-10 rounded-full flex items-center justify-center border transition-shadow ${
+      className={`h-10 w-10 rounded-full flex items-center justify-center border ${
         primary
           ? "bg-gradient-to-br from-primary to-accent text-primary-foreground border-primary/50 shadow-[0_0_22px_var(--neon-glow)]"
-          : "bg-secondary/40 backdrop-blur-xl border-glass-border text-foreground hover:shadow-[0_0_14px_hsl(var(--neon-glow)/0.35)]"
+          : "bg-secondary/40 backdrop-blur-xl border-glass-border text-foreground"
       }`}
     >
       {children}
