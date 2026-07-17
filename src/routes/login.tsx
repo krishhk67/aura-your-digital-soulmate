@@ -10,8 +10,8 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Sign In — Aura" },
-      { name: "description", content: "Sign in to Aura to start chatting." },
+      { title: "Sign In — Aurix" },
+      { name: "description", content: "Sign in to Aurix to start chatting." },
     ],
   }),
   component: LoginPage,
