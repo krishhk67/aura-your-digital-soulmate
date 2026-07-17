@@ -644,10 +644,18 @@ function AccountSecuritySection() {
     if (newPassword.length < 6) { toast.error("Password must be at least 6 characters"); return; }
     setBusy("password");
     const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (!error) {
+      const markRpc = supabase.rpc as unknown as (
+        fn: "mark_password_configured",
+      ) => Promise<{ error: { message: string } | null }>;
+      await markRpc("mark_password_configured");
+      await supabase.auth.refreshSession().catch(() => {});
+    }
     setBusy(null);
     if (error) toast.error(error.message);
     else { toast.success(hasEmail ? "Password updated" : "Password set — you can now sign in without Google"); setNewPassword(""); }
   };
+
 
   const linkGoogle = async () => {
     setBusy("link");
