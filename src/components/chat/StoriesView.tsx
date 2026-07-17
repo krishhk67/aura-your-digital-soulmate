@@ -97,11 +97,12 @@ export function StoriesView() {
               myStories.length > 0 ? "bg-gradient-to-tr from-primary via-accent to-primary animate-pulse-neon" : "bg-secondary",
             )}>
               <div className="h-full w-full rounded-full bg-background flex items-center justify-center overflow-hidden">
-                {user?.user_metadata?.avatar_url ? (
-                  <img src={user.user_metadata.avatar_url as string} alt="" className="h-full w-full object-cover" />
+                {myAvatar ? (
+                  <img src={myAvatar} alt="" className="h-full w-full object-cover" />
                 ) : (
                   <span className="text-xl font-bold">{(user?.email ?? "?").charAt(0).toUpperCase()}</span>
                 )}
+
               </div>
             </div>
             <div className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center border-2 border-background">
