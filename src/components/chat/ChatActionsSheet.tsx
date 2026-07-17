@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Trash2, Image as ImageIcon, Pin, PinOff, Bell, BellOff, Download, Ban, Flag, Users, Timer, Palette } from "lucide-react";
+import { Search, Trash2, Image as ImageIcon, Pin, PinOff, Bell, BellOff, Download, Ban, Flag, Users, Timer, Palette, EyeOff, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useChatMemberState, useBlockUser, clearChatForMe } from "@/hooks/useChatActions";
+import { useHiddenSpace } from "@/hooks/useHiddenSpace";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ReportDialog } from "./ReportDialog";
 import { DisappearingMessagesDialog } from "./DisappearingMessagesDialog";
 import { ChatThemeDialog } from "./ChatThemeDialog";
+import { HiddenSpaceSetupDialog } from "./HiddenSpaceSetupDialog";
 
 
 interface Props {
