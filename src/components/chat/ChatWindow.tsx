@@ -282,7 +282,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-2">
+      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-0">
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <div className="h-6 w-6 border-2 border-neon border-t-transparent rounded-full animate-spin" />
@@ -294,9 +294,33 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
             </p>
           </div>
         ) : (
-          visibleMessages.map((msg) => {
+          visibleMessages.map((msg, i) => {
             const isMe = msg.sender_id === user?.id;
             const time = new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+            const prev = visibleMessages[i - 1];
+            const next = visibleMessages[i + 1];
+            const withinGap = (a: typeof msg, b: typeof msg) =>
+              Math.abs(new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) < 5 * 60_000;
+            const groupedWithPrev = !!(prev && prev.sender_id === msg.sender_id && withinGap(prev, msg));
+            const groupedWithNext = !!(next && next.sender_id === msg.sender_id && withinGap(msg, next));
+
+            const isImage = msg.message_type === "image" && !!msg.media_url;
+            const isVideo = msg.message_type === "video" && !!msg.media_url;
+            const isAudio = msg.message_type === "audio" && !!msg.media_url;
+            const isFile = msg.message_type === "file" && !!msg.media_url;
+            const isMedia = isImage || isVideo;
+
+            const bubblePad = isMedia
+              ? "p-1 overflow-hidden"
+              : isAudio
+              ? "px-2 py-1"
+              : isFile
+              ? "px-2 py-1.5"
+              : "px-2.5 py-1";
+
+            const tailPrev = groupedWithPrev ? (isMe ? "rounded-tr-[6px]" : "rounded-tl-[6px]") : "";
+            const tailNext = groupedWithNext ? (isMe ? "rounded-br-[10px]" : "rounded-bl-[10px]") : (isMe ? "rounded-br-[6px]" : "rounded-bl-[6px]");
 
             return (
               <motion.div
@@ -305,47 +329,51 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                 initial={{ opacity: 0, y: 8, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                className={cn("flex", isMe ? "justify-end" : "justify-start")}
+                className={cn("flex", isMe ? "justify-end" : "justify-start", groupedWithPrev ? "mt-px" : "mt-1.5")}
               >
-                <div className="relative max-w-[80%]">
+                <div className="relative max-w-[78%]">
                   <div className={cn(
-                    "px-3 py-2 text-[14px] leading-relaxed",
+                    "text-[14px] leading-relaxed rounded-[14px]",
+                    bubblePad,
+                    tailPrev,
+                    tailNext,
                     isMe
-                      ? "bg-primary/20 text-foreground rounded-2xl rounded-br-md border border-primary/20"
-                      : "glass-panel text-foreground rounded-2xl rounded-bl-md"
+                      ? "bg-primary/20 text-foreground border border-primary/20"
+                      : "glass-panel text-foreground"
                   )}>
-                    {!isMe && msg.sender && (
+                    {!isMe && !groupedWithPrev && msg.sender && (
                       <p className="text-[10px] text-neon mb-0.5 font-medium">{msg.sender.display_name}</p>
                     )}
-                    {msg.message_type === "image" && msg.media_url && (
-                      <a href={msg.media_url} target="_blank" rel="noreferrer">
-                        <img src={msg.media_url} alt="" className="rounded-lg max-h-64 object-cover" />
+                    {isImage && (
+                      <a href={msg.media_url!} target="_blank" rel="noreferrer">
+                        <img src={msg.media_url!} alt="" className="block rounded-[10px] w-full max-h-64 object-cover" />
                       </a>
                     )}
-                    {msg.message_type === "video" && msg.media_url && (
-                      <video src={msg.media_url} controls className="rounded-lg max-h-64" />
+                    {isVideo && (
+                      <video src={msg.media_url!} controls className="block rounded-[10px] w-full max-h-64" />
                     )}
-                    {msg.message_type === "audio" && msg.media_url && (
-                      <AudioMessage url={msg.media_url} mine={isMe} durationHintMs={parseDurationHint(msg.content)} />
+                    {isAudio && (
+                      <AudioMessage url={msg.media_url!} mine={isMe} durationHintMs={parseDurationHint(msg.content)} />
                     )}
-                    {msg.message_type === "file" && msg.media_url && (
-                      <a href={msg.media_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 py-1">
-                        <div className="h-9 w-9 rounded-lg bg-primary/20 flex items-center justify-center"><FileText className="h-4 w-4 text-neon" /></div>
-                        <span className="text-xs underline">{msg.content ?? "Download file"}</span>
+                    {isFile && (
+                      <a href={msg.media_url!} target="_blank" rel="noreferrer" className="flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0"><FileText className="h-4 w-4 text-neon" /></div>
+                        <span className="text-xs underline truncate">{msg.content ?? "Download file"}</span>
                       </a>
                     )}
                     {(!msg.message_type || msg.message_type === "text") && msg.content}
                   </div>
-                  <div className={cn("flex items-center gap-1 mt-0.5 text-[10px] text-muted-foreground px-1", isMe ? "justify-end" : "justify-start")}>
-                    <span>{time}</span>
-                    {msg.expires_at && (
-                      <span className="inline-flex items-center gap-0.5 text-neon" title={`Expires ${new Date(msg.expires_at).toLocaleString()}`}>
-                        <Timer className="h-2.5 w-2.5" />
-                      </span>
-                    )}
-                    {isMe && <CheckCheck className="h-3 w-3 text-accent" />}
-                  </div>
-
+                  {!groupedWithNext && (
+                    <div className={cn("flex items-center gap-1 mt-0.5 text-[10px] text-muted-foreground px-1", isMe ? "justify-end" : "justify-start")}>
+                      <span>{time}</span>
+                      {msg.expires_at && (
+                        <span className="inline-flex items-center gap-0.5 text-neon" title={`Expires ${new Date(msg.expires_at).toLocaleString()}`}>
+                          <Timer className="h-2.5 w-2.5" />
+                        </span>
+                      )}
+                      {isMe && <CheckCheck className="h-3 w-3 text-accent" />}
+                    </div>
+                  )}
                 </div>
               </motion.div>
             );
@@ -353,6 +381,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
         )}
         <div ref={bottomRef} />
       </div>
+
 
       {/* Attachment menu */}
       <AnimatePresence>
