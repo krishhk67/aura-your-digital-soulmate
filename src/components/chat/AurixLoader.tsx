@@ -1,202 +1,217 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Environment, ContactShadows } from "@react-three/drei";
-import * as THREE from "three";
 
 const PHRASES = [
   "Preparing Aurix",
   "Encrypting conversations",
-  "Building secure tunnel",
+  "Establishing secure tunnel",
   "Syncing messages",
   "Almost ready",
 ];
 
 const EMERALD = "#10b981";
-const EMERALD_HEX = 0x10b981;
+const EMERALD_SOFT = "#6ee7b7";
 
-/* ---------------- 3D Figurine ---------------- */
+/* ---------------- Aurix Logo (2D SVG) ---------------- */
 
-function Figurine() {
-  const root = useRef<THREE.Group>(null!);
-  const torso = useRef<THREE.Group>(null!);
-  const head = useRef<THREE.Mesh>(null!);
-  const lShoulder = useRef<THREE.Group>(null!);
-  const rShoulder = useRef<THREE.Group>(null!);
-  const lHip = useRef<THREE.Group>(null!);
-  const rHip = useRef<THREE.Group>(null!);
-  const lFoot = useRef<THREE.Group>(null!);
-  const rFoot = useRef<THREE.Group>(null!);
+function AurixMark({ size = 120 }: { size?: number }) {
+  return (
+    <svg viewBox="0 0 100 100" width={size} height={size} fill="none">
+      <defs>
+        <linearGradient id="aurix-stroke" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={EMERALD_SOFT} />
+          <stop offset="50%" stopColor={EMERALD} />
+          <stop offset="100%" stopColor="#059669" />
+        </linearGradient>
+        <linearGradient id="aurix-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={EMERALD} stopOpacity="0.15" />
+          <stop offset="100%" stopColor={EMERALD} stopOpacity="0.02" />
+        </linearGradient>
+        <filter id="aurix-glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2.4" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
 
-  // Matte soft-touch black material with subtle emerald rim via env
-  const bodyMat = useMemo(
-    () =>
-      new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color("#0a0a0a"),
-        roughness: 0.55,
-        metalness: 0.15,
-        clearcoat: 0.6,
-        clearcoatRoughness: 0.35,
-        sheen: 1,
-        sheenColor: new THREE.Color(EMERALD_HEX),
-        sheenRoughness: 0.6,
-        envMapIntensity: 0.6,
-      }),
-    []
+      {/* Filled A silhouette */}
+      <motion.path
+        d="M50 12 L82 84 L68 84 L61 68 L39 68 L32 84 L18 84 Z M44 56 L56 56 L50 32 Z"
+        fill="url(#aurix-fill)"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: [0.4, 0.7, 0.4] }}
+        transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+      />
+
+      {/* Stroke draw */}
+      <motion.path
+        d="M50 12 L82 84 L68 84 L61 68 L39 68 L32 84 L18 84 Z"
+        stroke="url(#aurix-stroke)"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        fill="none"
+        filter="url(#aurix-glow)"
+        initial={{ pathLength: 0, opacity: 0 }}
+        animate={{ pathLength: 1, opacity: 1 }}
+        transition={{ pathLength: { duration: 2.2, ease: [0.65, 0, 0.35, 1] }, opacity: { duration: 0.6 } }}
+      />
+      <motion.path
+        d="M44 56 L56 56 L50 32 Z"
+        stroke="url(#aurix-stroke)"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+        fill="none"
+        filter="url(#aurix-glow)"
+        initial={{ pathLength: 0, opacity: 0 }}
+        animate={{ pathLength: 1, opacity: 1 }}
+        transition={{ pathLength: { duration: 1.6, ease: [0.65, 0, 0.35, 1], delay: 0.6 }, opacity: { duration: 0.6, delay: 0.6 } }}
+      />
+    </svg>
   );
+}
 
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime();
+/* ---------------- Rings ---------------- */
 
-    // Breathing + subtle vertical bob
-    if (root.current) {
-      root.current.position.y = Math.sin(t * 1.4) * 0.02;
-      root.current.rotation.y = Math.sin(t * 0.35) * 0.25;
-    }
-    if (torso.current) {
-      const lean = Math.sin(t * 1.1) * 0.08;
-      torso.current.rotation.z = lean;
-      torso.current.rotation.x = Math.sin(t * 0.9) * 0.04;
-      torso.current.scale.y = 1 + Math.sin(t * 1.6) * 0.012;
-    }
-    if (head.current) {
-      head.current.rotation.y = Math.sin(t * 0.7) * 0.35;
-      head.current.rotation.z = Math.sin(t * 1.1) * 0.06;
-    }
+function Ring({
+  size,
+  delay = 0,
+  duration = 8,
+  opacity = 0.35,
+  dashed = false,
+}: {
+  size: number;
+  delay?: number;
+  duration?: number;
+  opacity?: number;
+  dashed?: boolean;
+}) {
+  return (
+    <motion.div
+      style={{
+        position: "absolute",
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        border: `1px ${dashed ? "dashed" : "solid"} ${EMERALD}`,
+        opacity,
+        boxShadow: `0 0 24px ${EMERALD}22, inset 0 0 24px ${EMERALD}11`,
+      }}
+      animate={{ rotate: 360, scale: [1, 1.04, 1] }}
+      transition={{
+        rotate: { duration, repeat: Infinity, ease: "linear", delay },
+        scale: { duration: duration / 2, repeat: Infinity, ease: "easeInOut" },
+      }}
+    />
+  );
+}
 
-    // Arm swings — offset phase for natural gait
-    const armPhase = Math.sin(t * 2.0);
-    if (lShoulder.current) lShoulder.current.rotation.x = armPhase * 0.55;
-    if (rShoulder.current) rShoulder.current.rotation.x = -armPhase * 0.55;
-    if (lShoulder.current) lShoulder.current.rotation.z = 0.15 + Math.sin(t * 1.3) * 0.05;
-    if (rShoulder.current) rShoulder.current.rotation.z = -0.15 - Math.sin(t * 1.3) * 0.05;
+function PulseRing({ size, delay = 0 }: { size: number; delay?: number }) {
+  return (
+    <motion.div
+      style={{
+        position: "absolute",
+        width: size,
+        height: size,
+        borderRadius: "50%",
+        border: `1px solid ${EMERALD}`,
+      }}
+      initial={{ scale: 0.7, opacity: 0.6 }}
+      animate={{ scale: 1.5, opacity: 0 }}
+      transition={{ duration: 3.4, repeat: Infinity, ease: "easeOut", delay }}
+    />
+  );
+}
 
-    // Glide footwork — legs slide side-to-side, crossing over
-    const glide = Math.sin(t * 2.0);
-    const cross = Math.sin(t * 1.0);
-    if (lHip.current) {
-      lHip.current.position.x = -0.18 + cross * 0.12;
-      lHip.current.position.z = glide * 0.15;
-      lHip.current.rotation.x = -glide * 0.35;
-    }
-    if (rHip.current) {
-      rHip.current.position.x = 0.18 - cross * 0.12;
-      rHip.current.position.z = -glide * 0.15;
-      rHip.current.rotation.x = glide * 0.35;
-    }
-    // Heel rotations
-    if (lFoot.current) lFoot.current.rotation.y = Math.sin(t * 2.0) * 0.5;
-    if (rFoot.current) rFoot.current.rotation.y = -Math.sin(t * 2.0) * 0.5;
-  });
+/* ---------------- Orbiting particles ---------------- */
+
+function Orbit({
+  radius,
+  duration,
+  size = 3,
+  offset = 0,
+  reverse = false,
+}: {
+  radius: number;
+  duration: number;
+  size?: number;
+  offset?: number;
+  reverse?: boolean;
+}) {
+  return (
+    <motion.div
+      style={{
+        position: "absolute",
+        width: radius * 2,
+        height: radius * 2,
+        borderRadius: "50%",
+        transformOrigin: "50% 50%",
+      }}
+      animate={{ rotate: reverse ? -360 : 360 }}
+      transition={{ duration, repeat: Infinity, ease: "linear", delay: offset }}
+    >
+      <motion.div
+        style={{
+          position: "absolute",
+          top: -size / 2,
+          left: `calc(50% - ${size / 2}px)`,
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          background: EMERALD_SOFT,
+          boxShadow: `0 0 12px ${EMERALD}, 0 0 24px ${EMERALD}`,
+        }}
+        animate={{ opacity: [0.4, 1, 0.4], scale: [0.8, 1.3, 0.8] }}
+        transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut", delay: offset }}
+      />
+    </motion.div>
+  );
+}
+
+/* ---------------- Floating particles ---------------- */
+
+function Particles({ count = 28 }: { count?: number }) {
+  const items = useMemo(
+    () =>
+      Array.from({ length: count }, (_, i) => ({
+        id: i,
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        size: Math.random() * 2 + 0.6,
+        dur: Math.random() * 6 + 6,
+        delay: Math.random() * 4,
+        opacity: Math.random() * 0.5 + 0.15,
+      })),
+    [count]
+  );
 
   return (
-    <group ref={root} position={[0, -0.9, 0]}>
-      {/* Legs */}
-      <group ref={lHip} position={[-0.18, 0.05, 0]}>
-        <mesh material={bodyMat} castShadow position={[0, -0.35, 0]}>
-          <capsuleGeometry args={[0.11, 0.55, 8, 16]} />
-        </mesh>
-        <group ref={lFoot} position={[0, -0.72, 0.05]}>
-          <mesh material={bodyMat} castShadow>
-            <capsuleGeometry args={[0.1, 0.16, 6, 12]} />
-          </mesh>
-        </group>
-      </group>
-      <group ref={rHip} position={[0.18, 0.05, 0]}>
-        <mesh material={bodyMat} castShadow position={[0, -0.35, 0]}>
-          <capsuleGeometry args={[0.11, 0.55, 8, 16]} />
-        </mesh>
-        <group ref={rFoot} position={[0, -0.72, 0.05]}>
-          <mesh material={bodyMat} castShadow>
-            <capsuleGeometry args={[0.1, 0.16, 6, 12]} />
-          </mesh>
-        </group>
-      </group>
-
-      {/* Torso */}
-      <group ref={torso} position={[0, 0.55, 0]}>
-        <mesh material={bodyMat} castShadow>
-          <capsuleGeometry args={[0.28, 0.55, 10, 20]} />
-        </mesh>
-
-        {/* Arms */}
-        <group ref={lShoulder} position={[-0.34, 0.22, 0]}>
-          <mesh material={bodyMat} castShadow position={[0, -0.32, 0]}>
-            <capsuleGeometry args={[0.085, 0.52, 8, 16]} />
-          </mesh>
-          <mesh material={bodyMat} castShadow position={[0, -0.7, 0]}>
-            <sphereGeometry args={[0.09, 16, 16]} />
-          </mesh>
-        </group>
-        <group ref={rShoulder} position={[0.34, 0.22, 0]}>
-          <mesh material={bodyMat} castShadow position={[0, -0.32, 0]}>
-            <capsuleGeometry args={[0.085, 0.52, 8, 16]} />
-          </mesh>
-          <mesh material={bodyMat} castShadow position={[0, -0.7, 0]}>
-            <sphereGeometry args={[0.09, 16, 16]} />
-          </mesh>
-        </group>
-
-        {/* Head — smooth ovoid, no features */}
-        <mesh ref={head} material={bodyMat} castShadow position={[0, 0.6, 0]}>
-          <sphereGeometry args={[0.24, 32, 32]} />
-        </mesh>
-      </group>
-    </group>
+    <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+      {items.map((p) => (
+        <motion.div
+          key={p.id}
+          style={{
+            position: "absolute",
+            left: `${p.x}%`,
+            top: `${p.y}%`,
+            width: p.size,
+            height: p.size,
+            borderRadius: "50%",
+            background: EMERALD_SOFT,
+            boxShadow: `0 0 6px ${EMERALD}`,
+            opacity: p.opacity,
+          }}
+          animate={{
+            y: [0, -30, 0],
+            opacity: [p.opacity, p.opacity * 1.8, p.opacity],
+          }}
+          transition={{ duration: p.dur, repeat: Infinity, ease: "easeInOut", delay: p.delay }}
+        />
+      ))}
+    </div>
   );
-}
-
-/* Cinematic camera: slow push-in + micro float */
-function CameraRig() {
-  const { camera } = useThree();
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime();
-    const targetZ = 3.4 - Math.min(t * 0.02, 0.35);
-    camera.position.x = Math.sin(t * 0.25) * 0.12;
-    camera.position.y = 0.4 + Math.sin(t * 0.4) * 0.05;
-    camera.position.z = targetZ;
-    camera.lookAt(0, 0.1, 0);
-  });
-  return null;
-}
-
-/* Emerald floating particles inside 3D scene */
-function Particles({ count = 60 }: { count?: number }) {
-  const ref = useRef<THREE.Points>(null!);
-  const geom = useMemo(() => {
-    const g = new THREE.BufferGeometry();
-    const pos = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 4;
-      pos[i * 3 + 1] = Math.random() * 2.2 - 0.5;
-      pos[i * 3 + 2] = (Math.random() - 0.5) * 2.5;
-    }
-    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-    return g;
-  }, [count]);
-  const mat = useMemo(
-    () =>
-      new THREE.PointsMaterial({
-        color: EMERALD_HEX,
-        size: 0.025,
-        transparent: true,
-        opacity: 0.7,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-      }),
-    []
-  );
-  useFrame((s) => {
-    if (!ref.current) return;
-    const t = s.clock.getElapsedTime();
-    const arr = (ref.current.geometry.attributes.position as THREE.BufferAttribute).array as Float32Array;
-    for (let i = 0; i < count; i++) {
-      arr[i * 3 + 1] += 0.0015 + Math.sin(t + i) * 0.0005;
-      if (arr[i * 3 + 1] > 1.8) arr[i * 3 + 1] = -0.5;
-    }
-    (ref.current.geometry.attributes.position as THREE.BufferAttribute).needsUpdate = true;
-  });
-  return <points ref={ref} geometry={geom} material={mat} />;
 }
 
 /* ---------------- Loader Shell ---------------- */
@@ -206,7 +221,7 @@ export function AurixLoader() {
   const reduce = useReducedMotion();
 
   useEffect(() => {
-    const t = setInterval(() => setI((v) => (v + 1) % PHRASES.length), 2200);
+    const t = setInterval(() => setI((v) => (v + 1) % PHRASES.length), 2400);
     return () => clearInterval(t);
   }, []);
 
@@ -215,7 +230,7 @@ export function AurixLoader() {
       data-aurix-loader
       initial={false}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0, scale: 1.02, filter: "blur(10px)" }}
+      exit={{ opacity: 0, scale: 1.03, filter: "blur(12px)" }}
       transition={{ duration: 0.7, ease: [0.4, 0, 0.2, 1] }}
       style={{
         position: "fixed",
@@ -229,105 +244,166 @@ export function AurixLoader() {
         justifyContent: "center",
       }}
     >
-      {/* Ambient emerald volumetric glow */}
+      {/* Ambient emerald radial glow */}
       <div
         aria-hidden
         style={{
           position: "absolute",
           inset: 0,
           background:
-            "radial-gradient(60% 45% at 50% 60%, rgba(16,185,129,0.22), transparent 70%), radial-gradient(30% 25% at 50% 85%, rgba(16,185,129,0.35), transparent 70%)",
+            "radial-gradient(50% 40% at 50% 50%, rgba(16,185,129,0.18), transparent 70%), radial-gradient(80% 60% at 50% 100%, rgba(16,185,129,0.08), transparent 70%)",
           pointerEvents: "none",
         }}
       />
 
-      {/* 3D scene */}
-      <div style={{ position: "absolute", inset: 0 }}>
-        <Canvas
-          shadows
-          dpr={[1, 1.75]}
-          gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
-          camera={{ position: [0, 0.4, 3.4], fov: 32 }}
-          style={{ background: "transparent" }}
+      {/* Grain / noise (very subtle) */}
+      <div
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: 0,
+          opacity: 0.035,
+          mixBlendMode: "overlay",
+          backgroundImage:
+            "radial-gradient(rgba(255,255,255,0.6) 1px, transparent 1px)",
+          backgroundSize: "3px 3px",
+          pointerEvents: "none",
+        }}
+      />
+
+      <Particles />
+
+      {/* Centerpiece stage */}
+      <div
+        style={{
+          position: "relative",
+          width: 340,
+          height: 340,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {/* Soft halo behind logo */}
+        <motion.div
+          style={{
+            position: "absolute",
+            width: 240,
+            height: 240,
+            borderRadius: "50%",
+            background: `radial-gradient(circle, ${EMERALD}55, transparent 65%)`,
+            filter: "blur(20px)",
+          }}
+          animate={{ opacity: [0.5, 0.9, 0.5], scale: [0.95, 1.05, 0.95] }}
+          transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}
+        />
+
+        {/* Rings */}
+        {!reduce && (
+          <>
+            <Ring size={320} duration={22} opacity={0.18} dashed />
+            <Ring size={260} duration={16} opacity={0.28} />
+            <Ring size={200} duration={11} opacity={0.4} dashed />
+            <PulseRing size={220} />
+            <PulseRing size={220} delay={1.7} />
+          </>
+        )}
+
+        {/* Orbiting particles */}
+        {!reduce && (
+          <>
+            <Orbit radius={100} duration={7} size={4} />
+            <Orbit radius={130} duration={11} size={3} offset={1.2} reverse />
+            <Orbit radius={160} duration={15} size={2.5} offset={2.4} />
+          </>
+        )}
+
+        {/* Logo with breathing / float / soft rotation */}
+        <motion.div
+          style={{
+            position: "relative",
+            width: 140,
+            height: 140,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            filter: `drop-shadow(0 0 20px ${EMERALD}aa)`,
+          }}
+          animate={{
+            scale: [1, 1.05, 1],
+            y: [0, -6, 0],
+            rotate: [-2, 2, -2],
+          }}
+          transition={{
+            scale: { duration: 3.6, repeat: Infinity, ease: "easeInOut" },
+            y: { duration: 4.2, repeat: Infinity, ease: "easeInOut" },
+            rotate: { duration: 7, repeat: Infinity, ease: "easeInOut" },
+          }}
         >
-          {/* 3-point lighting */}
-          <ambientLight intensity={0.25} />
-          <directionalLight
-            position={[3, 4, 2]}
-            intensity={1.1}
-            color="#ffffff"
-            castShadow
-            shadow-mapSize-width={1024}
-            shadow-mapSize-height={1024}
-          />
-          <directionalLight position={[-3, 2, -2]} intensity={0.6} color={EMERALD} />
-          <pointLight position={[0, -0.8, 1.5]} intensity={1.4} color={EMERALD} distance={4} />
-          <spotLight
-            position={[0, 3, 2]}
-            angle={0.5}
-            penumbra={1}
-            intensity={0.8}
-            color="#ffffff"
-            castShadow
-          />
+          <AurixMark size={130} />
 
-          <Environment preset="studio" background={false} environmentIntensity={0.35} />
-
-          {!reduce && <CameraRig />}
-          <Figurine />
-          <Particles />
-
-          {/* Glossy reflective floor via contact shadow + soft plane */}
-          <ContactShadows
-            position={[0, -0.9, 0]}
-            opacity={0.85}
-            scale={5}
-            blur={2.6}
-            far={2}
-            color={EMERALD}
-          />
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.902, 0]} receiveShadow>
-            <circleGeometry args={[2.2, 64]} />
-            <meshStandardMaterial
-              color="#000"
-              roughness={0.35}
-              metalness={0.9}
-              envMapIntensity={0.4}
+          {/* Shimmer sweep */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: 24,
+              overflow: "hidden",
+              pointerEvents: "none",
+              WebkitMaskImage:
+                "radial-gradient(circle at 50% 50%, black 55%, transparent 70%)",
+              maskImage:
+                "radial-gradient(circle at 50% 50%, black 55%, transparent 70%)",
+            }}
+          >
+            <motion.div
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                width: "40%",
+                background:
+                  "linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent)",
+                filter: "blur(2px)",
+              }}
+              initial={{ x: "-120%" }}
+              animate={{ x: "260%" }}
+              transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut", repeatDelay: 0.6 }}
             />
-          </mesh>
-        </Canvas>
+          </div>
+        </motion.div>
       </div>
 
-      {/* Loading UI */}
+      {/* Text + progress */}
       <div
         style={{
           position: "absolute",
-          bottom: "12%",
+          bottom: "10%",
           left: 0,
           right: 0,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: 18,
+          gap: 20,
           pointerEvents: "none",
         }}
       >
-        <div style={{ height: 22, position: "relative", width: "min(280px, 70vw)" }}>
+        <div style={{ height: 22, position: "relative", width: "min(320px, 78vw)" }}>
           <AnimatePresence mode="wait">
             <motion.div
               key={i}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.45 }}
+              initial={{ opacity: 0, y: 10, filter: "blur(6px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, y: -10, filter: "blur(6px)" }}
+              transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
               style={{
                 position: "absolute",
                 inset: 0,
                 textAlign: "center",
                 fontSize: 13,
-                letterSpacing: "0.14em",
+                letterSpacing: "0.16em",
                 textTransform: "uppercase",
-                color: "rgba(255,255,255,0.72)",
+                color: "rgba(255,255,255,0.78)",
                 fontWeight: 500,
               }}
             >
@@ -336,27 +412,29 @@ export function AurixLoader() {
           </AnimatePresence>
         </div>
 
-        {/* Energy line */}
+        {/* Glass capsule progress line */}
         <div
           style={{
-            width: "min(220px, 60vw)",
-            height: 2,
+            width: "min(240px, 64vw)",
+            height: 3,
             borderRadius: 999,
-            background: "rgba(255,255,255,0.06)",
+            background: "rgba(255,255,255,0.05)",
+            border: "1px solid rgba(255,255,255,0.06)",
             overflow: "hidden",
             position: "relative",
-            boxShadow: `0 0 24px ${EMERALD}55`,
+            backdropFilter: "blur(8px)",
+            boxShadow: `0 0 20px ${EMERALD}44, inset 0 0 6px rgba(0,0,0,0.6)`,
           }}
         >
           <motion.div
             initial={{ x: "-100%" }}
             animate={{ x: "100%" }}
-            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: [0.65, 0, 0.35, 1] }}
             style={{
               position: "absolute",
               inset: 0,
-              background: `linear-gradient(90deg, transparent, ${EMERALD}, #6ee7b7, ${EMERALD}, transparent)`,
-              filter: "blur(0.5px)",
+              background: `linear-gradient(90deg, transparent 0%, ${EMERALD}55 30%, ${EMERALD_SOFT} 50%, ${EMERALD}55 70%, transparent 100%)`,
+              filter: "blur(0.4px)",
             }}
           />
         </div>
@@ -364,9 +442,10 @@ export function AurixLoader() {
         <div
           style={{
             fontSize: 10,
-            letterSpacing: "0.4em",
-            color: "rgba(255,255,255,0.35)",
+            letterSpacing: "0.5em",
+            color: "rgba(255,255,255,0.32)",
             fontWeight: 600,
+            paddingLeft: "0.5em",
           }}
         >
           AURIX
