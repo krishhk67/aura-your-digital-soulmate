@@ -6,9 +6,11 @@ import { cn } from "@/lib/utils";
 interface Props {
   url: string;
   mine?: boolean;
+  /** Optional duration hint in milliseconds (e.g. stored at record time). Used when the file lacks metadata duration. */
+  durationHintMs?: number;
 }
 
-export function AudioMessage({ url, mine }: Props) {
+export function AudioMessage({ url, mine, durationHintMs }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
