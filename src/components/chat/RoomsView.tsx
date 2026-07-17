@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  useRooms, useRoomActions, useSignedRoomMedia, signedRoomMedia,
+  useRooms, useRoomActions, useSignedRoomMedia,
   type RoomRow,
 } from "@/hooks/useRooms";
 import { CreateRoomDialog } from "./CreateRoomDialog";
