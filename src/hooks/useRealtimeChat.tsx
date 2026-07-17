@@ -34,6 +34,7 @@ export interface MessageRow {
   is_edited: boolean;
   created_at: string;
   expires_at?: string | null;
+  metadata?: unknown;
 }
 
 interface DirectChatResult {
