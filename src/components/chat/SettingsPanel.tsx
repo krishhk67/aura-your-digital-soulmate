@@ -88,16 +88,25 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
   const saveProfile = async () => {
     if (!user) return;
     setSaving(true);
+    // Handle username change atomically via RPC (case-insensitive uniqueness)
+    const newUser = username.trim();
+    const oldUser = profile?.username ?? "";
+    if (newUser !== oldUser && newUser.length > 0) {
+      const rpc = supabase.rpc as unknown as (
+        fn: "set_my_username", args: { _username: string }
+      ) => Promise<{ error: { message: string } | null }>;
+      const { error } = await rpc("set_my_username", { _username: newUser });
+      if (error) { toast.error(error.message); setSaving(false); return; }
+    }
     const { error } = await supabase.from("profiles").update({
       display_name: displayName.trim() || null,
-      username: username.trim() || null,
       bio: bio.trim() || null,
       status_text: statusText.trim() || null,
     }).eq("id", user.id);
     if (error) toast.error("Failed to save profile");
     else {
       toast.success("Profile updated");
-      setProfile(prev => prev ? { ...prev, display_name: displayName, username, bio, status_text: statusText } : prev);
+      setProfile(prev => prev ? { ...prev, display_name: displayName, username: newUser, bio, status_text: statusText } : prev);
     }
     setSaving(false);
   };
