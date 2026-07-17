@@ -93,7 +93,7 @@ export function HeroSection() {
             <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/30 to-accent/30 blur-3xl animate-pulse-neon" />
             <img
               src={heroMockup}
-              alt="Aura chat app interface"
+              alt="Aurix chat app interface"
               width={1024}
               height={1024}
               className="relative rounded-3xl max-w-sm lg:max-w-md w-full shadow-2xl"
