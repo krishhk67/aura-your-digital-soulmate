@@ -1,8 +1,10 @@
 import { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Search, Star, Sparkles } from "lucide-react";
-import { FONTS, FONT_CATEGORIES, ensureFontLoaded, getFontById, type FontCategory, type FontDef } from "@/lib/fonts";
+import { Check, Search, Star, Sparkles, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
+import { AURIX_DEFAULT_ID, FONTS, FONT_CATEGORIES, ensureFontLoaded, getFontById, isDefaultFont, type FontCategory, type FontDef } from "@/lib/fonts";
 import { useFont } from "@/hooks/useFont";
+
 
 /**
  * Typography picker — data-driven grid of font previews.
