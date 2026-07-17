@@ -232,7 +232,6 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
               className="absolute inset-0 h-full w-full object-contain"
               autoPlay
               playsInline
-              onTimeUpdate={handleVideoTime}
               onEnded={next}
             />
           ) : (
