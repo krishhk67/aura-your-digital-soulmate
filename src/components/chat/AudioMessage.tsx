@@ -6,9 +6,11 @@ import { cn } from "@/lib/utils";
 interface Props {
   url: string;
   mine?: boolean;
+  /** Optional duration hint in milliseconds (e.g. stored at record time). Used when the file lacks metadata duration. */
+  durationHintMs?: number;
 }
 
-export function AudioMessage({ url, mine }: Props) {
+export function AudioMessage({ url, mine, durationHintMs }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -33,24 +35,50 @@ export function AudioMessage({ url, mine }: Props) {
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
+    let fixingDuration = false;
+    const applyDuration = (d: number) => {
+      if (isFinite(d) && d > 0) setDuration(d);
+      else if (durationHintMs && durationHintMs > 0) setDuration(durationHintMs / 1000);
+    };
     const onTime = () => { if (!dragging) setProgress(a.currentTime); };
-    const onLoad = () => setDuration(a.duration || 0);
+    const onLoad = () => {
+      // MediaRecorder webm often reports Infinity for duration. Trigger the seek trick to force the browser to compute it.
+      if (!isFinite(a.duration) || a.duration === 0) {
+        fixingDuration = true;
+        try { a.currentTime = 1e6; } catch {}
+      } else {
+        applyDuration(a.duration);
+      }
+    };
+    const onDurationChange = () => {
+      if (fixingDuration && isFinite(a.duration) && a.duration > 0) {
+        fixingDuration = false;
+        applyDuration(a.duration);
+        try { a.currentTime = 0; } catch {}
+      } else if (!fixingDuration) {
+        applyDuration(a.duration);
+      }
+    };
     const onEnd = () => { setPlaying(false); playingRef.current = false; setProgress(0); progressRef.current = 0; };
     const onPlay = () => { setPlaying(true); playingRef.current = true; };
     const onPause = () => { setPlaying(false); playingRef.current = false; };
     a.addEventListener("timeupdate", onTime);
     a.addEventListener("loadedmetadata", onLoad);
+    a.addEventListener("durationchange", onDurationChange);
     a.addEventListener("ended", onEnd);
     a.addEventListener("play", onPlay);
     a.addEventListener("pause", onPause);
+    // Seed from hint immediately so UI never shows 0:00 for a known-length note.
+    if (durationHintMs && durationHintMs > 0) setDuration(durationHintMs / 1000);
     return () => {
       a.removeEventListener("timeupdate", onTime);
       a.removeEventListener("loadedmetadata", onLoad);
+      a.removeEventListener("durationchange", onDurationChange);
       a.removeEventListener("ended", onEnd);
       a.removeEventListener("play", onPlay);
       a.removeEventListener("pause", onPause);
     };
-  }, [dragging]);
+  }, [dragging, durationHintMs, url]);
 
   useEffect(() => {
     progressRef.current = duration ? progress / duration : 0;
@@ -101,15 +129,20 @@ export function AudioMessage({ url, mine }: Props) {
       const progress = progressRef.current;
       const playedX = progress * w;
 
-      // Single elegant liquid wave
+      // Dual liquid waves — synchronized primary + counter-phase secondary
       const mutedColor = mine ? "rgba(255,255,255,0.32)" : "rgba(148,148,160,0.5)";
+      const mutedColorSoft = mine ? "rgba(255,255,255,0.18)" : "rgba(148,148,160,0.28)";
 
-      const waveY = (nx: number) =>
-        midY +
-        Math.sin(nx * 6.2 + phaseRef.current * 2) * (h * 0.22) +
-        Math.sin(nx * 11.4 - phaseRef.current * 1.2) * (h * 0.07);
+      const waveY = (nx: number, variant: 0 | 1) =>
+        variant === 0
+          ? midY +
+            Math.sin(nx * 6.2 + phaseRef.current * 2) * (h * 0.22) +
+            Math.sin(nx * 11.4 - phaseRef.current * 1.2) * (h * 0.07)
+          : midY +
+            Math.sin(nx * 5.4 - phaseRef.current * 1.6 + 1.1) * (h * 0.16) +
+            Math.sin(nx * 9.8 + phaseRef.current * 1.0 + 0.4) * (h * 0.05);
 
-      const drawWave = (opts: { stroke: string | CanvasGradient; alpha: number; lineWidth: number; clipLeft?: number; clipRight?: number; shadow?: string }) => {
+      const drawWave = (opts: { variant: 0 | 1; stroke: string | CanvasGradient; alpha: number; lineWidth: number; clipLeft?: number; clipRight?: number; shadow?: string }) => {
         ctx.save();
         if (opts.clipLeft !== undefined || opts.clipRight !== undefined) {
           ctx.beginPath();
@@ -118,7 +151,7 @@ export function AudioMessage({ url, mine }: Props) {
         }
         ctx.beginPath();
         for (let x = 0; x <= w; x += 2) {
-          const y = waveY(x / w);
+          const y = waveY(x / w, opts.variant);
           if (x === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
@@ -132,20 +165,22 @@ export function AudioMessage({ url, mine }: Props) {
         ctx.restore();
       };
 
-      // Unplayed portion — muted gray, clipped from the playhead onward
-      drawWave({ stroke: mutedColor, alpha: 1, lineWidth: 1.8, clipLeft: playedX });
+      // Unplayed portion — two muted waves
+      drawWave({ variant: 1, stroke: mutedColorSoft, alpha: 1, lineWidth: 1.4, clipLeft: playedX });
+      drawWave({ variant: 0, stroke: mutedColor, alpha: 1, lineWidth: 1.8, clipLeft: playedX });
 
-      // Played portion — accent gradient with soft glow
+      // Played portion — accent gradient with soft glow, both waves
       if (playedX > 0.5) {
         const grad = ctx.createLinearGradient(0, 0, playedX, 0);
         grad.addColorStop(0, primary);
         grad.addColorStop(1, primaryLight);
-        drawWave({ stroke: grad, alpha: 1, lineWidth: 2, clipRight: playedX, shadow: primary });
+        drawWave({ variant: 1, stroke: primary, alpha: 0.55, lineWidth: 1.5, clipRight: playedX });
+        drawWave({ variant: 0, stroke: grad, alpha: 1, lineWidth: 2, clipRight: playedX, shadow: primary });
       }
 
-      // Glowing progress dot pinned to the wave, with gentle pulse
+      // Glowing progress dot pinned to the primary wave, with gentle pulse
       if (duration > 0) {
-        const y = waveY(progress);
+        const y = waveY(progress, 0);
         const pulse = 1 + Math.sin(t * 0.006) * 0.18;
         ctx.save();
         ctx.globalAlpha = 0.3;
