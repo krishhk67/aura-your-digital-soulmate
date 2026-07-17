@@ -33,6 +33,7 @@ import { useChatMemberState, useBlockUser, useIsBlocked, clearChatForMe } from "
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Pin, BellOff, Timer, Ban, ShieldOff } from "lucide-react";
 import { useCalls } from "@/hooks/useCalls";
+import { StoryReplyCard } from "./StoryReplyCard";
 
 
 interface ChatWindowProps {
@@ -345,7 +346,13 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
             const isVideo = msg.message_type === "video" && !!msg.media_url;
             const isAudio = msg.message_type === "audio" && !!msg.media_url;
             const isFile = msg.message_type === "file" && !!msg.media_url;
+            const isStoryReply = msg.message_type === "story_reply";
+            const isStoryReaction = msg.message_type === "story_reaction";
+            const isStory = isStoryReply || isStoryReaction;
             const isMedia = isImage || isVideo;
+            const storyMeta = isStory
+              ? (msg.metadata as unknown as import("@/hooks/useStories").StoryMessageMeta | null)
+              : null;
 
             const bubblePad = isMedia
               ? "p-1 overflow-hidden"
@@ -353,7 +360,10 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
               ? "px-2 py-1"
               : isFile
               ? "px-2 py-1.5"
+              : isStory
+              ? "px-2 py-1.5"
               : "px-2.5 py-1";
+
 
             const tailPrev = groupedWithPrev ? (isMe ? "rounded-tr-[6px]" : "rounded-tl-[6px]") : "";
             const tailNext = groupedWithNext ? (isMe ? "rounded-br-[10px]" : "rounded-bl-[10px]") : (isMe ? "rounded-br-[6px]" : "rounded-bl-[6px]");
@@ -402,25 +412,40 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                     {!isMe && !groupedWithPrev && msg.sender && (
                       <p className="text-[10px] text-neon mb-0.5 font-medium">{msg.sender.display_name}</p>
                     )}
-                    {isImage && (
-                      <a href={msg.media_url!} target="_blank" rel="noreferrer">
-                        <img src={msg.media_url!} alt="" className="block rounded-[10px] w-full max-h-64 object-cover" />
-                      </a>
+                    {isStory && storyMeta ? (
+                      <StoryReplyCard
+                        meta={storyMeta}
+                        isMe={isMe}
+                        isOwnerRecipient={!!user && storyMeta.story_user_id !== msg.sender_id && storyMeta.story_user_id === user.id}
+                        replyText={msg.content}
+                        ownerName={storyMeta.story_user_id === msg.sender_id
+                          ? (msg.sender?.display_name ?? "Their")
+                          : (storyMeta.story_user_id === user?.id ? "Your" : "Story")}
+                      />
+                    ) : (
+                      <>
+                        {isImage && (
+                          <a href={msg.media_url!} target="_blank" rel="noreferrer">
+                            <img src={msg.media_url!} alt="" className="block rounded-[10px] w-full max-h-64 object-cover" />
+                          </a>
+                        )}
+                        {isVideo && (
+                          <video src={msg.media_url!} controls className="block rounded-[10px] w-full max-h-64" />
+                        )}
+                        {isAudio && (
+                          <AudioMessage url={msg.media_url!} mine={isMe} durationHintMs={parseDurationHint(msg.content)} />
+                        )}
+                        {isFile && (
+                          <a href={msg.media_url!} target="_blank" rel="noreferrer" className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0"><FileText className="h-4 w-4 text-neon" /></div>
+                            <span className="text-xs underline truncate">{msg.content ?? "Download file"}</span>
+                          </a>
+                        )}
+                        {(!msg.message_type || msg.message_type === "text") && msg.content}
+                      </>
                     )}
-                    {isVideo && (
-                      <video src={msg.media_url!} controls className="block rounded-[10px] w-full max-h-64" />
-                    )}
-                    {isAudio && (
-                      <AudioMessage url={msg.media_url!} mine={isMe} durationHintMs={parseDurationHint(msg.content)} />
-                    )}
-                    {isFile && (
-                      <a href={msg.media_url!} target="_blank" rel="noreferrer" className="flex items-center gap-2">
-                        <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0"><FileText className="h-4 w-4 text-neon" /></div>
-                        <span className="text-xs underline truncate">{msg.content ?? "Download file"}</span>
-                      </a>
-                    )}
-                    {(!msg.message_type || msg.message_type === "text") && msg.content}
                   </div>
+
                   {isMe && !groupedWithNext && (
                     <div className="absolute -bottom-0.5 right-1 flex items-center gap-0.5 text-[10px] pointer-events-none">
                       {msg.expires_at && <Timer className="h-2.5 w-2.5 text-neon" />}

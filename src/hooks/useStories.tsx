@@ -139,6 +139,72 @@ export function useReactToStory() {
   }, [user]);
 }
 
+export interface StoryMessageMeta {
+  kind: "story_reply" | "story_reaction";
+  story_id: string;
+  story_user_id: string;
+  media_url: string | null;
+  media_type: string;
+  caption: string | null;
+  reaction?: string;
+  text?: string;
+}
+
+/**
+ * Send a story-context message into the DM with the story owner.
+ * Uses `message_type = 'story_reply' | 'story_reaction'` + `metadata` JSONB.
+ * The reply references the original story by id — no media duplication.
+ */
+export function useSendStoryMessage() {
+  const { user } = useAuth();
+  return useCallback(async (
+    story: StoryRow,
+    kind: "story_reply" | "story_reaction",
+    payload: { text?: string; reaction?: string },
+  ): Promise<{ error: Error | null; chatId: string | null }> => {
+    if (!user) return { error: new Error("Not signed in"), chatId: null };
+    type DirectChatRpc = (fn: "get_or_create_direct_chat", args: { _other_user_id: string })
+      => Promise<{ data: string | null; error: { message: string } | null }>;
+    const { data: chatId, error: chatErr } = await (supabase.rpc as unknown as DirectChatRpc)(
+      "get_or_create_direct_chat",
+      { _other_user_id: story.user_id },
+    );
+    if (chatErr || !chatId) return { error: new Error(chatErr?.message ?? "Could not open chat"), chatId: null };
+
+    const metadata: StoryMessageMeta = {
+      kind,
+      story_id: story.id,
+      story_user_id: story.user_id,
+      media_url: story.media_url ?? null,
+      media_type: story.media_type,
+      caption: story.caption ?? null,
+      reaction: payload.reaction,
+      text: payload.text,
+    };
+    const content = kind === "story_reaction"
+      ? (payload.reaction ?? "❤️")
+      : (payload.text ?? "").trim();
+
+    const { error } = await supabase.from("messages").insert({
+      chat_id: chatId,
+      sender_id: user.id,
+      content,
+      message_type: kind,
+      metadata: metadata as unknown as never,
+    });
+    return { error: error ? new Error(error.message) : null, chatId };
+  }, [user]);
+}
+
+/**
+ * Fetches a story by id (may be expired/deleted). Returns null when unavailable.
+ */
+export async function fetchStoryById(storyId: string): Promise<StoryRow | null> {
+  const { data } = await supabase.from("stories").select("*").eq("id", storyId).maybeSingle();
+  return (data as StoryRow | null) ?? null;
+}
+
+
 export interface StoryViewerRow {
   viewer_id: string;
   viewed_at: string;

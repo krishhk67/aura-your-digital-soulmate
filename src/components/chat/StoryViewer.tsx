@@ -4,11 +4,11 @@ import { X, Send, Eye, Trash2, Heart, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { useCreateChat, useSendMessage } from "@/hooks/useRealtimeChat";
-import { useDeleteStory, useReactToStory, useRecordStoryView, useStoryAudience, type StoryGroup } from "@/hooks/useStories";
+// (createChat/sendMessage now handled inside useSendStoryMessage)
+import { useDeleteStory, useReactToStory, useRecordStoryView, useSendStoryMessage, useStoryAudience, type StoryGroup } from "@/hooks/useStories";
 import { formatDistanceToNow } from "date-fns";
 
-const REACTIONS = ["❤️", "🔥", "😂", "😍", "👏"];
+const REACTIONS = ["❤️", "😂", "😍", "😮", "🔥", "👏", "😭", "👍", "✨"];
 const IMAGE_DURATION = 5000;
 
 interface Props {
@@ -37,8 +37,7 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
   const recordView = useRecordStoryView();
   const react = useReactToStory();
   const del = useDeleteStory();
-  const createChat = useCreateChat();
-  const sendMessage = useSendMessage();
+  const sendStoryMessage = useSendStoryMessage();
 
   useEffect(() => { if (open) { setGroupIdx(startGroupIndex); setStoryIdx(0); } }, [open, startGroupIndex]);
 
@@ -135,19 +134,18 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
 
   const handleReact = async (emoji: string) => {
     if (!story) return;
-    const { error } = await react(story.id, emoji);
+    // Record on story_reactions (owner audience) AND send a rich story-reaction message.
+    void react(story.id, emoji);
+    const { error } = await sendStoryMessage(story, "story_reaction", { reaction: emoji });
     if (error) toast.error(error.message); else toast.success(`Reacted ${emoji}`);
   };
 
   const handleSendReply = async () => {
     if (!story || !reply.trim()) return;
     setSending(true);
-    const { chatId, error } = await createChat(story.user_id);
-    if (error || !chatId) { toast.error(error?.message ?? "Could not reply"); setSending(false); return; }
-    const replyText = `↪︎ Replied to your story: ${reply.trim()}`;
-    const { error: sendErr } = await sendMessage(chatId, replyText);
+    const { error } = await sendStoryMessage(story, "story_reply", { text: reply.trim() });
     setSending(false);
-    if (sendErr) toast.error(sendErr.message);
+    if (error) toast.error(error.message);
     else { toast.success("Reply sent"); setReply(""); }
   };
 
@@ -256,19 +254,21 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
             </button>
           ) : (
             <div className="space-y-3">
-              <div className="flex justify-center gap-3">
+              <div className="flex justify-between gap-1 overflow-x-auto no-scrollbar px-1">
                 {REACTIONS.map(r => (
                   <motion.button
                     key={r}
-                    whileTap={{ scale: 1.3 }}
+                    whileTap={{ scale: 1.4 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 15 }}
                     onClick={() => handleReact(r)}
-                    className="h-11 w-11 rounded-full bg-white/15 backdrop-blur flex items-center justify-center text-xl"
+                    className="h-10 w-10 flex-shrink-0 rounded-full bg-white/15 backdrop-blur flex items-center justify-center text-lg hover:bg-white/25"
                   >
                     {r}
                   </motion.button>
                 ))}
               </div>
               <div className="flex items-center gap-2">
+
                 <input
                   value={reply}
                   onChange={e => setReply(e.target.value)}
