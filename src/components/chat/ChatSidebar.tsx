@@ -266,7 +266,20 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
               const displayName = (chat.is_group ? chat.name : (chat.other_user?.display_name ?? chat.other_user?.username)) ?? "User";
               const avatar = chat.is_group ? (chat.avatar_url || null) : (chat.other_user?.avatar_url || null);
               const isOnline = !chat.is_group && chat.other_user?.is_online;
-              const lastMsg = chat.last_message?.content ?? "No messages yet";
+              const lm = chat.last_message;
+              const lmType = lm?.message_type;
+              const lmMeta = (lm?.metadata ?? null) as { reaction?: string } | null;
+              const lastMsg = !lm
+                ? "No messages yet"
+                : lmType === "story_reaction"
+                ? `${lmMeta?.reaction ?? "❤️"} Reacted to your story`
+                : lmType === "story_reply"
+                ? `↪ Replied to your story${lm.content ? `: ${lm.content}` : ""}`
+                : lmType === "image" ? "📷 Photo"
+                : lmType === "video" ? "🎥 Video"
+                : lmType === "audio" ? "🎙 Voice message"
+                : lmType === "file" ? "📎 File"
+                : (lm.content ?? "");
               const timeAgo = chat.last_message?.created_at
                 ? formatDistanceToNow(new Date(chat.last_message.created_at), { addSuffix: false })
                 : "";
