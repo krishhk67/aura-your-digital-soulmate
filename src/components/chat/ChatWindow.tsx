@@ -329,7 +329,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                 initial={{ opacity: 0, y: 8, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                className={cn("flex", isMe ? "justify-end" : "justify-start", groupedWithPrev ? "mt-px" : "mt-1.5")}
+                className={cn("flex", isMe ? "justify-end" : "justify-start", groupedWithPrev ? "mt-[2px]" : "mt-[12px]")}
               >
                 <div className="relative max-w-[78%]">
                   <div className={cn(
@@ -363,15 +363,10 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                     )}
                     {(!msg.message_type || msg.message_type === "text") && msg.content}
                   </div>
-                  {!groupedWithNext && (
-                    <div className={cn("flex items-center gap-1 mt-0.5 text-[10px] text-muted-foreground px-1", isMe ? "justify-end" : "justify-start")}>
-                      <span>{time}</span>
-                      {msg.expires_at && (
-                        <span className="inline-flex items-center gap-0.5 text-neon" title={`Expires ${new Date(msg.expires_at).toLocaleString()}`}>
-                          <Timer className="h-2.5 w-2.5" />
-                        </span>
-                      )}
-                      {isMe && <CheckCheck className="h-3 w-3 text-accent" />}
+                  {isMe && !groupedWithNext && (
+                    <div className="absolute -bottom-0.5 right-1 flex items-center gap-0.5 text-[10px] text-accent pointer-events-none">
+                      {msg.expires_at && <Timer className="h-2.5 w-2.5 text-neon" />}
+                      <CheckCheck className="h-3 w-3" />
                     </div>
                   )}
                 </div>
