@@ -121,13 +121,13 @@ function ChatLayoutInner() {
         </AnimatePresence>
       </div>
 
-      {/* Bottom nav - hide when chat is open */}
-      {!showChatWindow && (
+      {/* Bottom nav - hide when chat or room is open */}
+      {!hideNav && (
         <BottomNav active={activeTab} onChange={handleTabChange} />
       )}
 
       {/* Safe area spacer for bottom nav */}
-      {!showChatWindow && <div className="h-[72px]" />}
+      {!hideNav && <div className="h-[72px]" />}
 
       <NewChatDialog
         open={newChatOpen}
