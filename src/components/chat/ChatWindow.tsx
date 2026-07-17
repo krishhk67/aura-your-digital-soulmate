@@ -382,14 +382,20 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
             }
 
             const openInfo = () => { if (isMe) setInfoMsg(msg); };
-            const onPointerDown = () => {
-              if (!isMe) return;
+            const openPicker = (target: Element | null) => {
+              const rect = target?.getBoundingClientRect() ?? null;
+              if (rect) setReactionTarget({ msg, rect });
+              try { navigator.vibrate?.(10); } catch { /* noop */ }
+            };
+            const onPointerDown = (e: React.PointerEvent) => {
+              const target = e.currentTarget as Element;
               if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
-              longPressTimer.current = window.setTimeout(() => setInfoMsg(msg), 450);
+              longPressTimer.current = window.setTimeout(() => openPicker(target), 380);
             };
             const cancelPress = () => {
               if (longPressTimer.current) { window.clearTimeout(longPressTimer.current); longPressTimer.current = null; }
             };
+            const msgReactions = reactionsByMessage.get(msg.id) ?? [];
 
             return (
               <motion.div
@@ -403,9 +409,10 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                 onPointerUp={cancelPress}
                 onPointerCancel={cancelPress}
                 onPointerLeave={cancelPress}
-                onContextMenu={(e) => { if (isMe) { e.preventDefault(); openInfo(); } }}
+                onContextMenu={(e) => { e.preventDefault(); openPicker(e.currentTarget); }}
               >
                 <div className="relative max-w-[78%]">
+
                   <div className={cn(
                     "text-[14px] leading-relaxed rounded-[14px]",
                     bubblePad,
