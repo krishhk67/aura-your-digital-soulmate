@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Paperclip, ArrowLeft, Phone, Video, MoreVertical, CheckCheck, Image as ImageIcon, FileText, Film, X, Trash2, Sparkles } from "lucide-react";
+import { Send, Paperclip, ArrowLeft, Phone, Video, MoreVertical, Check, CheckCheck, Image as ImageIcon, FileText, Film, X, Trash2, Sparkles } from "lucide-react";
 import { AiToolsSheet } from "./AiToolsSheet";
 import { SmartReplyBar } from "./SmartReplyBar";
 import { MoodIndicator, MOOD_META, type MoodId } from "./MoodIndicator";
 import { cn } from "@/lib/utils";
-import { useChatMessages, useSendMessage } from "@/hooks/useRealtimeChat";
+import { useChatMessages, useSendMessage, useChatReceipts, type MessageRow } from "@/hooks/useRealtimeChat";
+import { MessageInfoSheet } from "./MessageInfoSheet";
 import { useAuth } from "@/hooks/useAuth";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,6 +65,10 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const [aiOpen, setAiOpen] = useState(false);
   const [mood, setMood] = useState<MoodId | null>(null);
   const { startCall } = useCalls();
+  const { allDeliveredAt, allReadAt } = useChatReceipts(chatId);
+  const [infoMsg, setInfoMsg] = useState<MessageRow | null>(null);
+  const longPressTimer = useRef<number | null>(null);
+
 
   const initiateCall = (type: "voice" | "video") => {
     if (chatMeta?.is_group) { toast("Group calls coming next update"); return; }
@@ -117,11 +122,32 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
         }
       }
 
-      await supabase.from("chat_members")
-        .update({ last_read_at: new Date().toISOString() })
-        .eq("chat_id", chatId)
-        .eq("user_id", user.id);
+      type RpcCall = (fn: string, args: Record<string, unknown>) => Promise<unknown>;
+      await (supabase.rpc as unknown as RpcCall)("mark_chat_read", { _chat_id: chatId });
     })();
+  }, [chatId, user]);
+
+  // Keep marking as read as new messages arrive while chat is open & tab visible
+  useEffect(() => {
+    if (!chatId || !user || visibleMessages.length === 0) return;
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+    const last = visibleMessages[visibleMessages.length - 1];
+    if (last.sender_id === user.id) return;
+    type RpcCall = (fn: string, args: Record<string, unknown>) => Promise<unknown>;
+    void (supabase.rpc as unknown as RpcCall)("mark_chat_read", { _chat_id: chatId });
+  }, [chatId, user, visibleMessages]);
+
+  // Also mark on tab focus
+  useEffect(() => {
+    if (!chatId || !user) return;
+    const onVis = () => {
+      if (document.visibilityState === "visible") {
+        type RpcCall = (fn: string, args: Record<string, unknown>) => Promise<unknown>;
+        void (supabase.rpc as unknown as RpcCall)("mark_chat_read", { _chat_id: chatId });
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
   }, [chatId, user]);
 
   const handleSend = async () => {
@@ -322,6 +348,23 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
             const tailPrev = groupedWithPrev ? (isMe ? "rounded-tr-[6px]" : "rounded-tl-[6px]") : "";
             const tailNext = groupedWithNext ? (isMe ? "rounded-br-[10px]" : "rounded-bl-[10px]") : (isMe ? "rounded-br-[6px]" : "rounded-bl-[6px]");
 
+            // Read-receipt state (for my messages)
+            let tickState: "sent" | "delivered" | "read" = "sent";
+            if (isMe) {
+              if (allReadAt && msg.created_at <= allReadAt) tickState = "read";
+              else if (allDeliveredAt && msg.created_at <= allDeliveredAt) tickState = "delivered";
+            }
+
+            const openInfo = () => { if (isMe) setInfoMsg(msg); };
+            const onPointerDown = () => {
+              if (!isMe) return;
+              if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
+              longPressTimer.current = window.setTimeout(() => setInfoMsg(msg), 450);
+            };
+            const cancelPress = () => {
+              if (longPressTimer.current) { window.clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+            };
+
             return (
               <motion.div
                 key={msg.id}
@@ -330,6 +373,11 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
                 className={cn("flex", isMe ? "justify-end" : "justify-start", groupedWithPrev ? "mt-[2px]" : "mt-[12px]")}
+                onPointerDown={onPointerDown}
+                onPointerUp={cancelPress}
+                onPointerCancel={cancelPress}
+                onPointerLeave={cancelPress}
+                onContextMenu={(e) => { if (isMe) { e.preventDefault(); openInfo(); } }}
               >
                 <div className="relative max-w-[78%]">
                   <div className={cn(
@@ -364,9 +412,11 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                     {(!msg.message_type || msg.message_type === "text") && msg.content}
                   </div>
                   {isMe && !groupedWithNext && (
-                    <div className="absolute -bottom-0.5 right-1 flex items-center gap-0.5 text-[10px] text-accent pointer-events-none">
+                    <div className="absolute -bottom-0.5 right-1 flex items-center gap-0.5 text-[10px] pointer-events-none">
                       {msg.expires_at && <Timer className="h-2.5 w-2.5 text-neon" />}
-                      <CheckCheck className="h-3 w-3" />
+                      {tickState === "sent" && <Check className="h-3 w-3 text-muted-foreground/70" />}
+                      {tickState === "delivered" && <CheckCheck className="h-3 w-3 text-muted-foreground/70" />}
+                      {tickState === "read" && <CheckCheck className="h-3 w-3 text-sky-400" />}
                     </div>
                   )}
                 </div>
@@ -516,6 +566,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
         onUseReply={(t) => setInput(t)}
         onUseRewrite={(t) => setInput(t)}
       />
+      <MessageInfoSheet message={infoMsg} onClose={() => setInfoMsg(null)} isGroup={!!chatMeta?.is_group} />
     </div>
   );
 }

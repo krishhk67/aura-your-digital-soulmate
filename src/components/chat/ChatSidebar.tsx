@@ -310,17 +310,33 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
-                      <span className="font-semibold text-[15px] truncate flex items-center gap-1.5">
+                      <span className={cn(
+                        "truncate flex items-center gap-1.5 text-[15px]",
+                        (chat.unread_count ?? 0) > 0 ? "font-bold text-foreground" : "font-semibold"
+                      )}>
                         {chat.is_pinned && <Pin className="h-3 w-3 text-neon flex-shrink-0" />}
                         {chat.is_favorite && <Star className="h-3 w-3 text-neon flex-shrink-0 fill-current" />}
                         {displayName}
                       </span>
-                      <span className="text-[11px] text-muted-foreground flex-shrink-0 ml-2 flex items-center gap-1">
+                      <span className={cn(
+                        "text-[11px] flex-shrink-0 ml-2 flex items-center gap-1",
+                        (chat.unread_count ?? 0) > 0 ? "text-neon font-semibold" : "text-muted-foreground"
+                      )}>
                         {chat.is_muted && <BellOff className="h-3 w-3" />}
                         {timeAgo}
                       </span>
                     </div>
-                    <p className="text-[13px] text-muted-foreground truncate">{lastMsg}</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className={cn(
+                        "text-[13px] truncate",
+                        (chat.unread_count ?? 0) > 0 ? "text-foreground/90 font-medium" : "text-muted-foreground"
+                      )}>{lastMsg}</p>
+                      {(chat.unread_count ?? 0) > 0 && (
+                        <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex items-center justify-center shadow-[0_0_10px_var(--neon-glow)] flex-shrink-0">
+                          {(chat.unread_count ?? 0) > 99 ? "99+" : chat.unread_count}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </motion.button>
               );

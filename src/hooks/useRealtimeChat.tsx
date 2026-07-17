@@ -68,22 +68,19 @@ export function useMyChats(opts?: { hiddenOnly?: boolean }) {
 
   const fetchChats = useCallback(async () => {
     if (!user) return;
-    // Get chat memberships (with per-user state)
     const { data: memberships } = await supabase
       .from("chat_members")
-      .select("chat_id,is_pinned,is_muted,cleared_at,is_hidden,is_favorite,is_archived")
+      .select("chat_id,is_pinned,is_muted,cleared_at,is_hidden,is_favorite,is_archived,last_read_at")
       .eq("user_id", user.id);
 
     if (!memberships?.length) { setChats([]); setLoading(false); return; }
 
-    // Pull blocked users so we can hide their DMs
     const { data: blockedRows } = await supabase
       .from("blocked_users")
       .select("blocked_id")
       .eq("blocker_id", user.id);
     const blockedIds = new Set((blockedRows ?? []).map(b => b.blocked_id));
 
-    // Filter memberships by hidden mode
     const filteredMemberships = memberships.filter(m => hiddenOnly ? m.is_hidden : !m.is_hidden);
     if (!filteredMemberships.length) { setChats([]); setLoading(false); return; }
     const memberMap = new Map(filteredMemberships.map(m => [m.chat_id, m]));
@@ -97,14 +94,33 @@ export function useMyChats(opts?: { hiddenOnly?: boolean }) {
 
     if (!chatRows) { setChats([]); setLoading(false); return; }
 
-    // Get last message for each chat (respecting cleared_at)
     const enriched = await Promise.all(chatRows.map(async (chat) => {
       const meta = memberMap.get(chat.id);
       let q = supabase.from("messages").select("*").eq("chat_id", chat.id);
       if (meta?.cleared_at) q = q.gt("created_at", meta.cleared_at);
       const { data: msgs } = await q.order("created_at", { ascending: false }).limit(1);
 
-      // For DMs, get the other user's profile
+      // Unread: messages after my last_read_at from other senders (respecting cleared_at)
+      const cutoffCandidates = [meta?.last_read_at ?? null, meta?.cleared_at ?? null].filter(Boolean) as string[];
+      const cutoff = cutoffCandidates.sort().pop();
+      let unread_count = 0;
+      if (cutoff) {
+        const { count } = await supabase
+          .from("messages")
+          .select("id", { count: "exact", head: true })
+          .eq("chat_id", chat.id)
+          .neq("sender_id", user.id)
+          .gt("created_at", cutoff);
+        unread_count = count ?? 0;
+      } else {
+        const { count } = await supabase
+          .from("messages")
+          .select("id", { count: "exact", head: true })
+          .eq("chat_id", chat.id)
+          .neq("sender_id", user.id);
+        unread_count = count ?? 0;
+      }
+
       let other_user: ProfileRow | undefined;
       if (!chat.is_group) {
         const { data: members } = await supabase
@@ -126,6 +142,7 @@ export function useMyChats(opts?: { hiddenOnly?: boolean }) {
         ...chat,
         last_message: msgs?.[0] as MessageRow | undefined,
         other_user,
+        unread_count,
         is_pinned: meta?.is_pinned ?? false,
         is_muted: meta?.is_muted ?? false,
         cleared_at: meta?.cleared_at ?? null,
@@ -136,7 +153,6 @@ export function useMyChats(opts?: { hiddenOnly?: boolean }) {
       };
     }));
 
-    // Blocked chats stay visible — only restrict interaction inside.
     enriched.sort((a, b) => {
       if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
       return new Date(b.updated_at ?? 0).getTime() - new Date(a.updated_at ?? 0).getTime();
@@ -148,21 +164,67 @@ export function useMyChats(opts?: { hiddenOnly?: boolean }) {
 
   useEffect(() => { fetchChats(); }, [fetchChats]);
 
-  // Realtime: listen to chat_members and messages changes
   useEffect(() => {
     if (!user) return;
+    const bumped = new Set<string>();
+    type RpcCall = (fn: string, args: Record<string, unknown>) => Promise<unknown>;
+    const rpc = supabase.rpc as unknown as RpcCall;
     const channel = supabase
       .channel(`my-chats:${user.id}:${hiddenOnly ? "hidden" : "main"}:${Math.random().toString(36).slice(2, 8)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "chats" }, () => fetchChats())
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => fetchChats())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
+        const m = payload.new as { chat_id?: string; sender_id?: string };
+        if (m.chat_id && m.sender_id && m.sender_id !== user.id && !bumped.has(m.chat_id)) {
+          bumped.add(m.chat_id);
+          void rpc("mark_chat_delivered", { _chat_id: m.chat_id })
+            .finally(() => { window.setTimeout(() => bumped.delete(m.chat_id!), 800); });
+        }
+        fetchChats();
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "messages" }, () => fetchChats())
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "messages" }, () => fetchChats())
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_members" }, () => fetchChats())
       .on("postgres_changes", { event: "*", schema: "public", table: "blocked_users" }, () => fetchChats())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user, fetchChats]);
+  }, [user, fetchChats, hiddenOnly]);
 
   return { chats, loading, refetch: fetchChats };
+}
+
+/** Watches other members' delivered/read markers for a chat. */
+export function useChatReceipts(chatId: string | null) {
+  const { user } = useAuth();
+  const [receipts, setReceipts] = useState<{ user_id: string; last_delivered_at: string | null; last_read_at: string | null }[]>([]);
+
+  useEffect(() => {
+    if (!chatId || !user) { setReceipts([]); return; }
+    let cancelled = false;
+    const load = async () => {
+      const { data } = await supabase
+        .from("chat_members")
+        .select("user_id,last_delivered_at,last_read_at")
+        .eq("chat_id", chatId)
+        .neq("user_id", user.id);
+      if (!cancelled) setReceipts((data ?? []) as typeof receipts);
+    };
+    void load();
+    const channel = supabase
+      .channel(`receipts:${chatId}:${user.id}:${Math.random().toString(36).slice(2, 6)}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "chat_members", filter: `chat_id=eq.${chatId}` }, () => load())
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(channel); };
+  }, [chatId, user]);
+
+  const allDeliveredAt = receipts.length && receipts.every(r => !!r.last_delivered_at)
+    ? receipts.reduce<string>((acc, r) => (acc < (r.last_delivered_at as string) ? acc : (r.last_delivered_at as string)), receipts[0].last_delivered_at as string)
+    : null;
+  const allReadAt = receipts.length && receipts.every(r => !!r.last_read_at)
+    ? receipts.reduce<string>((acc, r) => (acc < (r.last_read_at as string) ? acc : (r.last_read_at as string)), receipts[0].last_read_at as string)
+    : null;
+
+  return { receipts, allDeliveredAt, allReadAt };
 }
 
 export function useChatMessages(chatId: string | null) {

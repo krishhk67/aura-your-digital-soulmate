@@ -96,6 +96,7 @@ export type Database = {
           is_muted: boolean
           is_pinned: boolean
           joined_at: string | null
+          last_delivered_at: string | null
           last_read_at: string | null
           role: string | null
           theme: string | null
@@ -111,6 +112,7 @@ export type Database = {
           is_muted?: boolean
           is_pinned?: boolean
           joined_at?: string | null
+          last_delivered_at?: string | null
           last_read_at?: string | null
           role?: string | null
           theme?: string | null
@@ -126,6 +128,7 @@ export type Database = {
           is_muted?: boolean
           is_pinned?: boolean
           joined_at?: string | null
+          last_delivered_at?: string | null
           last_read_at?: string | null
           role?: string | null
           theme?: string | null
@@ -948,6 +951,14 @@ export type Database = {
       cleanup_expired_messages: { Args: never; Returns: undefined }
       delete_chat: { Args: { _chat_id: string }; Returns: undefined }
       get_email_for_username: { Args: { _username: string }; Returns: string }
+      get_message_receipts: {
+        Args: { _message_id: string }
+        Returns: {
+          delivered_at: string
+          read_at: string
+          user_id: string
+        }[]
+      }
       get_or_create_direct_chat: {
         Args: { _other_user_id: string }
         Returns: string
@@ -971,6 +982,8 @@ export type Database = {
         Returns: string
       }
       join_room_by_code: { Args: { _invite_code: string }; Returns: string }
+      mark_chat_delivered: { Args: { _chat_id: string }; Returns: undefined }
+      mark_chat_read: { Args: { _chat_id: string }; Returns: undefined }
       mark_password_configured: { Args: never; Returns: undefined }
       preview_chat_invite: {
         Args: { _invite_code: string }
