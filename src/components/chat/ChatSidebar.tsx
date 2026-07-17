@@ -294,7 +294,10 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
                     storyGroup={chat.is_group ? undefined : (chat.other_user ? storyGroups.get(chat.other_user.id) : undefined)}
                     onOpenChat={() => onSelectChat(chat.id)}
                   />
-                  <div className="flex-1 min-w-0">
+                  <button
+                    onClick={() => onSelectChat(chat.id)}
+                    className="flex-1 min-w-0 text-left active:opacity-80 transition-opacity"
+                  >
                     <div className="flex items-center justify-between mb-0.5">
                       <span className={cn(
                         "truncate flex items-center gap-1.5 text-[15px]",
@@ -323,8 +326,8 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
                         </span>
                       )}
                     </div>
-                  </div>
-                </motion.button>
+                  </button>
+                </motion.div>
               );
             })}
           </AnimatePresence>
