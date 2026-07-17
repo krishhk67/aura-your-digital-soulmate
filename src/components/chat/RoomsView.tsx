@@ -30,7 +30,7 @@ const FILTERS = [
   { id: "ai", label: "AI" },
 ] as const;
 
-export function RoomsView() {
+export function RoomsView({ onActiveRoomChange }: { onActiveRoomChange?: (active: boolean) => void } = {}) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string>("all");
   const [focused, setFocused] = useState(false);
@@ -40,6 +40,8 @@ export function RoomsView() {
   const [activeRoom, setActiveRoom] = useState<string | null>(null);
   const { rooms, loading } = useRooms(search);
   const { joinRoom, joinByCode } = useRoomActions();
+
+  useEffect(() => { onActiveRoomChange?.(!!activeRoom); }, [activeRoom, onActiveRoomChange]);
 
   const handleJoin = async (room: Room) => {
     if (room.is_member) { setActiveRoom(room.id); return; }
