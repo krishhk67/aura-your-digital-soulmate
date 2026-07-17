@@ -339,8 +339,14 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                             );
                           })}
                         </div>
+
+                        <div className="pt-2 border-t border-border/60">
+                          <TypographySection />
+                        </div>
                       </div>
                     )}
+
+
 
                     {activeTab === "privacy" && (
                       <div className="space-y-4">
