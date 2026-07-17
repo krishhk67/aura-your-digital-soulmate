@@ -63,7 +63,7 @@ export function StoriesView() {
       [{
         user: {
           id: user.id,
-          username: null, display_name: "Your Story", avatar_url: null,
+          username: null, display_name: myDisplayName ?? "Your Story", avatar_url: myAvatar,
           bio: null, status_text: null, is_online: true, last_seen: new Date().toISOString(),
         },
         stories: myStories,
@@ -71,6 +71,7 @@ export function StoriesView() {
       }],
       0,
     );
+
   };
 
   return (
