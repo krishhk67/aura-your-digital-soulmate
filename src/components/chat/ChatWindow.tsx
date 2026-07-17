@@ -363,15 +363,10 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                     )}
                     {(!msg.message_type || msg.message_type === "text") && msg.content}
                   </div>
-                  {!groupedWithNext && (
-                    <div className={cn("flex items-center gap-1 mt-0.5 text-[10px] text-muted-foreground px-1", isMe ? "justify-end" : "justify-start")}>
-                      <span>{time}</span>
-                      {msg.expires_at && (
-                        <span className="inline-flex items-center gap-0.5 text-neon" title={`Expires ${new Date(msg.expires_at).toLocaleString()}`}>
-                          <Timer className="h-2.5 w-2.5" />
-                        </span>
-                      )}
-                      {isMe && <CheckCheck className="h-3 w-3 text-accent" />}
+                  {isMe && !groupedWithNext && (
+                    <div className="absolute -bottom-0.5 right-1 flex items-center gap-0.5 text-[10px] text-accent pointer-events-none">
+                      {msg.expires_at && <Timer className="h-2.5 w-2.5 text-neon" />}
+                      <CheckCheck className="h-3 w-3" />
                     </div>
                   )}
                 </div>
