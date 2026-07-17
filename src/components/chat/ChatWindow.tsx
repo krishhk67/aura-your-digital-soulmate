@@ -34,6 +34,8 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { Pin, BellOff, Timer, Ban, ShieldOff } from "lucide-react";
 import { useCalls } from "@/hooks/useCalls";
 import { StoryReplyCard } from "./StoryReplyCard";
+import { ReactionPicker, ReactionChips } from "./ReactionPicker";
+import { useMessageReactions, useToggleReaction } from "@/hooks/useMessageReactions";
 
 
 interface ChatWindowProps {
