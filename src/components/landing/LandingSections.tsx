@@ -202,10 +202,10 @@ export function FooterSection() {
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-2">
           <MessageCircle className="h-6 w-6 text-neon" />
-          <span className="font-display font-bold text-xl gradient-text">Aura</span>
+          <span className="font-display font-bold text-xl gradient-text">Aurix</span>
         </div>
         <p className="text-sm text-muted-foreground">
-          © 2026 Aura. The social app from 2030.
+          © 2026 Aurix. The social app from 2030.
         </p>
         <div className="flex gap-6 text-sm text-muted-foreground">
           <span className="hover:text-foreground transition-colors cursor-pointer">Privacy</span>
