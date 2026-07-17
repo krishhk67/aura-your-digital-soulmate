@@ -16,10 +16,15 @@ function writeList(key: string, v: string[]) { try { localStorage.setItem(key, J
 
 function applyFont(id: string) {
   if (typeof document === "undefined") return;
+  if (isDefaultFont(id)) {
+    document.documentElement.style.removeProperty("--app-font");
+    return;
+  }
   const font = getFontById(id);
   ensureFontLoaded(font);
   document.documentElement.style.setProperty("--app-font", font.fontFamily);
 }
+
 
 interface FontCtx {
   fontId: string;
