@@ -253,17 +253,18 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
             </button>
           ) : (
             <div className="space-y-2">
-              <div className="flex items-center justify-between gap-1 px-1">
+              <div className="flex items-center justify-center gap-1">
                 {(["❤️","😂","😮","😢","👍","🔥"] as const).map(e => (
                   <button
                     key={e}
                     onClick={() => handleReact(e)}
-                    className="h-9 w-9 rounded-full flex items-center justify-center text-[22px] leading-none bg-white/10 backdrop-blur hover:bg-white/20 active:scale-90 transition"
+                    className="h-8 w-8 rounded-full flex items-center justify-center text-[18px] leading-none bg-white/10 backdrop-blur hover:bg-white/20 active:scale-90 transition"
                   >
                     {e}
                   </button>
                 ))}
               </div>
+
               <div className="flex items-center gap-2">
                 <input
                   value={reply}
