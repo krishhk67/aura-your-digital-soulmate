@@ -252,9 +252,19 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
               {reactions.length > 0 && <span className="ml-2">· {reactions.length} ❤</span>}
             </button>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-1 px-1">
+                {(["❤️","😂","😮","😢","👍","🔥"] as const).map(e => (
+                  <button
+                    key={e}
+                    onClick={() => handleReact(e)}
+                    className="h-9 w-9 rounded-full flex items-center justify-center text-[22px] leading-none bg-white/10 backdrop-blur hover:bg-white/20 active:scale-90 transition"
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
               <div className="flex items-center gap-2">
-
                 <input
                   value={reply}
                   onChange={e => setReply(e.target.value)}
@@ -272,6 +282,7 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
                 </button>
               </div>
             </div>
+
           )}
         </div>
 
