@@ -163,6 +163,7 @@ export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, on
       <ReportDialog open={reportOpen} onClose={() => setReportOpen(false)} reportedUserId={partnerId ?? null} chatId={chatId} />
       <DisappearingMessagesDialog open={disappearOpen} onClose={() => setDisappearOpen(false)} chatId={chatId} />
       <ChatThemeDialog open={themeOpen} onClose={() => setThemeOpen(false)} chatId={chatId} />
+      <HiddenSpaceSetupDialog open={hsSetupOpen} onClose={() => setHsSetupOpen(false)} />
     </>
   );
 }
