@@ -938,6 +938,7 @@ export type Database = {
       }
       cleanup_expired_messages: { Args: never; Returns: undefined }
       delete_chat: { Args: { _chat_id: string }; Returns: undefined }
+      get_email_for_username: { Args: { _username: string }; Returns: string }
       get_or_create_direct_chat: {
         Args: { _other_user_id: string }
         Returns: string
@@ -954,6 +955,7 @@ export type Database = {
         Args: { _room: string; _user: string }
         Returns: boolean
       }
+      is_username_available: { Args: { _username: string }; Returns: boolean }
       join_chat_by_invite: { Args: { _invite_code: string }; Returns: string }
       join_room: {
         Args: { _invite_code?: string; _room_id: string }
@@ -985,6 +987,7 @@ export type Database = {
         Args: { _chat_id: string; _key: string; _value: string }
         Returns: undefined
       }
+      set_my_username: { Args: { _username: string }; Returns: undefined }
       setup_hidden_space: {
         Args: {
           _auto_lock_seconds?: number

@@ -88,16 +88,25 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
   const saveProfile = async () => {
     if (!user) return;
     setSaving(true);
+    // Handle username change atomically via RPC (case-insensitive uniqueness)
+    const newUser = username.trim();
+    const oldUser = profile?.username ?? "";
+    if (newUser !== oldUser && newUser.length > 0) {
+      const rpc = supabase.rpc as unknown as (
+        fn: "set_my_username", args: { _username: string }
+      ) => Promise<{ error: { message: string } | null }>;
+      const { error } = await rpc("set_my_username", { _username: newUser });
+      if (error) { toast.error(error.message); setSaving(false); return; }
+    }
     const { error } = await supabase.from("profiles").update({
       display_name: displayName.trim() || null,
-      username: username.trim() || null,
       bio: bio.trim() || null,
       status_text: statusText.trim() || null,
     }).eq("id", user.id);
     if (error) toast.error("Failed to save profile");
     else {
       toast.success("Profile updated");
-      setProfile(prev => prev ? { ...prev, display_name: displayName, username, bio, status_text: statusText } : prev);
+      setProfile(prev => prev ? { ...prev, display_name: displayName, username: newUser, bio, status_text: statusText } : prev);
     }
     setSaving(false);
   };
@@ -371,6 +380,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
 
                     {activeTab === "account" && (
                       <div className="space-y-4">
+                        <AccountSecuritySection />
                         <motion.button
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
@@ -602,5 +612,160 @@ function HiddenSpaceEntry() {
     </>
   );
 }
+
+function AccountSecuritySection() {
+  const { user } = useAuth();
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [busy, setBusy] = useState<null | "email" | "password" | "link" | "unlink">(null);
+
+  const identities = user?.identities ?? [];
+  const hasEmail = identities.some((i) => i.provider === "email");
+  const googleIdentity = identities.find((i) => i.provider === "google");
+  const hasGoogle = !!googleIdentity;
+  const canUnlinkGoogle = hasGoogle && hasEmail; // must keep at least one method
+
+  const changeEmail = async () => {
+    if (!newEmail.trim()) return;
+    setBusy("email");
+    const { error } = await supabase.auth.updateUser({ email: newEmail.trim() });
+    setBusy(null);
+    if (error) toast.error(error.message);
+    else { toast.success("Confirmation sent to your new email"); setNewEmail(""); }
+  };
+
+  const changePassword = async () => {
+    if (newPassword.length < 6) { toast.error("Password must be at least 6 characters"); return; }
+    setBusy("password");
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setBusy(null);
+    if (error) toast.error(error.message);
+    else { toast.success(hasEmail ? "Password updated" : "Password set — you can now sign in without Google"); setNewPassword(""); }
+  };
+
+  const linkGoogle = async () => {
+    setBusy("link");
+    // Supabase v2: linkIdentity requires the Manual Linking feature enabled server-side.
+    const authAny = supabase.auth as unknown as {
+      linkIdentity?: (args: { provider: "google" }) => Promise<{ error: { message: string } | null }>;
+    };
+    if (!authAny.linkIdentity) {
+      setBusy(null);
+      toast.error("Account linking is not enabled on this project");
+      return;
+    }
+    const { error } = await authAny.linkIdentity({ provider: "google" });
+    setBusy(null);
+    if (error) toast.error(error.message);
+  };
+
+  const unlinkGoogle = async () => {
+    if (!googleIdentity) return;
+    if (!canUnlinkGoogle) {
+      toast.error("Set an Aurix password first, or you'll be locked out");
+      return;
+    }
+    setBusy("unlink");
+    const authAny = supabase.auth as unknown as {
+      unlinkIdentity?: (identity: unknown) => Promise<{ error: { message: string } | null }>;
+    };
+    if (!authAny.unlinkIdentity) {
+      setBusy(null);
+      toast.error("Account unlinking is not enabled on this project");
+      return;
+    }
+    const { error } = await authAny.unlinkIdentity(googleIdentity);
+    setBusy(null);
+    if (error) toast.error(error.message);
+    else toast.success("Google account unlinked");
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Change email */}
+      <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+        <div>
+          <p className="text-sm font-semibold">Email</p>
+          <p className="text-[11px] text-muted-foreground">Current: {user?.email ?? "—"}</p>
+        </div>
+        <input
+          type="email"
+          value={newEmail}
+          onChange={(e) => setNewEmail(e.target.value)}
+          placeholder="new@email.com"
+          className="w-full px-4 py-2.5 rounded-xl bg-input/50 border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+        <button
+          onClick={changeEmail}
+          disabled={busy === "email" || !newEmail.trim()}
+          className="w-full py-2.5 rounded-xl bg-primary/15 text-primary text-sm font-semibold hover:bg-primary/25 transition disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {busy === "email" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          Change email
+        </button>
+      </div>
+
+      {/* Change / set password */}
+      <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+        <div>
+          <p className="text-sm font-semibold">{hasEmail ? "Change password" : "Set Aurix password"}</p>
+          <p className="text-[11px] text-muted-foreground">
+            {hasEmail
+              ? "Use at least 6 characters."
+              : "Set a password so you can sign in without Google."}
+          </p>
+        </div>
+        <input
+          type="password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          placeholder="New password"
+          minLength={6}
+          className="w-full px-4 py-2.5 rounded-xl bg-input/50 border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+        />
+        <button
+          onClick={changePassword}
+          disabled={busy === "password" || newPassword.length < 6}
+          className="w-full py-2.5 rounded-xl bg-primary/15 text-primary text-sm font-semibold hover:bg-primary/25 transition disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {busy === "password" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          {hasEmail ? "Update password" : "Set password"}
+        </button>
+      </div>
+
+      {/* Google linking */}
+      <div className="rounded-xl border border-border bg-secondary/20 p-4 space-y-3">
+        <div>
+          <p className="text-sm font-semibold">Google account</p>
+          <p className="text-[11px] text-muted-foreground">
+            {hasGoogle
+              ? `Linked${googleIdentity?.identity_data?.email ? ` — ${googleIdentity.identity_data.email}` : ""}`
+              : "Not linked"}
+          </p>
+        </div>
+        {hasGoogle ? (
+          <button
+            onClick={unlinkGoogle}
+            disabled={!canUnlinkGoogle || busy === "unlink"}
+            className="w-full py-2.5 rounded-xl border border-destructive/40 text-destructive text-sm font-semibold hover:bg-destructive/10 transition disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {busy === "unlink" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {canUnlinkGoogle ? "Unlink Google" : "Set a password first to unlink"}
+          </button>
+        ) : (
+          <button
+            onClick={linkGoogle}
+            disabled={busy === "link"}
+            className="w-full py-2.5 rounded-xl bg-primary/15 text-primary text-sm font-semibold hover:bg-primary/25 transition disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {busy === "link" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Link Google account
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 
 

@@ -20,7 +20,7 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState(""); // username or email (login) / email (signup)
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
@@ -36,11 +36,11 @@ function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    if (!identifier || (!resetMode && !password)) return;
     setLoading(true);
 
     if (resetMode) {
-      const { error } = await resetPassword(email);
+      const { error } = await resetPassword(identifier);
       if (error) toast.error(error.message);
       else toast.success("Password reset email sent! Check your inbox.");
       setLoading(false);
@@ -48,11 +48,12 @@ function LoginPage() {
     }
 
     if (isSignUp) {
-      const { error } = await signUp(email, password, username || undefined);
+      if (!username.trim()) { toast.error("Please choose a username"); setLoading(false); return; }
+      const { error } = await signUp(identifier, password, username);
       if (error) toast.error(error.message);
       else toast.success("Account created! Check your email to verify.");
     } else {
-      const { error } = await signIn(email, password);
+      const { error } = await signIn(identifier, password);
       if (error) toast.error(error.message);
       else navigate({ to: "/chat" });
     }
@@ -131,11 +132,12 @@ function LoginPage() {
             <div className="relative">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type={isSignUp || resetMode ? "email" : "text"}
+                placeholder={isSignUp || resetMode ? "Email" : "Username or Email"}
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 required
+                autoComplete={isSignUp ? "email" : "username"}
                 className="w-full h-12 rounded-xl bg-input/50 border border-border pl-11 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
               />
             </div>
