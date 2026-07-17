@@ -27,10 +27,13 @@ export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, on
   const { user } = useAuth();
   const { is_pinned, is_muted, update } = useChatMemberState(chatId);
   const { block } = useBlockUser();
+  const hs = useHiddenSpace();
   const [confirm, setConfirm] = useState<null | "clear" | "block">(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [disappearOpen, setDisappearOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
+  const [hsSetupOpen, setHsSetupOpen] = useState(false);
+  const isHidden = chatId ? hs.isHidden(chatId) : false;
 
 
 
