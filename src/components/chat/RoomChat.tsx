@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { ArrowLeft, Send, Image as ImageIcon, Smile, X, Reply, Info } from "lucide-react";
 import { motion, useMotionValue, useTransform, animate, type PanInfo } from "framer-motion";
 import { useRoom, useRoomMessages, useRoomActions, useSignedRoomMedia, type RoomMessageRow } from "@/hooks/useRooms";
+import { ReactionPicker, ReactionChips } from "./ReactionPicker";
+import { useMessageReactions, useToggleReaction, type ReactionRow } from "@/hooks/useMessageReactions";
 
 const ScrollingContext = createContext(false);
 
