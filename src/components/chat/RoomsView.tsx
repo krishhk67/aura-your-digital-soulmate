@@ -595,7 +595,7 @@ function EmptyState({ onCreate, search, filter }: { onCreate: () => void; search
       {!filtered && (
         <button
           onClick={onCreate}
-          className="inline-flex items-center gap-2 px-5 h-11 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold text-sm shadow-[0_0_24px_var(--neon-glow)] hover:scale-[1.03] active:scale-95 transition-transform"
+          className="inline-flex items-center gap-2 px-5 h-11 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold text-sm shadow-[0_0_24px_var(--neon-glow)] active:scale-95 transition-transform"
         >
           <Plus className="h-4 w-4" /> Create Room
         </button>
