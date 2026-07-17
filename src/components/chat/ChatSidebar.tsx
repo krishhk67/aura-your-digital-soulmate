@@ -81,7 +81,7 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
               <MessageCircle className="h-10 w-10 text-neon" />
             </div>
             <p className="font-display font-semibold text-lg mb-2">Start Chatting</p>
-            <p className="text-sm text-muted-foreground mb-5">Find people and start your first conversation on Aura</p>
+            <p className="text-sm text-muted-foreground mb-5">Find people and start your first conversation on Aurix</p>
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={onNewChat}
