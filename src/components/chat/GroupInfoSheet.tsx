@@ -712,6 +712,39 @@ export function GroupInfoSheet({ open, onClose, chat, onChatRemoved }: Props) {
             destructive
             onConfirm={() => void deleteGroup()}
           />
+
+          {/* QR code dialog */}
+          <AnimatePresence>
+            {qrOpen && inviteUrl && (
+              <>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  onClick={() => setQrOpen(false)} className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-md" />
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+                  className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[81] mx-auto max-w-sm glass-panel rounded-3xl p-6 border border-glass-border">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-display font-semibold text-sm">Scan to join</h3>
+                    <button onClick={() => setQrOpen(false)} className="h-8 w-8 rounded-full hover:bg-secondary flex items-center justify-center">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="mx-auto w-fit rounded-2xl bg-white p-4">
+                    <QRCodeSVG value={inviteUrl} size={220} level="M" />
+                  </div>
+                  <p className="text-center text-xs text-muted-foreground mt-3 truncate">{inviteUrl}</p>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button onClick={() => void copyInvite()}
+                      className="h-10 rounded-xl bg-secondary text-sm font-medium hover:bg-secondary/80 flex items-center justify-center gap-2">
+                      <Copy className="h-4 w-4" /> Copy
+                    </button>
+                    <button onClick={() => void shareInvite()}
+                      className="h-10 rounded-xl bg-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2">
+                      <Share2 className="h-4 w-4" /> Share
+                    </button>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </>
       )}
     </AnimatePresence>
@@ -735,6 +768,50 @@ function SettingsRow({
   );
 }
 
+function MiniAction({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick}
+      className="flex flex-col items-center gap-1 py-2 rounded-xl bg-secondary/60 hover:bg-secondary text-neon transition-colors">
+      {icon}
+      <span className="text-[10px] font-medium text-foreground/80">{label}</span>
+    </button>
+  );
+}
+
+function PermissionRow({
+  icon, label, value, onChange, disabled, saving,
+}: {
+  icon: React.ReactNode; label: string; value: PermissionScope;
+  onChange: (v: PermissionScope) => void; disabled?: boolean; saving?: boolean; ownerOnly?: boolean;
+}) {
+  const options: { value: PermissionScope; label: string }[] = [
+    { value: "everyone", label: "Everyone" },
+    { value: "admins", label: "Admins" },
+    { value: "owner", label: "Owner" },
+  ];
+  return (
+    <div className="glass-panel rounded-2xl p-3">
+      <div className="flex items-center gap-3 mb-2">
+        <span className="h-8 w-8 rounded-full bg-primary/15 text-neon flex items-center justify-center">{icon}</span>
+        <span className="flex-1 text-sm font-medium">{label}</span>
+        {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
+        {options.map((o) => (
+          <button key={o.value} disabled={disabled || saving} onClick={() => onChange(o.value)}
+            className={`h-8 rounded-lg text-[11px] font-medium transition-colors ${
+              value === o.value
+                ? "bg-primary/25 text-neon border border-primary/40"
+                : "bg-secondary/60 text-muted-foreground hover:bg-secondary"
+            } disabled:opacity-50 disabled:cursor-not-allowed`}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ActionItem({
   icon, label, onClick, destructive,
 }: { icon: React.ReactNode; label: string; onClick: () => void; destructive?: boolean }) {
@@ -746,6 +823,7 @@ function ActionItem({
     </button>
   );
 }
+
 
 /* ───────────────────────── Add Members Dialog ───────────────────────── */
 
