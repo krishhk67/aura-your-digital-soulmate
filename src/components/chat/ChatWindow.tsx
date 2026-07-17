@@ -150,23 +150,33 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
     return () => document.removeEventListener("visibilitychange", onVis);
   }, [chatId, user]);
 
+  // Single entry point for all outbound TEXT messages (manual + smart reply).
+  // Guarantees the exact same payload shape and RLS-relevant fields regardless
+  // of whether the chat is 1:1 or a group. Do NOT bypass this.
+  const submitText = async (raw: string, source: "manual" | "smart-reply" = "manual") => {
+    const text = (raw ?? "").trim();
+    if (!text || !chatId) return { ok: false as const };
+    console.info("[Aurix] submitText", { source, chatId, is_group: chatMeta?.is_group, len: text.length });
+    const { error } = await sendMessage(chatId, text);
+    if (error) {
+      console.error("[Aurix] submitText failed", { source, chatId, is_group: chatMeta?.is_group, error: error.message });
+      toast.error(error.message);
+      return { ok: false as const, error };
+    }
+    return { ok: true as const };
+  };
+
   const handleSend = async () => {
     if (!input.trim() || !chatId) return;
     const text = input;
     setInput("");
-    const { error } = await sendMessage(chatId, text);
-    if (error) {
-      setInput(text);
-      toast.error(error.message);
-    }
+    const res = await submitText(text, "manual");
+    if (!res.ok) setInput(text);
     inputRef.current?.focus();
   };
 
-  const sendText = async (text: string) => {
-    if (!text.trim() || !chatId) return;
-    const { error } = await sendMessage(chatId, text);
-    if (error) toast.error(error.message);
-  };
+  const sendText = (text: string) => submitText(text, "smart-reply");
+
 
   const uploadAndSend = async (file: File) => {
     if (!chatId || !user) return;
