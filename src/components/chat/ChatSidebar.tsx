@@ -216,7 +216,7 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
                       : "bg-transparent text-muted-foreground/80 border border-border/70 hover:text-foreground hover:bg-secondary/40"
                   )}
                 >
-                  <Icon className="h-4 w-4" strokeWidth={2} />
+                  <Icon className="h-4 w-4" />
                   <span>{f.label}</span>
                   {badge > 0 && f.key !== "all" && (
                     <span className={cn(
