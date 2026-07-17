@@ -199,7 +199,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const moodGlow = mood ? MOOD_META[mood].accent : undefined;
 
   return (
-    <div className="h-full flex flex-col bg-background relative" {...(chatTheme ? { "data-theme": chatTheme } : {})}>
+    <div className="h-full flex flex-col bg-background relative transition-colors duration-300 ease-out [&_*]:transition-colors [&_*]:duration-300" {...(chatTheme ? { "data-theme": chatTheme } : {})}>
       {moodGlow && (
         <div className="pointer-events-none absolute inset-x-0 top-0 h-32 -z-0 transition-opacity duration-700"
           style={{ background: `radial-gradient(ellipse at top, ${moodGlow}, transparent 70%)` }} />
