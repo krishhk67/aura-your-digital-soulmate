@@ -90,6 +90,8 @@ export type Database = {
           chat_id: string
           cleared_at: string | null
           id: string
+          is_archived: boolean
+          is_favorite: boolean
           is_hidden: boolean
           is_muted: boolean
           is_pinned: boolean
@@ -103,6 +105,8 @@ export type Database = {
           chat_id: string
           cleared_at?: string | null
           id?: string
+          is_archived?: boolean
+          is_favorite?: boolean
           is_hidden?: boolean
           is_muted?: boolean
           is_pinned?: boolean
@@ -116,6 +120,8 @@ export type Database = {
           chat_id?: string
           cleared_at?: string | null
           id?: string
+          is_archived?: boolean
+          is_favorite?: boolean
           is_hidden?: boolean
           is_muted?: boolean
           is_pinned?: boolean

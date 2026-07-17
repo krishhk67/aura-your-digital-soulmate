@@ -1,12 +1,16 @@
-import { motion } from "framer-motion";
-import { MessageCircle, Search, Plus, UserPlus, Pin, BellOff } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  MessageCircle, Search, Plus, UserPlus, Pin, BellOff,
+  Users, User, Mail, Star, Archive, PhoneCall, Sparkles, Lock, Globe2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMyChats } from "@/hooks/useRealtimeChat";
 import { useAuth } from "@/hooks/useAuth";
 import { useUsersWithActiveStories } from "@/hooks/useStories";
 import { useHiddenSpace } from "@/hooks/useHiddenSpace";
+import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface ChatSidebarProps {
   selectedChat: string | null;
@@ -15,14 +19,67 @@ interface ChatSidebarProps {
   onOpenSettings: () => void;
 }
 
+type FilterKey =
+  | "all" | "chats" | "groups" | "unread" | "favorites"
+  | "archived" | "calls" | "ai" | "hidden" | "communities";
+
+interface FilterDef {
+  key: FilterKey;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  requiresHidden?: boolean;
+}
+
+const FILTERS: FilterDef[] = [
+  { key: "all", label: "All", icon: Globe2 },
+  { key: "chats", label: "Chats", icon: User },
+  { key: "groups", label: "Groups", icon: Users },
+  { key: "unread", label: "Unread", icon: Mail },
+  { key: "favorites", label: "Favorites", icon: Star },
+  { key: "archived", label: "Archived", icon: Archive },
+  { key: "calls", label: "Calls", icon: PhoneCall },
+  { key: "ai", label: "AI", icon: Sparkles },
+  { key: "hidden", label: "Hidden", icon: Lock, requiresHidden: true },
+  { key: "communities", label: "Communities", icon: MessageCircle },
+];
+
 export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSidebarProps) {
-  const { chats, loading } = useMyChats();
+  const { chats: normalChats, loading } = useMyChats();
+  const hs = useHiddenSpace();
+  const { chats: hiddenChats } = useMyChats({ hiddenOnly: hs.unlocked });
   const { user } = useAuth();
   const storyUsers = useUsersWithActiveStories();
-  const hs = useHiddenSpace();
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState<FilterKey>("all");
+  const [callChatIds, setCallChatIds] = useState<Set<string>>(new Set());
 
-  // Intercept search: if it matches the hidden-space keyword, unlock and clear.
+  // Fetch chat_ids with recent calls (last 30d)
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+      const { data } = await supabase
+        .from("calls")
+        .select("chat_id")
+        .or(`caller_id.eq.${user.id},receiver_id.eq.${user.id}`)
+        .gte("created_at", since);
+      if (cancelled) return;
+      const ids = new Set<string>();
+      (data ?? []).forEach((r) => { if (r.chat_id) ids.add(r.chat_id); });
+      setCallChatIds(ids);
+    })();
+    const ch = supabase
+      .channel(`sidebar-calls:${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "calls" }, () => {
+        // refetch lightweight
+        setCallChatIds((prev) => new Set(prev));
+      })
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, [user]);
+
+  // Intercept search: hidden-space keyword
   const onSearchChange = async (v: string) => {
     setSearchQuery(v);
     if (hs.configured && v.trim().length >= 3) {
@@ -31,12 +88,82 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
     }
   };
 
-  const filteredChats = searchQuery
-    ? chats.filter(c => {
+  const source = activeFilter === "hidden" ? hiddenChats : normalChats;
+
+  const filteredChats = useMemo(() => {
+    let list = source;
+
+    switch (activeFilter) {
+      case "all":
+        list = list.filter((c) => !c.is_archived);
+        break;
+      case "chats":
+        list = list.filter((c) => !c.is_group && !c.is_archived);
+        break;
+      case "groups":
+        list = list.filter((c) => c.is_group && !c.is_archived);
+        break;
+      case "unread":
+        list = list.filter((c) => (c.unread_count ?? 0) > 0 && !c.is_archived);
+        break;
+      case "favorites":
+        list = list.filter((c) => c.is_favorite && !c.is_archived);
+        break;
+      case "archived":
+        list = list.filter((c) => c.is_archived);
+        break;
+      case "calls":
+        list = list.filter((c) => callChatIds.has(c.id) && !c.is_archived);
+        break;
+      case "ai":
+      case "communities":
+        list = [];
+        break;
+      case "hidden":
+        // already hidden set
+        break;
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter((c) => {
         const name = c.is_group ? c.name : c.other_user?.display_name ?? c.other_user?.username;
-        return name?.toLowerCase().includes(searchQuery.toLowerCase());
-      })
-    : chats;
+        return name?.toLowerCase().includes(q);
+      });
+    }
+    return list;
+  }, [source, activeFilter, searchQuery, callChatIds]);
+
+  // Counts for badges (based on normal chats, non-archived)
+  const counts = useMemo(() => {
+    const active = normalChats.filter((c) => !c.is_archived);
+    return {
+      unread: active.filter((c) => (c.unread_count ?? 0) > 0).length,
+      groups: active.filter((c) => c.is_group).length,
+      chats: active.filter((c) => !c.is_group).length,
+      favorites: active.filter((c) => c.is_favorite).length,
+      archived: normalChats.filter((c) => c.is_archived).length,
+      calls: active.filter((c) => callChatIds.has(c.id)).length,
+      hidden: hiddenChats.length,
+    } as Record<string, number>;
+  }, [normalChats, hiddenChats, callChatIds]);
+
+  const visibleFilters = FILTERS.filter((f) => !f.requiresHidden || hs.unlocked);
+
+  const emptyMessage = () => {
+    switch (activeFilter) {
+      case "unread": return "No unread chats.";
+      case "favorites": return "No favorite conversations.";
+      case "groups": return "No group chats yet.";
+      case "chats": return "No one-to-one chats yet.";
+      case "archived": return "Nothing archived.";
+      case "calls": return "No recent calls.";
+      case "ai": return "AI conversations coming soon.";
+      case "communities": return "Communities are coming soon.";
+      case "hidden": return "No hidden conversations.";
+      default: return "Start Chatting";
+    }
+  };
 
   return (
     <div className="h-full flex flex-col bg-background">
@@ -57,7 +184,7 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
         </div>
 
         {/* Search */}
-        <div className="relative mb-2">
+        <div className="relative mb-3">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
@@ -66,6 +193,41 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full h-11 rounded-2xl bg-secondary/50 border border-border pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
           />
+        </div>
+
+        {/* Filter chips */}
+        <div className="-mx-5 px-5 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-2 pb-1 pr-2 w-max">
+            {visibleFilters.map((f) => {
+              const selected = activeFilter === f.key;
+              const badge = counts[f.key] ?? 0;
+              const Icon = f.icon;
+              return (
+                <motion.button
+                  key={f.key}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setActiveFilter(f.key)}
+                  className={cn(
+                    "relative flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-all duration-200",
+                    selected
+                      ? "bg-primary text-primary-foreground shadow-[0_0_16px_var(--neon-glow)] border border-primary"
+                      : "bg-transparent text-muted-foreground border border-border hover:text-foreground hover:border-primary/40"
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  <span>{f.label}</span>
+                  {badge > 0 && f.key !== "all" && (
+                    <span className={cn(
+                      "ml-0.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-semibold flex items-center justify-center",
+                      selected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary/20 text-neon"
+                    )}>
+                      {badge > 99 ? "99+" : badge}
+                    </span>
+                  )}
+                </motion.button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -80,79 +242,88 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
             <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mx-auto mb-5 border border-primary/10">
               <MessageCircle className="h-10 w-10 text-neon" />
             </div>
-            <p className="font-display font-semibold text-lg mb-2">Start Chatting</p>
-            <p className="text-sm text-muted-foreground mb-5">Find people and start your first conversation on Aurix</p>
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={onNewChat}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold hover:shadow-[0_0_20px_var(--neon-glow)] transition-all"
-            >
-              <UserPlus className="h-4 w-4" />
-              Find People
-            </motion.button>
+            <p className="font-display font-semibold text-lg mb-2">{emptyMessage()}</p>
+            {activeFilter === "all" && (
+              <>
+                <p className="text-sm text-muted-foreground mb-5">Find people and start your first conversation on Aurix</p>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={onNewChat}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold hover:shadow-[0_0_20px_var(--neon-glow)] transition-all"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Find People
+                </motion.button>
+              </>
+            )}
           </div>
         ) : (
-          filteredChats.map((chat, index) => {
-            const displayName = chat.is_group ? chat.name : (chat.other_user?.display_name ?? chat.other_user?.username ?? "User");
-            const avatar = chat.is_group ? (chat.avatar_url || null) : (chat.other_user?.avatar_url || null);
-            const isOnline = !chat.is_group && chat.other_user?.is_online;
-            const lastMsg = chat.last_message?.content ?? "No messages yet";
-            const timeAgo = chat.last_message?.created_at
-              ? formatDistanceToNow(new Date(chat.last_message.created_at), { addSuffix: false })
-              : "";
-            const isSelected = selectedChat === chat.id;
+          <AnimatePresence mode="popLayout">
+            {filteredChats.map((chat, index) => {
+              const displayName = chat.is_group ? chat.name : (chat.other_user?.display_name ?? chat.other_user?.username ?? "User");
+              const avatar = chat.is_group ? (chat.avatar_url || null) : (chat.other_user?.avatar_url || null);
+              const isOnline = !chat.is_group && chat.other_user?.is_online;
+              const lastMsg = chat.last_message?.content ?? "No messages yet";
+              const timeAgo = chat.last_message?.created_at
+                ? formatDistanceToNow(new Date(chat.last_message.created_at), { addSuffix: false })
+                : "";
+              const isSelected = selectedChat === chat.id;
 
-            return (
-              <motion.button
-                key={chat.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.03 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => onSelectChat(chat.id)}
-                className={cn(
-                  "w-full flex items-center gap-3.5 p-3.5 rounded-2xl transition-all text-left active:bg-secondary/80",
-                  isSelected ? "bg-primary/10 border border-primary/20" : "hover:bg-secondary/40"
-                )}
-              >
-                <div className="relative flex-shrink-0">
-                  {(() => {
-                    const hasStory = !chat.is_group && chat.other_user && storyUsers.has(chat.other_user.id);
-                    const innerImg = avatar?.startsWith("http") ? (
-                      <img src={avatar} alt="" className="h-full w-full rounded-full object-cover" />
-                    ) : (
-                      <div className="h-full w-full rounded-full bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center text-lg font-bold">
-                        {chat.is_group ? "👥" : displayName?.charAt(0)?.toUpperCase() || "?"}
-                      </div>
-                    );
-                    return hasStory ? (
-                      <div className="h-14 w-14 rounded-full p-[2px] bg-gradient-to-tr from-primary via-accent to-primary">
-                        <div className="h-full w-full rounded-full bg-background p-[2px]">
-                          <div className="h-full w-full rounded-full overflow-hidden">{innerImg}</div>
-                        </div>
-                      </div>
-                    ) : <div className="h-14 w-14">{innerImg}</div>;
-                  })()}
-                  {isOnline && (
-                    <div className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full bg-accent border-2 border-background" />
+              return (
+                <motion.button
+                  key={chat.id}
+                  layout
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.22, delay: Math.min(index * 0.02, 0.15) }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => onSelectChat(chat.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3.5 p-3.5 rounded-2xl transition-all text-left active:bg-secondary/80",
+                    isSelected ? "bg-primary/10 border border-primary/20" : "hover:bg-secondary/40"
                   )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="font-semibold text-[15px] truncate flex items-center gap-1.5">
-                      {chat.is_pinned && <Pin className="h-3 w-3 text-neon flex-shrink-0" />}
-                      {displayName}
-                    </span>
-                    <span className="text-[11px] text-muted-foreground flex-shrink-0 ml-2 flex items-center gap-1">
-                      {chat.is_muted && <BellOff className="h-3 w-3" />}
-                      {timeAgo}
-                    </span>
+                >
+                  <div className="relative flex-shrink-0">
+                    {(() => {
+                      const hasStory = !chat.is_group && chat.other_user && storyUsers.has(chat.other_user.id);
+                      const innerImg = avatar?.startsWith("http") ? (
+                        <img src={avatar} alt="" className="h-full w-full rounded-full object-cover" />
+                      ) : (
+                        <div className="h-full w-full rounded-full bg-gradient-to-br from-primary/30 to-accent/30 flex items-center justify-center text-lg font-bold">
+                          {chat.is_group ? "👥" : displayName?.charAt(0)?.toUpperCase() || "?"}
+                        </div>
+                      );
+                      return hasStory ? (
+                        <div className="h-14 w-14 rounded-full p-[2px] bg-gradient-to-tr from-primary via-accent to-primary">
+                          <div className="h-full w-full rounded-full bg-background p-[2px]">
+                            <div className="h-full w-full rounded-full overflow-hidden">{innerImg}</div>
+                          </div>
+                        </div>
+                      ) : <div className="h-14 w-14">{innerImg}</div>;
+                    })()}
+                    {isOnline && (
+                      <div className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full bg-accent border-2 border-background" />
+                    )}
                   </div>
-                  <p className="text-[13px] text-muted-foreground truncate">{lastMsg}</p>
-                </div>
-              </motion.button>
-            );
-          })
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="font-semibold text-[15px] truncate flex items-center gap-1.5">
+                        {chat.is_pinned && <Pin className="h-3 w-3 text-neon flex-shrink-0" />}
+                        {chat.is_favorite && <Star className="h-3 w-3 text-neon flex-shrink-0 fill-current" />}
+                        {displayName}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground flex-shrink-0 ml-2 flex items-center gap-1">
+                        {chat.is_muted && <BellOff className="h-3 w-3" />}
+                        {timeAgo}
+                      </span>
+                    </div>
+                    <p className="text-[13px] text-muted-foreground truncate">{lastMsg}</p>
+                  </div>
+                </motion.button>
+              );
+            })}
+          </AnimatePresence>
         )}
       </div>
     </div>
