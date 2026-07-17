@@ -473,11 +473,86 @@ export function GroupInfoSheet({ open, onClose, chat, onChatRemoved }: Props) {
               </div>
             )}
 
+            {/* PERMISSIONS TAB */}
+            {tab === "permissions" && (
+              <div className="mx-4 mb-6 space-y-3">
+                <div className="glass-panel rounded-2xl p-4 space-y-1">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Who can</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Control what members are allowed to do in this group. Owner always has full control.
+                  </p>
+                </div>
+                {([
+                  { key: "send_messages", label: "Send messages", icon: <MessageCircle className="h-4 w-4" /> },
+                  { key: "send_media", label: "Send photos & videos", icon: <ImgIcon className="h-4 w-4" /> },
+                  { key: "send_voice", label: "Send voice messages", icon: <Mic className="h-4 w-4" /> },
+                  { key: "add_members", label: "Add new members", icon: <UserPlus className="h-4 w-4" /> },
+                  { key: "edit_info", label: "Edit group info", icon: <InfoIcon className="h-4 w-4" /> },
+                  { key: "pin_messages", label: "Pin messages", icon: <PinIcon className="h-4 w-4" /> },
+                ] as { key: PermissionKey; label: string; icon: React.ReactNode }[]).map((row) => (
+                  <PermissionRow
+                    key={row.key}
+                    icon={row.icon}
+                    label={row.label}
+                    value={(permissions[row.key] ?? "everyone") as PermissionScope}
+                    disabled={!isAdmin}
+                    saving={savingPerm === row.key}
+                    ownerOnly={row.key === "edit_info" ? false : false}
+                    onChange={(v) => void setPermission(row.key, v)}
+                  />
+                ))}
+                {!isAdmin && (
+                  <p className="text-[11px] text-muted-foreground text-center mt-2">
+                    Only admins can change permissions.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* SETTINGS TAB */}
             {tab === "settings" && (
-              <div className="mx-4 mb-6 space-y-2">
+              <div className="mx-4 mb-6 space-y-4">
+                {/* Invite link */}
                 {isAdmin && (
-                  <>
+                  <div className="glass-panel rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                          <Link2 className="h-3 w-3" /> Invite link
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          Anyone with this link can join {chat.name ?? "the group"}.
+                        </p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" checked={inviteEnabled}
+                          onChange={(e) => void toggleInviteEnabled(e.target.checked)} />
+                        <span className="w-9 h-5 bg-secondary peer-checked:bg-primary/60 rounded-full relative transition-colors">
+                          <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white transition-transform ${inviteEnabled ? "translate-x-4" : ""}`} />
+                        </span>
+                      </label>
+                    </div>
+                    {inviteEnabled ? (
+                      <>
+                        <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 text-xs font-mono overflow-hidden">
+                          <span className="truncate flex-1">{inviteUrl}</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2">
+                          <MiniAction icon={<Copy className="h-4 w-4" />} label="Copy" onClick={() => void copyInvite()} />
+                          <MiniAction icon={<Share2 className="h-4 w-4" />} label="Share" onClick={() => void shareInvite()} />
+                          <MiniAction icon={<QrCode className="h-4 w-4" />} label="QR" onClick={() => setQrOpen(true)} />
+                          <MiniAction icon={<RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />} label="Reset" onClick={() => void rotateInvite()} />
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">Invite link is currently disabled.</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Group actions */}
+                {isAdmin && (
+                  <div className="space-y-2">
                     <SettingsRow icon={<Camera className="h-4 w-4" />} label="Change avatar"
                       onClick={() => fileRef.current?.click()} />
                     <SettingsRow icon={<Pencil className="h-4 w-4" />} label="Edit name"
@@ -486,22 +561,45 @@ export function GroupInfoSheet({ open, onClose, chat, onChatRemoved }: Props) {
                       onClick={() => { setTab("info"); setEditing("description"); }} />
                     <SettingsRow icon={<UserPlus className="h-4 w-4" />} label="Add members"
                       onClick={() => { setTab("members"); setAddOpen(true); }} />
-                  </>
+                    <SettingsRow icon={<Lock className="h-4 w-4" />} label="Permissions"
+                      onClick={() => setTab("permissions")} hint={`${Object.keys(permissions).length || 6} settings`} />
+                  </div>
                 )}
-                {isOwner && (
-                  <SettingsRow icon={<ArrowRightLeft className="h-4 w-4" />} label="Transfer ownership"
-                    onClick={() => setTab("members")} hint="Tap a member to transfer" />
-                )}
-                {!isOwner && me && (
-                  <SettingsRow icon={<LogOut className="h-4 w-4" />} label="Leave group" destructive
-                    onClick={() => setConfirmLeave(true)} />
-                )}
-                {isOwner && (
-                  <SettingsRow icon={<Trash2 className="h-4 w-4" />} label="Delete group" destructive
-                    onClick={() => setConfirmDelete(true)} />
-                )}
+
+                {/* Personal actions */}
+                <div className="space-y-2">
+                  <SettingsRow
+                    icon={<Pin className="h-4 w-4" />}
+                    label={memberState.is_pinned ? "Unpin group" : "Pin group"}
+                    onClick={() => void memberState.update({ is_pinned: !memberState.is_pinned })}
+                  />
+                  <SettingsRow
+                    icon={<BellOff className="h-4 w-4" />}
+                    label={memberState.is_muted ? "Unmute notifications" : "Mute notifications"}
+                    onClick={() => void memberState.update({ is_muted: !memberState.is_muted })}
+                  />
+                  <SettingsRow icon={<Eraser className="h-4 w-4" />} label="Clear chat for me"
+                    onClick={() => void clearForMe()} />
+                </div>
+
+                {/* Danger zone */}
+                <div className="space-y-2">
+                  {isOwner && (
+                    <SettingsRow icon={<ArrowRightLeft className="h-4 w-4" />} label="Transfer ownership"
+                      onClick={() => setTab("members")} hint="Tap a member" />
+                  )}
+                  {!isOwner && me && (
+                    <SettingsRow icon={<LogOut className="h-4 w-4" />} label="Leave group" destructive
+                      onClick={() => setConfirmLeave(true)} />
+                  )}
+                  {isOwner && (
+                    <SettingsRow icon={<Trash2 className="h-4 w-4" />} label="Delete group" destructive
+                      onClick={() => setConfirmDelete(true)} />
+                  )}
+                </div>
               </div>
             )}
+
           </motion.div>
 
           {/* Member actions sheet */}
