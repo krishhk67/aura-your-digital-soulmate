@@ -492,10 +492,10 @@ function RoomCard({ room, index, onOpen }: { room: Room; index: number; onOpen: 
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index, 8) * 0.04, duration: 0.35, ease: "easeOut" }}
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.985 }}
+      whileTap={{ scale: 0.98 }}
       onClick={() => onOpen(room)}
-      className="group relative w-full text-left rounded-2xl border border-glass-border bg-secondary/30 backdrop-blur-xl p-3.5 flex flex-col gap-3 overflow-hidden hover:border-primary/40 hover:shadow-[0_10px_30px_-14px_hsl(var(--neon-glow)/0.6),0_0_0_1px_hsl(var(--primary)/0.25)] transition-all"
+      className="group relative w-full text-left rounded-2xl border border-glass-border bg-secondary/30 backdrop-blur-xl p-3.5 flex flex-col gap-3 overflow-hidden"
+      style={{ WebkitTapHighlightColor: "transparent" }}
     >
       {/* per-room tint spill */}
       <span aria-hidden className="absolute -inset-8 blur-3xl opacity-70 pointer-events-none -z-10" style={{ background: `radial-gradient(circle at 20% 0%, ${tint}, transparent 60%)` }} />
