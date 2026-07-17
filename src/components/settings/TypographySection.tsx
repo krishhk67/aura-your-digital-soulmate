@@ -136,7 +136,7 @@ export function TypographySection() {
         <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">Live preview</p>
         <motion.div
           layout
-          style={{ fontFamily: active.fontFamily }}
+          style={active ? { fontFamily: active.fontFamily } : undefined}
           className="rounded-2xl border border-border/60 bg-muted/20 p-4 space-y-2"
         >
           <div className="flex justify-start">
