@@ -153,10 +153,10 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        drag="y"
+        drag={overlayOpen ? false : "y"}
         dragConstraints={{ top: 0, bottom: 0 }}
         dragElastic={0.4}
-        onDragEnd={(_, info) => { if (info.offset.y > 120) onClose(); }}
+        onDragEnd={(_, info) => { if (!overlayOpen && info.offset.y > 120) onClose(); }}
         className="fixed inset-0 z-[90] bg-black flex flex-col"
       >
         {/* progress bars */}
