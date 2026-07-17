@@ -98,7 +98,7 @@ export type Database = {
           joined_at: string | null
           last_delivered_at: string | null
           last_read_at: string | null
-          role: string | null
+          role: string
           theme: string | null
           user_id: string
         }
@@ -114,7 +114,7 @@ export type Database = {
           joined_at?: string | null
           last_delivered_at?: string | null
           last_read_at?: string | null
-          role?: string | null
+          role?: string
           theme?: string | null
           user_id: string
         }
@@ -130,7 +130,7 @@ export type Database = {
           joined_at?: string | null
           last_delivered_at?: string | null
           last_read_at?: string | null
-          role?: string | null
+          role?: string
           theme?: string | null
           user_id?: string
         }
