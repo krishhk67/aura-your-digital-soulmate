@@ -134,11 +134,11 @@ export function AiToolsSheet({ open, onClose, messages, currentUserId, draft, on
             className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl bg-background border-t border-glass-border max-h-[85vh] overflow-y-auto pb-[env(safe-area-inset-bottom,12px)]"
           >
             <div className="flex justify-center pt-2 pb-1"><div className="h-1 w-10 rounded-full bg-muted-foreground/30" /></div>
-            <div className="px-4 pb-2 flex items-center gap-2">
+            <div className="px-4 pb-3 pt-1 flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-neon" />
-              <p className="text-sm font-semibold">AI tools</p>
-              <span className="text-[10px] text-muted-foreground ml-auto">Powered by Lovable AI</span>
+              <p className="text-sm font-semibold tracking-tight">AI Tools</p>
             </div>
+
 
             <div className="px-3 flex gap-1 mb-3 overflow-x-auto scrollbar-none">
               {tabs.map((t) => (
