@@ -5,10 +5,10 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreateChat, useSendMessage } from "@/hooks/useRealtimeChat";
-import { useDeleteStory, useReactToStory, useRecordStoryView, useStoryAudience, type StoryGroup } from "@/hooks/useStories";
+import { useDeleteStory, useReactToStory, useRecordStoryView, useSendStoryMessage, useStoryAudience, type StoryGroup } from "@/hooks/useStories";
 import { formatDistanceToNow } from "date-fns";
 
-const REACTIONS = ["❤️", "🔥", "😂", "😍", "👏"];
+const REACTIONS = ["❤️", "😂", "😍", "😮", "🔥", "👏", "😭", "👍", "✨"];
 const IMAGE_DURATION = 5000;
 
 interface Props {
