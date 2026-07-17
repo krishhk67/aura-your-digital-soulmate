@@ -186,8 +186,9 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
           {group.stories.map((_, i) => (
             <div key={i} className="flex-1 h-0.5 bg-white/25 rounded-full overflow-hidden">
               <div
-                className="h-full bg-white"
-                style={{ width: `${i < storyIdx ? 100 : i === storyIdx ? progress * 100 : 0}%`, transition: i === storyIdx ? "none" : undefined }}
+                ref={i === storyIdx ? activeBarRef : undefined}
+                className="h-full bg-white will-change-[width]"
+                style={{ width: `${i < storyIdx ? 100 : 0}%` }}
               />
             </div>
           ))}
