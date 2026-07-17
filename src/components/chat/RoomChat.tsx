@@ -301,29 +301,31 @@ function MessageRow({
           <div className="w-7 flex-shrink-0" />
         ) : null}
 
-        <div className="relative min-w-0">
+        <div className="relative min-w-0 flex flex-col">
+          {/* Metadata row: sender name (left) + timestamp (right, fades with scroll).
+              Shown only for the first message in a group. */}
+          {!grouped && (
+            <MetaRow
+              mine={mine}
+              name={mine ? "You" : (m.sender?.display_name ?? m.sender?.username ?? "Member")}
+              time={formatMsgTime(m.created_at)}
+            />
+          )}
           <div
             className={`rounded-2xl px-2.5 py-1.5 ${
               mine
-                ? "bg-primary text-primary-foreground rounded-br-md"
-                : "bg-secondary rounded-bl-md"
+                ? "bg-primary text-primary-foreground rounded-br-md self-end"
+                : "bg-secondary rounded-bl-md self-start"
             } ${grouped ? (mine ? "rounded-tr-md" : "rounded-tl-md") : ""}`}
           >
-            {!mine && !grouped && (
-              <div className="text-[11px] font-semibold text-neon leading-tight mb-0.5 truncate">
-                {m.sender?.display_name ?? m.sender?.username ?? "Member"}
-              </div>
-            )}
             {replyMsg && (
               <div className="text-[11px] opacity-75 border-l-2 border-current pl-2 mb-1 truncate">
                 ↪ {replyMsg.content ?? replyMsg.message_type}
               </div>
             )}
             <RoomMsgBody m={m} />
-            <span className="block text-[10px] opacity-55 mt-0.5 text-right leading-none">
-              {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-            </span>
           </div>
+
 
           {/* Reply icon outside bubble (bottom-right / bottom-left depending on side) */}
           <button
