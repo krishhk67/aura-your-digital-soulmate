@@ -35,24 +35,50 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
+    let fixingDuration = false;
+    const applyDuration = (d: number) => {
+      if (isFinite(d) && d > 0) setDuration(d);
+      else if (durationHintMs && durationHintMs > 0) setDuration(durationHintMs / 1000);
+    };
     const onTime = () => { if (!dragging) setProgress(a.currentTime); };
-    const onLoad = () => setDuration(a.duration || 0);
+    const onLoad = () => {
+      // MediaRecorder webm often reports Infinity for duration. Trigger the seek trick to force the browser to compute it.
+      if (!isFinite(a.duration) || a.duration === 0) {
+        fixingDuration = true;
+        try { a.currentTime = 1e6; } catch {}
+      } else {
+        applyDuration(a.duration);
+      }
+    };
+    const onDurationChange = () => {
+      if (fixingDuration && isFinite(a.duration) && a.duration > 0) {
+        fixingDuration = false;
+        applyDuration(a.duration);
+        try { a.currentTime = 0; } catch {}
+      } else if (!fixingDuration) {
+        applyDuration(a.duration);
+      }
+    };
     const onEnd = () => { setPlaying(false); playingRef.current = false; setProgress(0); progressRef.current = 0; };
     const onPlay = () => { setPlaying(true); playingRef.current = true; };
     const onPause = () => { setPlaying(false); playingRef.current = false; };
     a.addEventListener("timeupdate", onTime);
     a.addEventListener("loadedmetadata", onLoad);
+    a.addEventListener("durationchange", onDurationChange);
     a.addEventListener("ended", onEnd);
     a.addEventListener("play", onPlay);
     a.addEventListener("pause", onPause);
+    // Seed from hint immediately so UI never shows 0:00 for a known-length note.
+    if (durationHintMs && durationHintMs > 0) setDuration(durationHintMs / 1000);
     return () => {
       a.removeEventListener("timeupdate", onTime);
       a.removeEventListener("loadedmetadata", onLoad);
+      a.removeEventListener("durationchange", onDurationChange);
       a.removeEventListener("ended", onEnd);
       a.removeEventListener("play", onPlay);
       a.removeEventListener("pause", onPause);
     };
-  }, [dragging]);
+  }, [dragging, durationHintMs, url]);
 
   useEffect(() => {
     progressRef.current = duration ? progress / duration : 0;
