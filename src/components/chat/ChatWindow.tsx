@@ -65,6 +65,10 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const [aiOpen, setAiOpen] = useState(false);
   const [mood, setMood] = useState<MoodId | null>(null);
   const { startCall } = useCalls();
+  const { allDeliveredAt, allReadAt } = useChatReceipts(chatId);
+  const [infoMsg, setInfoMsg] = useState<MessageRow | null>(null);
+  const longPressTimer = useRef<number | null>(null);
+
 
   const initiateCall = (type: "voice" | "video") => {
     if (chatMeta?.is_group) { toast("Group calls coming next update"); return; }
