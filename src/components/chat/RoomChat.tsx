@@ -164,6 +164,10 @@ export function RoomChat({ roomId, onBack }: Props) {
               grouped={isGrouped}
               replyMsg={replyMsg ?? null}
               onReply={() => setReply(m)}
+              reactions={reactionsByMessage.get(m.id) ?? []}
+              currentUserId={user?.id}
+              onToggleReaction={(emoji) => void toggleReaction(m.id, emoji)}
+              onLongPress={(rect) => setReactionTarget({ msgId: m.id, mine, rect })}
             />
           );
         })}
