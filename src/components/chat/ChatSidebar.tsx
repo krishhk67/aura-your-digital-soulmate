@@ -263,7 +263,7 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
         ) : (
           <AnimatePresence mode="popLayout">
             {filteredChats.map((chat, index) => {
-              const displayName = chat.is_group ? chat.name : (chat.other_user?.display_name ?? chat.other_user?.username ?? "User");
+              const displayName = (chat.is_group ? chat.name : (chat.other_user?.display_name ?? chat.other_user?.username)) ?? "User";
               const avatar = chat.is_group ? (chat.avatar_url || null) : (chat.other_user?.avatar_url || null);
               const isOnline = !chat.is_group && chat.other_user?.is_online;
               const lastMsg = chat.last_message?.content ?? "No messages yet";
