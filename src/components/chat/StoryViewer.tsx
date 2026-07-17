@@ -23,7 +23,7 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
   const [groupIdx, setGroupIdx] = useState(startGroupIndex);
   const [storyIdx, setStoryIdx] = useState(0);
   const [progress, setProgress] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [holdPaused, setHoldPaused] = useState(false);
   const [reply, setReply] = useState("");
   const [showViewers, setShowViewers] = useState(false);
   const [sending, setSending] = useState(false);
@@ -45,6 +45,11 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
   const isOwner = !!user && story?.user_id === user.id;
 
   const { viewers, reactions } = useStoryAudience(story?.id ?? null, isOwner && open);
+
+  // Any overlay opened on top of the viewer must pause the whole story lifecycle
+  // (timers, progress, media, auto-next, gestures). Add future overlays to this list.
+  const overlayOpen = showViewers;
+  const paused = holdPaused || overlayOpen;
 
   const next = () => {
     if (!group) return;
