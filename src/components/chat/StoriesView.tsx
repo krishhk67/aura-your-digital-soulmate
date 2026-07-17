@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Plus, Sparkles, Loader2 } from "lucide-react";
 import { useStoriesFeed, type StoryGroup } from "@/hooks/useStories";
@@ -7,6 +7,8 @@ import { StoryComposer } from "./StoryComposer";
 import { StoryViewer } from "./StoryViewer";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+
 
 export function StoriesView() {
   const { user } = useAuth();
