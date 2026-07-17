@@ -38,7 +38,7 @@ const features = [
 ];
 
 const testimonials = [
-  { name: "Luna K.", handle: "@lunakay", text: "Aura literally changed how I talk to people. The vibe is unmatched.", avatar: "🌙" },
+  { name: "Luna K.", handle: "@lunakay", text: "Aurix literally changed how I talk to people. The vibe is unmatched.", avatar: "🌙" },
   { name: "Dev R.", handle: "@devraz", text: "Ghost mode + AI replies = I'm never going back to boring chats.", avatar: "⚡" },
   { name: "Mia Chen", handle: "@miavibes", text: "The mood themes are insane. It feels like my chat is alive.", avatar: "🎭" },
 ];
