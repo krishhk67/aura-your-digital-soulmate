@@ -197,10 +197,10 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
         {/* media + tap zones */}
         <div
           className="flex-1 relative select-none"
-          onPointerDown={() => setPaused(true)}
-          onPointerUp={() => setPaused(false)}
-          onPointerLeave={() => setPaused(false)}
-          onClick={handleTap}
+          onPointerDown={() => !overlayOpen && setHoldPaused(true)}
+          onPointerUp={() => setHoldPaused(false)}
+          onPointerLeave={() => setHoldPaused(false)}
+          onClick={overlayOpen ? undefined : handleTap}
         >
           {story.media_type === "video" ? (
             <video
