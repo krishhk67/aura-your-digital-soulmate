@@ -72,8 +72,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const [infoMsg, setInfoMsg] = useState<MessageRow | null>(null);
   const longPressTimer = useRef<number | null>(null);
   const [reactionTarget, setReactionTarget] = useState<{ msg: MessageRow; rect: DOMRect } | null>(null);
-
-  const messageIds = visibleMessagesIds(messages, cleared_at);
+  const messageIds = messages.map(m => m.id);
   const { byMessage: reactionsByMessage } = useMessageReactions("chat", chatId, messageIds);
   const toggleReaction = useToggleReaction("chat");
 
