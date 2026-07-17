@@ -16,6 +16,14 @@ import { HiddenSpaceProvider, useHiddenSpace } from "@/hooks/useHiddenSpace";
 import { useAuth } from "@/hooks/useAuth";
 
 export function ChatLayout() {
+  return (
+    <HiddenSpaceProvider>
+      <ChatLayoutInner />
+    </HiddenSpaceProvider>
+  );
+}
+
+function ChatLayoutInner() {
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<NavTab>("chats");
