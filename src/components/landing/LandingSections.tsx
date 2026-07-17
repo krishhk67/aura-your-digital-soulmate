@@ -34,9 +34,15 @@ import {
   Monitor,
   Terminal,
   ChevronRight,
+  Smartphone,
+  Download,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import heroMockup from "@/assets/hero-mockup.jpg";
+
 
 /* ────────────────────────────────────────────────────────────────
    Shared motion helpers
@@ -124,6 +130,8 @@ export function HeroSection() {
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   const y = useTransform(scrollYProgress, [0, 1], [0, reduce ? 0 : 120]);
   const opacity = useTransform(scrollYProgress, [0, 0.8], [1, 0.4]);
+  const [downloadOpen, setDownloadOpen] = useState(false);
+
 
   // Mockup parallax tilt
   const mx = useMotionValue(0);
@@ -185,16 +193,17 @@ export function HeroSection() {
                 <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Button>
             </Link>
-            <a href="#features">
-              <Button
-                size="lg"
-                variant="outline"
-                className="rounded-full border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.06] hover:text-white h-12 px-6"
-              >
-                Learn More
-              </Button>
-            </a>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => setDownloadOpen(true)}
+              className="rounded-full border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.06] hover:text-white h-12 px-6"
+            >
+              <Download className="mr-1.5 h-4 w-4" />
+              Download
+            </Button>
           </motion.div>
+
 
           <motion.ul
             variants={fadeUp}
@@ -270,9 +279,160 @@ export function HeroSection() {
           </motion.div>
         </motion.div>
       </motion.div>
+      <DownloadModal open={downloadOpen} onOpenChange={setDownloadOpen} />
     </section>
   );
 }
+
+/* ────────────────────────────────────────────────────────────────
+   Download Modal — placeholder until Android APK ships
+   ──────────────────────────────────────────────────────────────── */
+
+function DownloadModal({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  // Esc + swipe-down close, body scroll lock
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onOpenChange(false);
+    };
+    window.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [open, onOpenChange]);
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          {/* Backdrop */}
+          <motion.div
+            className="absolute inset-0 bg-black/70 backdrop-blur-xl"
+            onClick={() => onOpenChange(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          />
+
+          {/* Card */}
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dl-title"
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.6 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 120) onOpenChange(false);
+            }}
+            initial={{ opacity: 0, y: 40, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 40, scale: 0.96 }}
+            transition={{ type: "spring", stiffness: 320, damping: 30 }}
+            className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.02] backdrop-blur-2xl shadow-[0_40px_120px_-20px_rgba(0,0,0,0.9)]"
+          >
+            {/* Ambient glow */}
+            <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 h-56 w-56 rounded-full bg-emerald-500/25 blur-3xl" />
+
+            {/* Grab handle (mobile) */}
+            <div className="sm:hidden mx-auto mt-2.5 h-1 w-10 rounded-full bg-white/20" />
+
+            {/* Close */}
+            <button
+              onClick={() => onOpenChange(false)}
+              aria-label="Close"
+              className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white transition"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="relative p-6 sm:p-8">
+              {/* Aurix brand */}
+              <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-white/50">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)]" />
+                Aurix
+              </div>
+
+              {/* Icon */}
+              <div className="mt-5 flex justify-center">
+                <motion.div
+                  initial={{ scale: 0.85, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.05, type: "spring", stiffness: 260, damping: 20 }}
+                  className="relative flex h-20 w-20 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/20 to-cyan-500/10"
+                >
+                  <div className="absolute inset-0 rounded-2xl bg-emerald-500/20 blur-2xl" />
+                  <Smartphone className="relative h-9 w-9 text-emerald-300" />
+                </motion.div>
+              </div>
+
+              {/* Title */}
+              <h2
+                id="dl-title"
+                className="mt-5 text-center text-2xl font-semibold tracking-tight text-white"
+              >
+                📱 Aurix for Android
+              </h2>
+              <p className="mt-2 text-center text-sm text-white/70">
+                The official Android app is almost here.
+              </p>
+              <p className="mt-3 text-center text-[13px] leading-relaxed text-white/50">
+                We're putting the finishing touches on Aurix for Android.
+                The APK will be available soon.
+              </p>
+
+              {/* Status badge */}
+              <div className="mt-5 flex justify-center">
+                <div className="flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-emerald-200">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-70" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(52,211,153,0.9)]" />
+                  </span>
+                  Status · Coming Soon
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="mt-7 flex flex-col-reverse sm:flex-row gap-2.5">
+                <Button
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  className="flex-1 rounded-full border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.06] hover:text-white h-11"
+                >
+                  Close
+                </Button>
+                <Button
+                  onClick={() => {
+                    toast("Coming Soon 🚀");
+                  }}
+                  className="flex-1 rounded-full bg-white text-black hover:bg-white/90 shadow-[0_10px_40px_-10px_rgba(52,211,153,0.6)] font-medium h-11"
+                >
+                  Notify Me
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 
 /* ────────────────────────────────────────────────────────────────
    Logo cloud / trust
