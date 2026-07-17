@@ -80,7 +80,7 @@ function ChatLayoutInner() {
               exit={{ opacity: 0, y: -20 }}
               className="absolute inset-0"
             >
-              <RoomsView />
+              <RoomsView onActiveRoomChange={setRoomActive} />
             </motion.div>
           ) : activeTab === "stories" ? (
             <motion.div
