@@ -36,6 +36,20 @@ export function useChatMemberState(chatId: string | null) {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  // Live sync: other hook instances (e.g. ChatThemeDialog) broadcast updates
+  // via a window CustomEvent so every mounted useChatMemberState for the same
+  // chat re-applies the patch immediately — no refetch, no remount.
+  useEffect(() => {
+    if (!chatId) return;
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { chatId: string; patch: Partial<ChatMemberState> } | undefined;
+      if (!detail || detail.chatId !== chatId) return;
+      setState(prev => ({ ...prev, ...detail.patch }));
+    };
+    window.addEventListener("aurix:chat-member-updated", handler);
+    return () => window.removeEventListener("aurix:chat-member-updated", handler);
+  }, [chatId]);
+
   const update = useCallback(async (patch: Partial<ChatMemberState>) => {
     if (!chatId || !user) return { error: new Error("Not signed in") };
     const { error } = await supabase
@@ -43,7 +57,10 @@ export function useChatMemberState(chatId: string | null) {
       .update(patch)
       .eq("chat_id", chatId)
       .eq("user_id", user.id);
-    if (!error) setState(prev => ({ ...prev, ...patch }));
+    if (!error) {
+      setState(prev => ({ ...prev, ...patch }));
+      window.dispatchEvent(new CustomEvent("aurix:chat-member-updated", { detail: { chatId, patch } }));
+    }
     return { error: error ? new Error(error.message) : null };
   }, [chatId, user]);
 
