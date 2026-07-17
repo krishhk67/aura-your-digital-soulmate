@@ -315,7 +315,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                       <video src={msg.media_url} controls className="rounded-lg max-h-64" />
                     )}
                     {msg.message_type === "audio" && msg.media_url && (
-                      <AudioMessage url={msg.media_url} mine={isMe} />
+                      <AudioMessage url={msg.media_url} mine={isMe} durationHintMs={parseDurationHint(msg.content)} />
                     )}
                     {msg.message_type === "file" && msg.media_url && (
                       <a href={msg.media_url} target="_blank" rel="noreferrer" className="flex items-center gap-2 py-1">
