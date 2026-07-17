@@ -33,6 +33,7 @@ import { useChatMemberState, useBlockUser, useIsBlocked, clearChatForMe } from "
 import { ConfirmDialog } from "./ConfirmDialog";
 import { Pin, BellOff, Timer, Ban, ShieldOff } from "lucide-react";
 import { useCalls } from "@/hooks/useCalls";
+import { StoryReplyCard } from "./StoryReplyCard";
 
 
 interface ChatWindowProps {
