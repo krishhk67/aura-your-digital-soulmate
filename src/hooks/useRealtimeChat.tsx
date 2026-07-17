@@ -59,9 +59,10 @@ export interface ProfileRow {
 }
 
 
-export function useMyChats() {
+export function useMyChats(opts?: { hiddenOnly?: boolean }) {
   const { user } = useAuth();
-  const [chats, setChats] = useState<(ChatRow & { last_message?: MessageRow; other_user?: ProfileRow; unread_count?: number; is_pinned?: boolean; is_muted?: boolean; cleared_at?: string | null; is_blocked?: boolean })[]>([]);
+  const hiddenOnly = !!opts?.hiddenOnly;
+  const [chats, setChats] = useState<(ChatRow & { last_message?: MessageRow; other_user?: ProfileRow; unread_count?: number; is_pinned?: boolean; is_muted?: boolean; cleared_at?: string | null; is_blocked?: boolean; is_hidden?: boolean })[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchChats = useCallback(async () => {
@@ -69,7 +70,7 @@ export function useMyChats() {
     // Get chat memberships (with per-user state)
     const { data: memberships } = await supabase
       .from("chat_members")
-      .select("chat_id,is_pinned,is_muted,cleared_at")
+      .select("chat_id,is_pinned,is_muted,cleared_at,is_hidden")
       .eq("user_id", user.id);
 
     if (!memberships?.length) { setChats([]); setLoading(false); return; }
@@ -81,8 +82,11 @@ export function useMyChats() {
       .eq("blocker_id", user.id);
     const blockedIds = new Set((blockedRows ?? []).map(b => b.blocked_id));
 
-    const memberMap = new Map(memberships.map(m => [m.chat_id, m]));
-    const chatIds = memberships.map(m => m.chat_id);
+    // Filter memberships by hidden mode
+    const filteredMemberships = memberships.filter(m => hiddenOnly ? m.is_hidden : !m.is_hidden);
+    if (!filteredMemberships.length) { setChats([]); setLoading(false); return; }
+    const memberMap = new Map(filteredMemberships.map(m => [m.chat_id, m]));
+    const chatIds = filteredMemberships.map(m => m.chat_id);
 
     const { data: chatRows } = await supabase
       .from("chats")
@@ -124,6 +128,7 @@ export function useMyChats() {
         is_pinned: meta?.is_pinned ?? false,
         is_muted: meta?.is_muted ?? false,
         cleared_at: meta?.cleared_at ?? null,
+        is_hidden: meta?.is_hidden ?? false,
         is_blocked: !!(other_user && blockedIds.has(other_user.id)),
       };
     }));
@@ -136,7 +141,7 @@ export function useMyChats() {
 
     setChats(enriched as typeof chats);
     setLoading(false);
-  }, [user]);
+  }, [user, hiddenOnly]);
 
   useEffect(() => { fetchChats(); }, [fetchChats]);
 

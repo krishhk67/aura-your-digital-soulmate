@@ -8,12 +8,22 @@ import { SettingsPanel } from "./SettingsPanel";
 import { RoomsView } from "./RoomsView";
 import { ProfileView } from "./ProfileView";
 import { StoriesView } from "./StoriesView";
+import { HiddenSpaceView } from "./HiddenSpaceView";
 import { CallProvider } from "@/hooks/useCalls";
 import { CallOverlay } from "@/components/calls/CallOverlay";
 import { CallsHistoryView } from "@/components/calls/CallsHistoryView";
+import { HiddenSpaceProvider, useHiddenSpace } from "@/hooks/useHiddenSpace";
 import { useAuth } from "@/hooks/useAuth";
 
 export function ChatLayout() {
+  return (
+    <HiddenSpaceProvider>
+      <ChatLayoutInner />
+    </HiddenSpaceProvider>
+  );
+}
+
+function ChatLayoutInner() {
   const [selectedChat, setSelectedChat] = useState<string | null>(null);
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<NavTab>("chats");
@@ -122,6 +132,16 @@ export function ChatLayout() {
         <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       </div>
       <CallOverlay />
+      <HiddenSpaceOverlay />
     </CallProvider>
+  );
+}
+
+function HiddenSpaceOverlay() {
+  const hs = useHiddenSpace();
+  return (
+    <AnimatePresence>
+      {hs.unlocked && <HiddenSpaceView key="hs" onClose={() => hs.lock()} />}
+    </AnimatePresence>
   );
 }

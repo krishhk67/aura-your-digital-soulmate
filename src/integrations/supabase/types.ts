@@ -90,6 +90,7 @@ export type Database = {
           chat_id: string
           cleared_at: string | null
           id: string
+          is_hidden: boolean
           is_muted: boolean
           is_pinned: boolean
           joined_at: string | null
@@ -102,6 +103,7 @@ export type Database = {
           chat_id: string
           cleared_at?: string | null
           id?: string
+          is_hidden?: boolean
           is_muted?: boolean
           is_pinned?: boolean
           joined_at?: string | null
@@ -114,6 +116,7 @@ export type Database = {
           chat_id?: string
           cleared_at?: string | null
           id?: string
+          is_hidden?: boolean
           is_muted?: boolean
           is_pinned?: boolean
           joined_at?: string | null
@@ -165,6 +168,45 @@ export type Database = {
           is_group?: boolean | null
           name?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      hidden_space_settings: {
+        Row: {
+          auto_lock_seconds: number
+          created_at: string
+          keyword_hash: string
+          notification_mode: string
+          pin_hash: string | null
+          recovery_email: string | null
+          theme: Json
+          updated_at: string
+          user_id: string
+          wallpaper_url: string | null
+        }
+        Insert: {
+          auto_lock_seconds?: number
+          created_at?: string
+          keyword_hash: string
+          notification_mode?: string
+          pin_hash?: string | null
+          recovery_email?: string | null
+          theme?: Json
+          updated_at?: string
+          user_id: string
+          wallpaper_url?: string | null
+        }
+        Update: {
+          auto_lock_seconds?: number
+          created_at?: string
+          keyword_hash?: string
+          notification_mode?: string
+          pin_hash?: string | null
+          recovery_email?: string | null
+          theme?: Json
+          updated_at?: string
+          user_id?: string
+          wallpaper_url?: string | null
         }
         Relationships: []
       }
@@ -905,11 +947,31 @@ export type Database = {
       }
       join_room_by_code: { Args: { _invite_code: string }; Returns: string }
       room_role: { Args: { _room: string; _user: string }; Returns: string }
+      set_chat_hidden: {
+        Args: { _chat_id: string; _hidden: boolean }
+        Returns: undefined
+      }
+      setup_hidden_space: {
+        Args: {
+          _auto_lock_seconds?: number
+          _keyword: string
+          _notification_mode?: string
+          _pin?: string
+          _recovery_email?: string
+        }
+        Returns: undefined
+      }
       transfer_chat_ownership: {
         Args: { _chat_id: string; _new_owner_id: string }
         Returns: undefined
       }
+      update_hidden_space_appearance: {
+        Args: { _theme?: Json; _wallpaper_url?: string }
+        Returns: undefined
+      }
       users_share_dm: { Args: { _a: string; _b: string }; Returns: boolean }
+      verify_hidden_keyword: { Args: { _keyword: string }; Returns: boolean }
+      verify_hidden_pin: { Args: { _pin: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

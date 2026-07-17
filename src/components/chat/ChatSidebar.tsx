@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { useMyChats } from "@/hooks/useRealtimeChat";
 import { useAuth } from "@/hooks/useAuth";
 import { useUsersWithActiveStories } from "@/hooks/useStories";
+import { useHiddenSpace } from "@/hooks/useHiddenSpace";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 
@@ -18,7 +19,17 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
   const { chats, loading } = useMyChats();
   const { user } = useAuth();
   const storyUsers = useUsersWithActiveStories();
+  const hs = useHiddenSpace();
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Intercept search: if it matches the hidden-space keyword, unlock and clear.
+  const onSearchChange = async (v: string) => {
+    setSearchQuery(v);
+    if (hs.configured && v.trim().length >= 3) {
+      const ok = await hs.unlock(v.trim());
+      if (ok) setSearchQuery("");
+    }
+  };
 
   const filteredChats = searchQuery
     ? chats.filter(c => {
@@ -52,7 +63,7 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
             type="text"
             placeholder="Search conversations..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => onSearchChange(e.target.value)}
             className="w-full h-11 rounded-2xl bg-secondary/50 border border-border pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
           />
         </div>

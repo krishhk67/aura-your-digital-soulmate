@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Trash2, Image as ImageIcon, Pin, PinOff, Bell, BellOff, Download, Ban, Flag, Users, Timer, Palette } from "lucide-react";
+import { Search, Trash2, Image as ImageIcon, Pin, PinOff, Bell, BellOff, Download, Ban, Flag, Users, Timer, Palette, EyeOff, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useChatMemberState, useBlockUser, clearChatForMe } from "@/hooks/useChatActions";
+import { useHiddenSpace } from "@/hooks/useHiddenSpace";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { ReportDialog } from "./ReportDialog";
 import { DisappearingMessagesDialog } from "./DisappearingMessagesDialog";
 import { ChatThemeDialog } from "./ChatThemeDialog";
+import { HiddenSpaceSetupDialog } from "./HiddenSpaceSetupDialog";
 
 
 interface Props {
@@ -25,10 +27,13 @@ export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, on
   const { user } = useAuth();
   const { is_pinned, is_muted, update } = useChatMemberState(chatId);
   const { block } = useBlockUser();
+  const hs = useHiddenSpace();
   const [confirm, setConfirm] = useState<null | "clear" | "block">(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [disappearOpen, setDisappearOpen] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
+  const [hsSetupOpen, setHsSetupOpen] = useState(false);
+  const isHidden = chatId ? hs.isHidden(chatId) : false;
 
 
 
@@ -82,6 +87,22 @@ export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, on
     { icon: is_muted ? Bell : BellOff, label: is_muted ? "Unmute notifications" : "Mute notifications", onClick: toggleMute },
     { icon: Timer, label: "Disappearing messages", onClick: () => { setDisappearOpen(true); onClose(); } },
     { icon: Palette, label: "Chat theme", onClick: () => { setThemeOpen(true); onClose(); } },
+    {
+      icon: isHidden ? Eye : EyeOff,
+      label: isHidden ? "Remove from Hidden Space" : "Move to Hidden Space",
+      onClick: async () => {
+        if (!chatId) return;
+        if (!hs.configured) {
+          setHsSetupOpen(true); onClose();
+          toast("Set up Hidden Space first", { description: "Choose your secret keyword to activate." });
+          return;
+        }
+        const { error } = isHidden ? await hs.moveChatOut(chatId) : await hs.moveChatIn(chatId);
+        if (error) return toast.error(error.message);
+        toast.success(isHidden ? "Moved out of Hidden Space" : "Moved to Hidden Space");
+        onClose();
+      },
+    },
     { icon: Download, label: "Export chat", onClick: exportChat },
     { icon: Trash2, label: "Clear chat", onClick: () => setConfirm("clear"), danger: true },
     ...(!isGroup && partnerId ? [
@@ -142,6 +163,7 @@ export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, on
       <ReportDialog open={reportOpen} onClose={() => setReportOpen(false)} reportedUserId={partnerId ?? null} chatId={chatId} />
       <DisappearingMessagesDialog open={disappearOpen} onClose={() => setDisappearOpen(false)} chatId={chatId} />
       <ChatThemeDialog open={themeOpen} onClose={() => setThemeOpen(false)} chatId={chatId} />
+      <HiddenSpaceSetupDialog open={hsSetupOpen} onClose={() => setHsSetupOpen(false)} />
     </>
   );
 }
