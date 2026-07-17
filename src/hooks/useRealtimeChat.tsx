@@ -149,7 +149,7 @@ export function useMyChats(opts?: { hiddenOnly?: boolean }) {
   useEffect(() => {
     if (!user) return;
     const channel = supabase
-      .channel("my-chats")
+      .channel(`my-chats:${user.id}:${hiddenOnly ? "hidden" : "main"}:${Math.random().toString(36).slice(2, 8)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "chats" }, () => fetchChats())
       .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => fetchChats())
       .on("postgres_changes", { event: "*", schema: "public", table: "chat_members" }, () => fetchChats())
