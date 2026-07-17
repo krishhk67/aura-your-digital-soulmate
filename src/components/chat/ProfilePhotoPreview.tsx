@@ -13,6 +13,19 @@ interface Props {
   onViewProfile?: () => void;
 }
 
+function sanitizeAvatarUrl(url: string | null) {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname.endsWith("supabase.co")) {
+      return `https://<backend-storage>${parsed.pathname}${parsed.search}`;
+    }
+    return url;
+  } catch {
+    return url;
+  }
+}
+
 /**
  * WhatsApp-style floating profile photo preview.
  * Tap the enlarged avatar to open the fullscreen image viewer.
@@ -47,9 +60,9 @@ export function ProfilePhotoPreview({
     console.info("[Aurix ProfilePhotoPreview]", {
       component: "ProfilePhotoPreview",
       userId: profile?.id ?? null,
-      avatar_url: avatar,
+      avatar_url: sanitizeAvatarUrl(avatar),
       profile_photo_url: null,
-      resolvedUrl: avatar,
+      resolvedUrl: sanitizeAvatarUrl(avatar),
       heroTransitionId: heroId ?? null,
       viewerState: fullscreen ? "fullscreen-requested" : "preview-open",
     });
