@@ -22,12 +22,14 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
   const { user } = useAuth();
   const [groupIdx, setGroupIdx] = useState(startGroupIndex);
   const [storyIdx, setStoryIdx] = useState(0);
-  const [progress, setProgress] = useState(0);
+  const [, forceProgressReset] = useState(0);
   const [holdPaused, setHoldPaused] = useState(false);
   const [reply, setReply] = useState("");
   const [showViewers, setShowViewers] = useState(false);
   const [sending, setSending] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const activeBarRef = useRef<HTMLDivElement | null>(null);
+  const progressRef = useRef(0);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number>(0);
   const elapsedRef = useRef<number>(0);
