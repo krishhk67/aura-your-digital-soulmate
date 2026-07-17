@@ -250,8 +250,8 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
                 <input
                   value={reply}
                   onChange={e => setReply(e.target.value)}
-                  onFocus={() => setPaused(true)}
-                  onBlur={() => setPaused(false)}
+                  onFocus={() => setHoldPaused(true)}
+                  onBlur={() => setHoldPaused(false)}
                   placeholder={`Reply to ${group.user.display_name ?? "story"}…`}
                   className="flex-1 h-11 rounded-2xl bg-white/15 backdrop-blur px-4 text-sm text-white placeholder:text-white/60 focus:outline-none"
                 />
