@@ -140,7 +140,7 @@ export function RoomChat({ roomId, onBack }: Props) {
 
       {/* Messages */}
       <ScrollingContext.Provider value={scrolling}>
-      <div onScroll={onScroll} className="flex-1 overflow-y-auto px-2.5 py-2 space-y-0.5 overscroll-contain">
+      <div onScroll={onScroll} className="flex-1 overflow-y-auto px-2.5 py-2 space-y-0 overscroll-contain">
 
         {loading && <div className="text-center text-xs text-muted-foreground py-4">Loading…</div>}
         {!loading && messages.length === 0 && (
@@ -270,8 +270,12 @@ function MessageRow({
     triggeredRef.current = false;
   };
 
+  const isMedia = m.message_type === "image" || m.message_type === "video";
+  const isVoice = m.message_type === "voice";
+  const isText = !isMedia && !isVoice;
+
   return (
-    <div className={`relative flex ${mine ? "justify-end" : "justify-start"} ${grouped ? "mt-0.5" : "mt-2"}`}>
+    <div className={`relative flex ${mine ? "justify-end" : "justify-start"} ${grouped ? "mt-px" : "mt-1.5"}`}>
       {/* Swipe reply indicator (right side) */}
       <motion.div
         aria-hidden
@@ -292,13 +296,13 @@ function MessageRow({
         className={`group flex gap-2 max-w-[82%] ${mine ? "flex-row-reverse" : "flex-row"} touch-pan-y`}
       >
         {!mine && !grouped ? (
-          <div className="h-7 w-7 mt-0.5 rounded-full bg-secondary overflow-hidden flex-shrink-0 flex items-center justify-center text-[11px]">
+          <div className="h-6 w-6 mt-0.5 rounded-full bg-secondary overflow-hidden flex-shrink-0 flex items-center justify-center text-[11px]">
             {m.sender?.avatar_url
               ? <img src={m.sender.avatar_url} alt="" className="h-full w-full object-cover" />
               : (m.sender?.display_name ?? "?")[0]?.toUpperCase()}
           </div>
         ) : !mine ? (
-          <div className="w-7 flex-shrink-0" />
+          <div className="w-6 flex-shrink-0" />
         ) : null}
 
         <div className="relative min-w-0 flex flex-col">
@@ -312,19 +316,24 @@ function MessageRow({
             />
           )}
           <div
-            className={`rounded-2xl px-2.5 py-1.5 ${
+            className={`rounded-[14px] ${
+              isMedia ? "p-1 overflow-hidden" : isVoice ? "px-2 py-1" : "px-2.5 py-1"
+            } ${
               mine
-                ? "bg-primary text-primary-foreground rounded-br-md self-end"
-                : "bg-secondary rounded-bl-md self-start"
-            } ${grouped ? (mine ? "rounded-tr-md" : "rounded-tl-md") : ""}`}
+                ? "bg-primary text-primary-foreground rounded-br-[6px] self-end"
+                : "bg-secondary rounded-bl-[6px] self-start"
+            } ${grouped ? (mine ? "rounded-tr-[6px]" : "rounded-tl-[6px]") : ""} ${
+              isText ? "shadow-[0_1px_2px_rgba(0,0,0,0.25)]" : ""
+            }`}
           >
             {replyMsg && (
-              <div className="text-[11px] opacity-75 border-l-2 border-current pl-2 mb-1 truncate">
+              <div className={`text-[11px] opacity-75 border-l-2 border-current pl-2 mb-1 truncate ${isMedia ? "mx-1 mt-0.5" : ""}`}>
                 ↪ {replyMsg.content ?? replyMsg.message_type}
               </div>
             )}
             <RoomMsgBody m={m} />
           </div>
+
 
 
           {/* Reply icon outside bubble (bottom-right / bottom-left depending on side) */}
@@ -365,13 +374,14 @@ function MetaRow({ mine, name, time }: { mine: boolean; name: string; time: stri
 function RoomMsgBody({ m }: { m: RoomMessageRow }) {
   const url = useSignedRoomMedia(m.media_url);
   if (m.message_type === "image" && url) {
-    return <img src={url} alt="" className="rounded-xl max-h-64 object-cover" />;
+    return <img src={url} alt="" className="block rounded-[10px] max-h-64 w-full object-cover" />;
   }
   if (m.message_type === "video" && url) {
-    return <video src={url} controls className="rounded-xl max-h-64" />;
+    return <video src={url} controls className="block rounded-[10px] max-h-64 w-full" />;
   }
   if (m.message_type === "voice" && url) {
     return <AudioMessage url={url} durationHintMs={Number(m.content) || undefined} />;
   }
   return <div className="text-[14.5px] leading-snug whitespace-pre-wrap break-words">{m.content}</div>;
 }
+
