@@ -147,8 +147,10 @@ export function ProfilePhotoPreview({
         open={fullscreen}
         src={avatar}
         alt={profile?.display_name ?? ""}
+        heroId={heroId}
         onClose={() => setFullscreen(false)}
       />
+
     </>
   );
 }
