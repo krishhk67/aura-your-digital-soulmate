@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, User as UserIcon, Lock, Loader2, Check, X as XIcon } from "lucide-react";
+import { Sparkles, User as UserIcon, Lock, Loader2, Check, X as XIcon, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -18,12 +18,23 @@ export function AccountOnboardingDialog() {
   const [needsPassword, setNeedsPassword] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [checking, setChecking] = useState(false);
   const [available, setAvailable] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
+  // Session-scoped guard: once the user completes onboarding, never
+  // reopen the modal in the same session even if a subsequent
+  // USER_UPDATED event momentarily reports stale `identities`.
+  const completedRef = useRef(false);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      completedRef.current = false;
+      setOpen(false);
+      return;
+    }
+    if (completedRef.current) return;
     let cancelled = false;
     (async () => {
       const { data: prof } = await supabase
@@ -68,8 +79,27 @@ export function AccountOnboardingDialog() {
     return () => clearTimeout(t);
   }, [username, needsUsername]);
 
+  const togglePasswordVisibility = () => {
+    const input = passwordInputRef.current;
+    const selStart = input?.selectionStart ?? null;
+    const selEnd = input?.selectionEnd ?? null;
+    setShowPassword((v) => !v);
+    // Restore focus + cursor position after the input type flip
+    requestAnimationFrame(() => {
+      if (!input) return;
+      input.focus();
+      if (selStart !== null && selEnd !== null) {
+        try {
+          input.setSelectionRange(selStart, selEnd);
+        } catch {
+          /* some input types don't support selection */
+        }
+      }
+    });
+  };
+
   const submit = async () => {
-    if (!user) return;
+    if (!user || busy) return;
     if (needsUsername && !available) {
       toast.error("Pick an available username");
       return;
@@ -91,10 +121,23 @@ export function AccountOnboardingDialog() {
       if (needsPassword) {
         const { error } = await supabase.auth.updateUser({ password });
         if (error) throw new Error(error.message);
+        // Force the auth client to pull the freshest user (with the new
+        // email identity attached) so downstream screens see it.
+        await supabase.auth.refreshSession().catch(() => {});
       }
-      toast.success("Account set up! You can now sign in with either method.");
+      // Success — mark complete BEFORE closing so the user-effect
+      // above can't race and reopen the modal.
+      completedRef.current = true;
+      setNeedsUsername(false);
+      setNeedsPassword(false);
+      setPassword("");
+      setShowPassword(false);
+      setUsername("");
+      setAvailable(null);
       setOpen(false);
+      toast.success("Account set up! You can now sign in with either method.");
     } catch (e) {
+      // Failure path: keep the modal open, surface the error.
       toast.error(e instanceof Error ? e.message : "Something went wrong");
     } finally {
       setBusy(false);
@@ -174,13 +217,35 @@ export function AccountOnboardingDialog() {
                     <div className="mt-1 relative">
                       <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <input
-                        type="password"
+                        ref={passwordInputRef}
+                        type={showPassword ? "text" : "password"}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="At least 6 characters"
                         minLength={6}
-                        className="w-full h-12 rounded-xl bg-input/50 border border-border pl-11 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        autoComplete="new-password"
+                        className="w-full h-12 rounded-xl bg-input/50 border border-border pl-11 pr-11 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                       />
+                      <button
+                        type="button"
+                        onClick={togglePasswordVisibility}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        aria-pressed={showPassword}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                      >
+                        <AnimatePresence mode="wait" initial={false}>
+                          <motion.span
+                            key={showPassword ? "eye-off" : "eye"}
+                            initial={{ opacity: 0, scale: 0.75, rotate: -15 }}
+                            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                            exit={{ opacity: 0, scale: 0.75, rotate: 15 }}
+                            transition={{ duration: 0.15 }}
+                            className="inline-flex"
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </motion.span>
+                        </AnimatePresence>
+                      </button>
                     </div>
                   </div>
                 )}
