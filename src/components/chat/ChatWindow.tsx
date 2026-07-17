@@ -13,6 +13,17 @@ import type { ProfileRow, ChatRow } from "@/hooks/useRealtimeChat";
 import { toast } from "sonner";
 import { VoiceRecorder, MicButton } from "./VoiceRecorder";
 import { AudioMessage } from "./AudioMessage";
+
+/** Parse durations stored as message content: "5s", "5.2s", or a raw millisecond number. */
+function parseDurationHint(content?: string | null): number | undefined {
+  if (!content) return undefined;
+  const s = content.trim();
+  const sec = s.match(/^([\d.]+)\s*s$/i);
+  if (sec) return Math.round(parseFloat(sec[1]) * 1000);
+  const n = Number(s);
+  if (Number.isFinite(n) && n > 0) return n > 1000 ? n : n * 1000;
+  return undefined;
+}
 import { ChatProfileSheet } from "./ChatProfileSheet";
 import { GroupInfoSheet } from "./GroupInfoSheet";
 import { ChatActionsSheet } from "./ChatActionsSheet";
