@@ -569,6 +569,7 @@ export type Database = {
           id: string
           is_online: boolean | null
           last_seen: string | null
+          password_configured: boolean
           status_text: string | null
           updated_at: string | null
           username: string | null
@@ -582,6 +583,7 @@ export type Database = {
           id: string
           is_online?: boolean | null
           last_seen?: string | null
+          password_configured?: boolean
           status_text?: string | null
           updated_at?: string | null
           username?: string | null
@@ -595,6 +597,7 @@ export type Database = {
           id?: string
           is_online?: boolean | null
           last_seen?: string | null
+          password_configured?: boolean
           status_text?: string | null
           updated_at?: string | null
           username?: string | null
@@ -962,6 +965,7 @@ export type Database = {
         Returns: string
       }
       join_room_by_code: { Args: { _invite_code: string }; Returns: string }
+      mark_password_configured: { Args: never; Returns: undefined }
       preview_chat_invite: {
         Args: { _invite_code: string }
         Returns: {
