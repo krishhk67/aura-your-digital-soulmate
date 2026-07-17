@@ -129,7 +129,14 @@ function ChatLayoutInner() {
         onChatCreated={(id) => { setSelectedChat(id); setNewChatOpen(false); setActiveTab("chats"); }}
       />
 
-        <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+        <SettingsPanel
+          open={settingsOpen}
+          onClose={() => {
+            setSettingsOpen(false);
+            setActiveTab("chats");
+            setSelectedChat(null);
+          }}
+        />
       </div>
       <CallOverlay />
       <HiddenSpaceOverlay />
