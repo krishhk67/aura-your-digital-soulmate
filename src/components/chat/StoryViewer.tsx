@@ -136,19 +136,18 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
 
   const handleReact = async (emoji: string) => {
     if (!story) return;
-    const { error } = await react(story.id, emoji);
+    // Record on story_reactions (owner audience) AND send a rich story-reaction message.
+    void react(story.id, emoji);
+    const { error } = await sendStoryMessage(story, "story_reaction", { reaction: emoji });
     if (error) toast.error(error.message); else toast.success(`Reacted ${emoji}`);
   };
 
   const handleSendReply = async () => {
     if (!story || !reply.trim()) return;
     setSending(true);
-    const { chatId, error } = await createChat(story.user_id);
-    if (error || !chatId) { toast.error(error?.message ?? "Could not reply"); setSending(false); return; }
-    const replyText = `↪︎ Replied to your story: ${reply.trim()}`;
-    const { error: sendErr } = await sendMessage(chatId, replyText);
+    const { error } = await sendStoryMessage(story, "story_reply", { text: reply.trim() });
     setSending(false);
-    if (sendErr) toast.error(sendErr.message);
+    if (error) toast.error(error.message);
     else { toast.success("Reply sent"); setReply(""); }
   };
 
