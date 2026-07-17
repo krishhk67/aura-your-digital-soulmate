@@ -89,7 +89,22 @@ export function RoomChat({ roomId, onBack }: Props) {
     });
   }, [messages]);
 
-  if (!room) return <div className="h-full flex items-center justify-center text-muted-foreground text-sm">Loading…</div>;
+  // Scroll detection for fading timestamps
+  const [scrolling, setScrolling] = useState(false);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollingRef = useRef(false);
+  const onScroll = () => {
+    if (!scrollingRef.current) {
+      scrollingRef.current = true;
+      setScrolling(true);
+    }
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = setTimeout(() => {
+      scrollingRef.current = false;
+      setScrolling(false);
+    }, 1700);
+  };
+  useEffect(() => () => { if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current); }, []);
 
   return (
     <div className="h-[100dvh] flex flex-col bg-background">
@@ -121,7 +136,9 @@ export function RoomChat({ roomId, onBack }: Props) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-2.5 py-2 space-y-0.5 overscroll-contain">
+      <ScrollingContext.Provider value={scrolling}>
+      <div onScroll={onScroll} className="flex-1 overflow-y-auto px-2.5 py-2 space-y-0.5 overscroll-contain">
+
         {loading && <div className="text-center text-xs text-muted-foreground py-4">Loading…</div>}
         {!loading && messages.length === 0 && (
           <div className="text-center text-sm text-muted-foreground py-10">Start the conversation 👋</div>
