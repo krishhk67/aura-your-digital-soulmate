@@ -41,8 +41,6 @@ export function RoomsView() {
   const { rooms, loading } = useRooms(search);
   const { joinRoom, joinByCode } = useRoomActions();
 
-  if (activeRoom) return <RoomChat roomId={activeRoom} onBack={() => setActiveRoom(null)} />;
-
   const handleJoin = async (room: Room) => {
     if (room.is_member) { setActiveRoom(room.id); return; }
     if (room.is_private) {
@@ -94,6 +92,10 @@ export function RoomsView() {
   }, [filtered]);
 
   const rest = filtered.filter(r => r.id !== featured?.id);
+
+  // Early return AFTER all hooks to preserve hook order across renders
+  if (activeRoom) return <RoomChat roomId={activeRoom} onBack={() => setActiveRoom(null)} />;
+
 
   return (
     <div className="relative h-full flex flex-col bg-background overflow-hidden">
