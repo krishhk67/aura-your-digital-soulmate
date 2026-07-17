@@ -575,3 +575,32 @@ function StoriesPrivacySection() {
   );
 }
 
+function HiddenSpaceEntry() {
+  const hs = useHiddenSpace();
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <motion.button
+        whileTap={{ scale: 0.98 }}
+        onClick={() => setOpen(true)}
+        className="w-full p-4 rounded-xl border border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-blue-500/5 hover:from-purple-500/15 transition-all flex items-center gap-3 text-left"
+      >
+        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-500/30 to-blue-500/30 border border-white/10 flex items-center justify-center">
+          <EyeOff className="h-4 w-4 text-purple-300" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold">Hidden Space</p>
+          <p className="text-[11px] text-muted-foreground">
+            {hs.configured
+              ? "Change keyword, PIN, auto-lock or notifications"
+              : "Set up a private vault for hidden chats"}
+          </p>
+        </div>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </motion.button>
+      <HiddenSpaceSetupDialog open={open} onClose={() => setOpen(false)} />
+    </>
+  );
+}
+
+
