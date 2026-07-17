@@ -542,10 +542,10 @@ function RoomCard({ room, index, onOpen }: { room: Room; index: number; onOpen: 
           </span>
         </div>
         <span
-          className={`inline-flex items-center gap-1 h-8 px-3.5 rounded-full text-[12px] font-semibold transition-all ${
+          className={`inline-flex items-center gap-1 h-8 px-3.5 rounded-full text-[12px] font-semibold ${
             room.is_member
               ? "bg-secondary/70 text-foreground border border-glass-border"
-              : "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_0_14px_var(--neon-glow)] group-hover:shadow-[0_0_22px_var(--neon-glow)]"
+              : "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_0_14px_var(--neon-glow)]"
           }`}
         >
           {room.is_member ? "Enter" : "Join"}
