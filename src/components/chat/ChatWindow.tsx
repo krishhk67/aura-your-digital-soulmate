@@ -381,7 +381,6 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
               else if (allDeliveredAt && msg.created_at <= allDeliveredAt) tickState = "delivered";
             }
 
-            const openInfo = () => { if (isMe) setInfoMsg(msg); };
             const openPicker = (target: Element | null) => {
               const rect = target?.getBoundingClientRect() ?? null;
               if (rect) setReactionTarget({ msg, rect });
