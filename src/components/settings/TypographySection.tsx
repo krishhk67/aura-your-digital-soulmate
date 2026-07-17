@@ -1,8 +1,10 @@
 import { useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Search, Star, Sparkles } from "lucide-react";
-import { FONTS, FONT_CATEGORIES, ensureFontLoaded, getFontById, type FontCategory, type FontDef } from "@/lib/fonts";
+import { Check, Search, Star, Sparkles, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
+import { AURIX_DEFAULT_ID, FONTS, FONT_CATEGORIES, ensureFontLoaded, getFontById, isDefaultFont, type FontCategory, type FontDef } from "@/lib/fonts";
 import { useFont } from "@/hooks/useFont";
+
 
 /**
  * Typography picker — data-driven grid of font previews.
@@ -34,18 +36,34 @@ export function TypographySection() {
   useEffect(() => { filtered.slice(0, 12).forEach(ensureFontLoaded); }, [filtered]);
   useEffect(() => { recentFonts.forEach(ensureFontLoaded); }, [recentFonts]);
 
-  const active = getFontById(fontId);
+  const isDefault = isDefaultFont(fontId);
+  const active = isDefault ? null : getFontById(fontId);
+
+  const handleReset = () => {
+    setFont(AURIX_DEFAULT_ID);
+    toast.success("Typography restored to Aurix Default.");
+  };
 
   return (
     <div className="space-y-5">
-      <div>
-        <h3 className="font-display font-semibold text-sm flex items-center gap-2">
-          <Sparkles className="h-3.5 w-3.5 text-primary" /> Typography
-        </h3>
-        <p className="text-xs text-muted-foreground mt-1">
-          Change the font used across the entire app. Applies instantly, no reload.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="font-display font-semibold text-sm flex items-center gap-2">
+            <Sparkles className="h-3.5 w-3.5 text-primary" /> Typography
+          </h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            Change the font used across the entire app. Applies instantly, no reload.
+          </p>
+        </div>
+        <button
+          onClick={handleReset}
+          disabled={isDefault}
+          className="shrink-0 inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-medium border border-border/60 text-muted-foreground hover:text-foreground hover:border-primary/60 disabled:opacity-40 disabled:cursor-not-allowed transition"
+        >
+          <RotateCcw className="h-3.5 w-3.5" /> Reset
+        </button>
       </div>
+
 
       {/* Search */}
       <div className="relative">
@@ -96,6 +114,8 @@ export function TypographySection() {
 
       {/* Font list */}
       <div className="grid grid-cols-1 gap-2.5">
+        <AurixDefaultCard active={isDefault} onSelect={() => setFont(AURIX_DEFAULT_ID)} />
+
         <AnimatePresence initial={false}>
           {filtered.map(f => (
             <FontCard
@@ -118,7 +138,7 @@ export function TypographySection() {
         <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">Live preview</p>
         <motion.div
           layout
-          style={{ fontFamily: active.fontFamily }}
+          style={active ? { fontFamily: active.fontFamily } : undefined}
           className="rounded-2xl border border-border/60 bg-muted/20 p-4 space-y-2"
         >
           <div className="flex justify-start">
@@ -221,3 +241,55 @@ function FontCard({
     </motion.div>
   );
 }
+
+function AurixDefaultCard({ active, onSelect }: { active: boolean; onSelect: () => void }) {
+  return (
+    <motion.div layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.18 }}>
+      <motion.button
+        whileTap={{ scale: 0.98 }}
+        onClick={onSelect}
+        className={`w-full text-left rounded-2xl border p-3.5 pr-12 relative transition-all overflow-hidden ${
+          active
+            ? "border-primary bg-primary/10 shadow-[0_0_28px_var(--neon-glow)]"
+            : "border-primary/40 bg-gradient-to-br from-primary/10 via-transparent to-transparent hover:border-primary/70"
+        }`}
+      >
+        <div className="flex items-baseline gap-3">
+          <span className="text-3xl leading-none font-semibold text-primary">Aa</span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold truncate flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-primary" /> Aurix Default
+              </p>
+              <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/20 text-primary font-semibold">
+                Default
+              </span>
+            </div>
+            <p className="text-[11px] text-muted-foreground truncate">
+              The original Aurix typography
+            </p>
+          </div>
+        </div>
+        <p className="text-sm mt-2 text-foreground/85 leading-relaxed">
+          The quick brown fox jumps over the lazy dog.
+        </p>
+
+        <AnimatePresence>
+          {active && (
+            <motion.span
+              key="check"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 22 }}
+              className="absolute top-3 right-3 h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-[0_0_16px_var(--neon-glow)]"
+            >
+              <Check className="h-4 w-4" strokeWidth={3} />
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </motion.button>
+    </motion.div>
+  );
+}
+
