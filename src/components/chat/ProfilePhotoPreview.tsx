@@ -16,6 +16,8 @@ interface Props {
 /**
  * WhatsApp-style floating profile photo preview.
  * Tap the enlarged avatar to open the fullscreen image viewer.
+ * Uses a per-user `heroId` so shared-element transitions never collide
+ * with another profile's avatar (which caused the "shrink to tiny circle" bug).
  */
 export function ProfilePhotoPreview({
   open,
@@ -27,9 +29,11 @@ export function ProfilePhotoPreview({
 }: Props) {
   const [fullscreen, setFullscreen] = useState(false);
   const avatar = profile?.avatar_url ?? null;
+  const heroId = profile?.id ? `avatar-hero-${profile.id}` : undefined;
   const initial = (profile?.display_name ?? profile?.username ?? "?")
     .charAt(0)
     .toUpperCase();
+
 
   return (
     <>
@@ -60,13 +64,11 @@ export function ProfilePhotoPreview({
             <motion.button
               onClick={() => avatar && setFullscreen(true)}
               className="relative z-10 rounded-full overflow-hidden shadow-[0_20px_60px_-10px_rgba(0,0,0,0.6)]"
-              layoutId="avatar-hero"
-              initial={{ scale: 0.4, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.4, opacity: 0 }}
+              layoutId={heroId}
               transition={{ type: "spring", stiffness: 260, damping: 26 }}
               whileTap={{ scale: 0.97 }}
             >
+
               {avatar ? (
                 <img
                   src={avatar}
@@ -145,8 +147,10 @@ export function ProfilePhotoPreview({
         open={fullscreen}
         src={avatar}
         alt={profile?.display_name ?? ""}
+        heroId={heroId}
         onClose={() => setFullscreen(false)}
       />
+
     </>
   );
 }
