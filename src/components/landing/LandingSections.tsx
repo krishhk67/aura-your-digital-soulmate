@@ -72,7 +72,7 @@ export function HeroSection() {
           <motion.div variants={fadeUp} custom={3} className="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
             <Link to="/chat">
               <Button variant="hero" size="xl">
-                Enter Aura <ArrowRight className="ml-2 h-5 w-5" />
+                Enter Aurix <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
             <Link to="/login">
