@@ -87,6 +87,22 @@ export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, on
     { icon: is_muted ? Bell : BellOff, label: is_muted ? "Unmute notifications" : "Mute notifications", onClick: toggleMute },
     { icon: Timer, label: "Disappearing messages", onClick: () => { setDisappearOpen(true); onClose(); } },
     { icon: Palette, label: "Chat theme", onClick: () => { setThemeOpen(true); onClose(); } },
+    {
+      icon: isHidden ? Eye : EyeOff,
+      label: isHidden ? "Remove from Hidden Space" : "Move to Hidden Space",
+      onClick: async () => {
+        if (!chatId) return;
+        if (!hs.configured) {
+          setHsSetupOpen(true); onClose();
+          toast("Set up Hidden Space first", { description: "Choose your secret keyword to activate." });
+          return;
+        }
+        const { error } = isHidden ? await hs.moveChatOut(chatId) : await hs.moveChatIn(chatId);
+        if (error) return toast.error(error.message);
+        toast.success(isHidden ? "Moved out of Hidden Space" : "Moved to Hidden Space");
+        onClose();
+      },
+    },
     { icon: Download, label: "Export chat", onClick: exportChat },
     { icon: Trash2, label: "Clear chat", onClick: () => setConfirm("clear"), danger: true },
     ...(!isGroup && partnerId ? [
