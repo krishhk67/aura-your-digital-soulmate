@@ -115,7 +115,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
         navigator.vibrate?.([400, 200, 400, 200, 400]);
       }
     } catch (e) {
-      console.warn("[Aura] ringtone failed", e);
+      console.warn("[Aurix] ringtone failed", e);
     }
   }, []);
 
@@ -290,7 +290,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
           const offer = await pc.createOffer();
           await pc.setLocalDescription(offer);
           sendSignal("offer", { sdp: offer });
-        } catch (e) { console.error("[Aura] offer failed", e); }
+        } catch (e) { console.error("[Aurix] offer failed", e); }
       }, 400);
 
       // Timeout → missed

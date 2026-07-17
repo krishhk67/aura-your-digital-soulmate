@@ -176,7 +176,7 @@ export function useChatMessages(chatId: string | null) {
       .select("*")
       .eq("chat_id", chatId)
       .order("created_at", { ascending: true });
-    console.info("[Aura] messages fetched", { chatId, count: data?.length ?? 0 });
+    console.info("[Aurix] messages fetched", { chatId, count: data?.length ?? 0 });
 
     if (!data) { setMessages([]); setLoading(false); return; }
 
@@ -220,7 +220,7 @@ export function useChatMessages(chatId: string | null) {
       }, (payload) => {
         const old = payload.old as { id?: string };
         if (old?.id) {
-          console.info("[Aura] message expired/deleted", { id: old.id });
+          console.info("[Aurix] message expired/deleted", { id: old.id });
           setMessages(prev => prev.filter(m => m.id !== old.id));
         }
       })
@@ -238,7 +238,7 @@ export function useSendMessage() {
 
   return useCallback(async (chatId: string, content: string, type = "text") => {
     if (!user || !content.trim()) return { error: new Error("You must be signed in to send messages.") };
-    console.info("[Aura] sending message", { chatId, type });
+    console.info("[Aurix] sending message", { chatId, type });
     const { error } = await supabase.from("messages").insert({
       chat_id: chatId,
       sender_id: user.id,
@@ -246,7 +246,7 @@ export function useSendMessage() {
       message_type: type,
     });
     if (error) {
-      console.error("[Aura] send message failed", error);
+      console.error("[Aurix] send message failed", error);
       return { error: new Error(error.message) };
     }
     return { error: null };
@@ -259,17 +259,17 @@ export function useCreateChat() {
   return useCallback(async (otherUserId: string): Promise<DirectChatResult> => {
     if (!user) return { chatId: null, error: new Error("You must be signed in to start a conversation.") };
 
-    console.info("[Aura] starting direct chat", { currentUserId: user.id, otherUserId });
+    console.info("[Aurix] starting direct chat", { currentUserId: user.id, otherUserId });
     const { data, error } = await (supabase.rpc as unknown as DirectChatRpc)("get_or_create_direct_chat", {
       _other_user_id: otherUserId,
     });
 
     if (error || !data) {
-      console.error("[Aura] direct chat creation failed", error);
+      console.error("[Aurix] direct chat creation failed", error);
       return { chatId: null, error: new Error(error?.message ?? "Could not start this conversation.") };
     }
 
-    console.info("[Aura] direct chat ready", { chatId: data });
+    console.info("[Aurix] direct chat ready", { chatId: data });
     return { chatId: data, error: null };
   }, [user]);
 }

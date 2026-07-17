@@ -90,7 +90,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       supabase
         .from("user_settings")
         .upsert({ user_id: user.id, theme: id }, { onConflict: "user_id" })
-        .then(({ error }) => { if (error) console.error("[Aura] save theme failed", error); });
+        .then(({ error }) => { if (error) console.error("[Aurix] save theme failed", error); });
     }
   }, [user]);
 
