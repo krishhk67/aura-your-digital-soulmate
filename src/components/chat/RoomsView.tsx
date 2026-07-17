@@ -100,8 +100,14 @@ export function RoomsView() {
       <AmbientBackdrop />
 
       {/* HEADER */}
-      <div className="relative z-10 px-5 pt-[env(safe-area-inset-top,12px)] pt-4 pb-3">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+      <div
+        className="relative z-10 px-5 pb-5"
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 20px)" }}
+      >
+        <div
+          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3"
+          style={{ paddingRight: "env(safe-area-inset-right, 0px)" }}
+        >
           <div className="min-w-0 flex items-center gap-2.5">
             <div className="relative h-10 w-10 rounded-2xl bg-gradient-to-br from-primary/30 to-accent/20 flex items-center justify-center border border-primary/30 shadow-[0_0_24px_var(--neon-glow)]">
               <Users className="h-5 w-5 text-neon" />
@@ -109,7 +115,7 @@ export function RoomsView() {
             </div>
             <div className="min-w-0">
               <h1 className="font-display font-bold text-[22px] leading-none gradient-text">Rooms</h1>
-              <p className="text-[11px] text-muted-foreground mt-1">Communities · live right now</p>
+              <p className="text-[11px] text-muted-foreground mt-1.5">Communities · live right now</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -123,7 +129,7 @@ export function RoomsView() {
         </div>
 
         {/* SEARCH */}
-        <div className="mt-4 relative">
+        <div className="mt-6 relative">
           <motion.div
             animate={{
               boxShadow: focused
@@ -143,7 +149,7 @@ export function RoomsView() {
               className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-foreground/70"
             />
             {search && (
-              <button onClick={() => setSearch("")} className="text-xs text-muted-foreground px-2 py-0.5 rounded-full hover:bg-secondary">
+              <button onClick={() => setSearch("")} className="text-xs text-muted-foreground px-2 py-0.5 rounded-full active:bg-secondary">
                 clear
               </button>
             )}
@@ -155,7 +161,7 @@ export function RoomsView() {
           {showJoin && (
             <motion.div
               initial={{ opacity: 0, height: 0, marginTop: 0 }}
-              animate={{ opacity: 1, height: "auto", marginTop: 10 }}
+              animate={{ opacity: 1, height: "auto", marginTop: 12 }}
               exit={{ opacity: 0, height: 0, marginTop: 0 }}
               className="overflow-hidden"
             >
@@ -169,7 +175,7 @@ export function RoomsView() {
                 />
                 <button
                   onClick={joinWithCode}
-                  className="h-10 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold shadow-[0_0_18px_var(--neon-glow)]"
+                  className="h-10 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold shadow-[0_0_18px_var(--neon-glow)] active:scale-95 transition-transform"
                 >
                   Join
                 </button>
@@ -179,8 +185,8 @@ export function RoomsView() {
         </AnimatePresence>
 
         {/* FILTER CHIPS */}
-        <div className="mt-3 -mx-5 px-5 overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-2 pb-1 w-max">
+        <div className="mt-6 -mx-5 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-2 py-1 px-5 w-max">
             {FILTERS.map(f => {
               const Icon = "icon" in f ? f.icon : undefined;
               const active = filter === f.id;
@@ -188,11 +194,12 @@ export function RoomsView() {
                 <motion.button
                   key={f.id}
                   whileTap={{ scale: 0.94 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 28 }}
                   onClick={() => setFilter(f.id)}
                   className={`relative h-8 px-3.5 rounded-full text-[12.5px] font-medium flex items-center gap-1.5 transition-colors ${
                     active
                       ? "text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground bg-secondary/40 backdrop-blur border border-glass-border"
+                      : "text-muted-foreground bg-secondary/40 backdrop-blur border border-glass-border"
                   }`}
                 >
                   {active && (
