@@ -1,124 +1,126 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Play, Pause } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
+/**
+ * VoicePlayer (AudioMessage)
+ *
+ * Fully rebuilt UI. Reuses the existing <audio> element for playback and the
+ * same props/message schema as before. Three fully independent systems:
+ *   1. Wave animation loop  → canvas RAF driven by its own phase clock
+ *   2. Playback progress    → derived from <audio>.currentTime via events
+ *   3. Audio state          → play/pause/ended listeners
+ * None of them can stop, freeze, or replace the others.
+ */
 interface Props {
   url: string;
   mine?: boolean;
-  /** Optional duration hint in milliseconds (e.g. stored at record time). Used when the file lacks metadata duration. */
+  /** Optional duration hint in milliseconds (used when metadata is missing). */
   durationHintMs?: number;
 }
 
 export function AudioMessage({ url, mine, durationHintMs }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const rafRef = useRef<number | null>(null);
-  const phaseRef = useRef(0);
-  const progressRef = useRef(0);
-  const progressSecondsRef = useRef(0);
+  const trackRef = useRef<HTMLDivElement | null>(null);
+
+  // Refs the RAF loop reads without triggering React re-renders
   const playingRef = useRef(false);
+  const progressRatioRef = useRef(0); // 0..1
   const durationRef = useRef(0);
   const draggingRef = useRef(false);
 
   const [playing, setPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [dragging, setDragging] = useState(false);
 
-  // Deterministic per-message wave signature so bars aren't identical everywhere
-  const sigRef = useRef<number[]>(
-    (() => {
-      const seed = Math.floor(Math.random() * 1000);
-      return Array.from({ length: 8 }, (_, i) => 0.4 + Math.abs(Math.sin(seed * (i + 1) * 0.37)) * 0.6);
-    })(),
-  );
-
+  // ─── 1. AUDIO STATE ─────────────────────────────────────────────
   useEffect(() => {
     const a = audioRef.current;
     if (!a) return;
-    let fixingDuration = false;
+
+    let fixing = false;
     const applyDuration = (d: number) => {
-      if (isFinite(d) && d > 0) setDuration(d);
-      else if (durationHintMs && durationHintMs > 0) setDuration(durationHintMs / 1000);
+      if (isFinite(d) && d > 0) {
+        durationRef.current = d;
+        setDuration(d);
+      } else if (durationHintMs && durationHintMs > 0) {
+        const dh = durationHintMs / 1000;
+        durationRef.current = dh;
+        setDuration(dh);
+      }
     };
-    const onTime = () => {
-      if (draggingRef.current) return;
-      const nextProgress = a.currentTime;
-      progressSecondsRef.current = nextProgress;
-      progressRef.current = durationRef.current ? nextProgress / durationRef.current : 0;
-      setProgress(nextProgress);
-    };
-    const onLoad = () => {
-      // MediaRecorder webm often reports Infinity for duration. Trigger the seek trick to force the browser to compute it.
+
+    const onLoaded = () => {
       if (!isFinite(a.duration) || a.duration === 0) {
-        fixingDuration = true;
+        // MediaRecorder webm workaround: seek very far to force real duration.
+        fixing = true;
         try { a.currentTime = 1e6; } catch {}
       } else {
         applyDuration(a.duration);
       }
     };
     const onDurationChange = () => {
-      if (fixingDuration && isFinite(a.duration) && a.duration > 0) {
-        fixingDuration = false;
+      if (fixing && isFinite(a.duration) && a.duration > 0) {
+        fixing = false;
         applyDuration(a.duration);
         try { a.currentTime = 0; } catch {}
-      } else if (!fixingDuration) {
+      } else if (!fixing) {
         applyDuration(a.duration);
       }
     };
-    const onEnd = () => {
-      setPlaying(false);
-      playingRef.current = false;
-      try { a.currentTime = 0; } catch {}
-      setProgress(0);
-      progressSecondsRef.current = 0;
-      progressRef.current = 0;
+    const onTime = () => {
+      if (draggingRef.current) return;
+      const d = durationRef.current;
+      const ct = a.currentTime || 0;
+      progressRatioRef.current = d > 0 ? Math.min(1, ct / d) : 0;
+      setCurrentTime(ct);
     };
-    const onPlay = () => { setPlaying(true); playingRef.current = true; };
-    const onPause = () => { setPlaying(false); playingRef.current = false; };
-    a.addEventListener("timeupdate", onTime);
-    a.addEventListener("loadedmetadata", onLoad);
+    const onPlay = () => { playingRef.current = true; setPlaying(true); };
+    const onPause = () => { playingRef.current = false; setPlaying(false); };
+    const onEnded = () => {
+      playingRef.current = false;
+      setPlaying(false);
+      try { a.currentTime = 0; } catch {}
+      progressRatioRef.current = 0;
+      setCurrentTime(0);
+    };
+
+    a.addEventListener("loadedmetadata", onLoaded);
     a.addEventListener("durationchange", onDurationChange);
-    a.addEventListener("ended", onEnd);
+    a.addEventListener("timeupdate", onTime);
     a.addEventListener("play", onPlay);
     a.addEventListener("pause", onPause);
-    // Seed from hint immediately so UI never shows 0:00 for a known-length note.
-    if (durationHintMs && durationHintMs > 0) setDuration(durationHintMs / 1000);
+    a.addEventListener("ended", onEnded);
+
+    if (durationHintMs && durationHintMs > 0 && !durationRef.current) {
+      durationRef.current = durationHintMs / 1000;
+      setDuration(durationHintMs / 1000);
+    }
+
     return () => {
-      a.removeEventListener("timeupdate", onTime);
-      a.removeEventListener("loadedmetadata", onLoad);
+      a.removeEventListener("loadedmetadata", onLoaded);
       a.removeEventListener("durationchange", onDurationChange);
-      a.removeEventListener("ended", onEnd);
+      a.removeEventListener("timeupdate", onTime);
       a.removeEventListener("play", onPlay);
       a.removeEventListener("pause", onPause);
+      a.removeEventListener("ended", onEnded);
     };
-  }, [durationHintMs, url]);
+  }, [url, durationHintMs]);
 
-  useEffect(() => {
-    durationRef.current = duration;
-    progressRef.current = duration ? progressSecondsRef.current / duration : 0;
-  }, [duration]);
-
-  useEffect(() => {
-    draggingRef.current = dragging;
-  }, [dragging]);
-
-  useEffect(() => {
-    progressSecondsRef.current = progress;
-    progressRef.current = durationRef.current ? progress / durationRef.current : 0;
-  }, [progress, duration]);
-
-  // Canvas render loop — liquid dual-wave visualization
+  // ─── 2. WAVE ANIMATION LOOP ─────────────────────────────────────
+  // Runs forever. Independent from audio state. Reads progressRatioRef so the
+  // played/unplayed colour split follows playback without ever stopping.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    let lastT = performance.now();
-    let lastTimeLabelT = 0;
+    let raf = 0;
+    let phase = 0;
+    let last = performance.now();
 
     const resize = () => {
       const parent = canvas.parentElement;
@@ -138,93 +140,84 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
 
     const styles = getComputedStyle(document.documentElement);
     const primary = `hsl(${styles.getPropertyValue("--primary").trim() || "160 84% 45%"})`;
-    const primaryLight = primary;
 
-    const render = (t: number) => {
-      const dt = Math.min(64, t - lastT);
-      lastT = t;
-
-      // Animation clock is intentionally independent from audio currentTime.
-      // The waves stay alive during idle, playback, pause, seek, and resume.
-      const speed = playingRef.current ? 0.0024 : 0.0009;
-      phaseRef.current += dt * speed;
-
-      const audio = audioRef.current;
-      const totalDuration = durationRef.current;
-      if (audio && !draggingRef.current && totalDuration > 0) {
-        const nextProgress = Math.max(0, Math.min(totalDuration, audio.currentTime || 0));
-        progressSecondsRef.current = nextProgress;
-        progressRef.current = nextProgress / totalDuration;
-
-        if (t - lastTimeLabelT > 120) {
-          lastTimeLabelT = t;
-          setProgress((prev) => (Math.abs(prev - nextProgress) > 0.035 ? nextProgress : prev));
-        }
-      }
+    const draw = (t: number) => {
+      const dt = Math.min(64, t - last);
+      last = t;
+      // Wave keeps flowing at all times — a touch faster while playing.
+      phase += dt * (playingRef.current ? 0.0022 : 0.0009);
 
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
+      const mid = h / 2;
       ctx.clearRect(0, 0, w, h);
 
-      const midY = h / 2;
-      const progress = Math.max(0, Math.min(1, progressRef.current));
+      const progress = Math.max(0, Math.min(1, progressRatioRef.current));
       const playedX = progress * w;
 
-      // Dual liquid waves — synchronized primary + counter-phase secondary
-      const mutedColor = mine ? "rgba(255,255,255,0.32)" : "rgba(148,148,160,0.5)";
-      const mutedColorSoft = mine ? "rgba(255,255,255,0.18)" : "rgba(148,148,160,0.28)";
+      const yA = (nx: number) =>
+        mid +
+        Math.sin(nx * 6.2 + phase * 2.0) * (h * 0.24) +
+        Math.sin(nx * 11.4 - phase * 1.2) * (h * 0.07);
+      const yB = (nx: number) =>
+        mid +
+        Math.sin(nx * 5.4 - phase * 1.6 + 1.1) * (h * 0.17) +
+        Math.sin(nx * 9.8 + phase * 1.0 + 0.4) * (h * 0.05);
 
-      const waveY = (nx: number, variant: 0 | 1) =>
-        variant === 0
-          ? midY +
-            Math.sin(nx * 6.2 + phaseRef.current * 2) * (h * 0.22) +
-            Math.sin(nx * 11.4 - phaseRef.current * 1.2) * (h * 0.07)
-          : midY +
-            Math.sin(nx * 5.4 - phaseRef.current * 1.6 + 1.1) * (h * 0.16) +
-            Math.sin(nx * 9.8 + phaseRef.current * 1.0 + 0.4) * (h * 0.05);
-
-      const drawWave = (opts: { variant: 0 | 1; stroke: string | CanvasGradient; alpha: number; lineWidth: number; clipLeft?: number; clipRight?: number; shadow?: string }) => {
+      const stroke = (
+        fn: (nx: number) => number,
+        color: string | CanvasGradient,
+        lineWidth: number,
+        alpha: number,
+        clip?: { left?: number; right?: number },
+        glow?: string,
+      ) => {
         ctx.save();
-        if (opts.clipLeft !== undefined || opts.clipRight !== undefined) {
+        if (clip) {
+          const l = clip.left ?? 0;
+          const r = clip.right ?? w;
           ctx.beginPath();
-          ctx.rect(opts.clipLeft ?? 0, 0, (opts.clipRight ?? w) - (opts.clipLeft ?? 0), h);
+          ctx.rect(l, 0, r - l, h);
           ctx.clip();
         }
         ctx.beginPath();
         for (let x = 0; x <= w; x += 2) {
-          const y = waveY(x / w, opts.variant);
+          const y = fn(x / w);
           if (x === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
-        ctx.globalAlpha = opts.alpha;
-        ctx.strokeStyle = opts.stroke;
-        ctx.lineWidth = opts.lineWidth;
+        ctx.globalAlpha = alpha;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
-        if (opts.shadow) { ctx.shadowColor = opts.shadow; ctx.shadowBlur = 6; }
+        if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = 6; }
         ctx.stroke();
         ctx.restore();
       };
 
-      // Unplayed portion — two muted waves
-      drawWave({ variant: 1, stroke: mutedColorSoft, alpha: 1, lineWidth: 1.4, clipLeft: playedX });
-      drawWave({ variant: 0, stroke: mutedColor, alpha: 1, lineWidth: 1.8, clipLeft: playedX });
+      const mutedStrong = mine ? "rgba(255,255,255,0.34)" : "rgba(150,150,164,0.55)";
+      const mutedSoft = mine ? "rgba(255,255,255,0.18)" : "rgba(150,150,164,0.3)";
 
-      // Played portion — accent gradient with soft glow, both waves
+      // Unplayed dual wave (always visible along the full track)
+      stroke(yB, mutedSoft, 1.4, 1, { left: playedX });
+      stroke(yA, mutedStrong, 1.8, 1, { left: playedX });
+
+      // Played dual wave in accent (progress overlay)
       if (playedX > 0.5) {
         const grad = ctx.createLinearGradient(0, 0, playedX, 0);
         grad.addColorStop(0, primary);
-        grad.addColorStop(1, primaryLight);
-        drawWave({ variant: 1, stroke: primary, alpha: 0.55, lineWidth: 1.5, clipRight: playedX });
-        drawWave({ variant: 0, stroke: grad, alpha: 1, lineWidth: 2, clipRight: playedX, shadow: primary });
+        grad.addColorStop(1, primary);
+        stroke(yB, primary, 1.5, 0.55, { right: playedX });
+        stroke(yA, grad, 2, 1, { right: playedX }, primary);
       }
 
-      // Glowing progress dot pinned to the primary wave, with gentle pulse
+      // Glowing playhead — sits on top, pulses gently
       if (durationRef.current > 0) {
-        const y = waveY(progress, 0);
-        const pulse = 1 + Math.sin(t * 0.006) * 0.18;
+        const y = yA(progress);
+        const pulse = 1 + Math.sin(t * 0.006) * 0.2;
         ctx.save();
-        ctx.globalAlpha = 0.3;
+        ctx.globalAlpha = 0.32;
         ctx.fillStyle = primary;
         ctx.beginPath();
         ctx.arc(playedX, y, 6.5 * pulse, 0, Math.PI * 2);
@@ -238,100 +231,120 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
         ctx.restore();
       }
 
-      rafRef.current = requestAnimationFrame(render);
+      raf = requestAnimationFrame(draw);
     };
-    rafRef.current = requestAnimationFrame(render);
+    raf = requestAnimationFrame(draw);
+
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      cancelAnimationFrame(raf);
       ro.disconnect();
     };
   }, [mine]);
 
+  // ─── 3. INTERACTION ─────────────────────────────────────────────
   const toggle = () => {
     const a = audioRef.current;
     if (!a) return;
-    if (playing) a.pause();
+    if (playingRef.current) a.pause();
     else a.play().catch(() => {});
   };
 
-  const seekFromEvent = useCallback((clientX: number) => {
-    const el = containerRef.current;
+  const seekTo = useCallback((clientX: number) => {
+    const el = trackRef.current;
     const a = audioRef.current;
-    if (!el || !a || !duration) return;
+    const d = durationRef.current;
+    if (!el || !a || !d) return;
     const rect = el.getBoundingClientRect();
     const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    a.currentTime = pct * duration;
-    const nextProgress = pct * duration;
-    progressSecondsRef.current = nextProgress;
-    progressRef.current = pct;
-    setProgress(nextProgress);
-  }, [duration]);
+    const nt = pct * d;
+    try { a.currentTime = nt; } catch {}
+    progressRatioRef.current = pct;
+    setCurrentTime(nt);
+  }, []);
 
   const onPointerDown = (e: React.PointerEvent) => {
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     draggingRef.current = true;
-    setDragging(true);
-    seekFromEvent(e.clientX);
+    seekTo(e.clientX);
   };
   const onPointerMove = (e: React.PointerEvent) => {
-    if (!dragging) return;
-    seekFromEvent(e.clientX);
+    if (!draggingRef.current) return;
+    seekTo(e.clientX);
   };
   const onPointerUp = (e: React.PointerEvent) => {
     draggingRef.current = false;
-    setDragging(false);
     try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
   };
 
   const fmt = (s: number) => {
-    if (!isFinite(s)) return "0:00";
+    if (!isFinite(s) || s < 0) return "0:00";
     const m = Math.floor(s / 60);
     const r = Math.floor(s % 60);
     return `${m}:${r.toString().padStart(2, "0")}`;
   };
 
   return (
-    <div className={cn("flex items-center gap-3 min-w-[210px] max-w-[280px]")}>
+    <div className="flex items-center gap-3 min-w-[210px] max-w-[280px]">
       <audio ref={audioRef} src={url} preload="metadata" />
+
+      {/* Play / Pause button with ripple */}
       <motion.button
+        type="button"
         onClick={toggle}
-        whileTap={{ scale: 0.92 }}
+        whileTap={{ scale: 0.9 }}
+        aria-label={playing ? "Pause" : "Play"}
         className={cn(
-          "relative h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 transition-colors",
-          mine ? "bg-primary-foreground/25 text-primary-foreground" : "bg-primary/20 text-primary",
+          "relative h-11 w-11 rounded-full flex items-center justify-center flex-shrink-0 shadow-md transition-colors",
+          mine
+            ? "bg-primary-foreground/25 text-primary-foreground shadow-black/20"
+            : "bg-primary/20 text-primary shadow-primary/20",
         )}
       >
         {playing && (
           <motion.span
-            className={cn("absolute inset-0 rounded-full", mine ? "bg-primary-foreground/20" : "bg-primary/25")}
-            initial={{ scale: 1, opacity: 0.7 }}
-            animate={{ scale: 1.4, opacity: 0 }}
+            aria-hidden
+            className={cn(
+              "absolute inset-0 rounded-full",
+              mine ? "bg-primary-foreground/25" : "bg-primary/30",
+            )}
+            initial={{ scale: 1, opacity: 0.6 }}
+            animate={{ scale: 1.55, opacity: 0 }}
             transition={{ duration: 1.4, repeat: Infinity, ease: "easeOut" }}
           />
         )}
-        <motion.div
-          key={playing ? "pause" : "play"}
-          initial={{ scale: 0.6, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.15 }}
-        >
-          {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4 ml-0.5" />}
-        </motion.div>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span
+            key={playing ? "pause" : "play"}
+            initial={{ scale: 0.6, opacity: 0, rotate: -30 }}
+            animate={{ scale: 1, opacity: 1, rotate: 0 }}
+            exit={{ scale: 0.6, opacity: 0, rotate: 30 }}
+            transition={{ duration: 0.16 }}
+            className="flex"
+          >
+            {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
+          </motion.span>
+        </AnimatePresence>
       </motion.button>
 
-      <div className="flex-1 flex flex-col gap-1 min-w-0">
+      {/* Waveform + timestamp */}
+      <div className="flex-1 min-w-0 flex flex-col gap-1">
         <div
-          ref={containerRef}
+          ref={trackRef}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
-          className="relative w-full h-9 cursor-pointer touch-none select-none"
+          className="relative w-full h-10 cursor-pointer touch-none select-none"
         >
           <canvas ref={canvasRef} className="block w-full h-full" />
         </div>
-        <span className={cn("text-[10px] font-mono tabular-nums", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>
-          {fmt(progress)} / {fmt(duration)}
+        <span
+          className={cn(
+            "text-[10px] font-mono tabular-nums leading-none",
+            mine ? "text-primary-foreground/70" : "text-muted-foreground",
+          )}
+        >
+          {fmt(currentTime)} / {fmt(duration)}
         </span>
       </div>
     </div>
