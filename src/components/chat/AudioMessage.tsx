@@ -249,8 +249,8 @@ export function AudioMessage({ url, mine }: Props) {
         >
           <canvas ref={canvasRef} className="block w-full h-full" />
         </div>
-        <span className={cn("text-[10px] font-mono", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>
-          {playing || progress > 0 ? fmt(progress) : fmt(duration)}
+        <span className={cn("text-[10px] font-mono tabular-nums", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>
+          {fmt(progress)} / {fmt(duration)}
         </span>
       </div>
     </div>
