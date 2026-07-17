@@ -621,6 +621,18 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
         onUseRewrite={(t) => setInput(t)}
       />
       <MessageInfoSheet message={infoMsg} onClose={() => setInfoMsg(null)} isGroup={!!chatMeta?.is_group} />
+      {reactionTarget && (
+        <ReactionPicker
+          anchorRect={reactionTarget.rect}
+          mine={reactionTarget.msg.sender_id === user?.id}
+          myEmojis={new Set((reactionsByMessage.get(reactionTarget.msg.id) ?? []).filter(r => r.user_id === user?.id).map(r => r.emoji))}
+          onPick={(emoji) => {
+            void toggleReaction(reactionTarget.msg.id, emoji);
+            setReactionTarget(null);
+          }}
+          onClose={() => setReactionTarget(null)}
+        />
+      )}
     </div>
   );
 }
