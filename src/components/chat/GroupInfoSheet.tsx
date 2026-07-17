@@ -3,19 +3,33 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Image as ImageIcon, Camera, Pencil, Check, UserMinus, Crown, Shield,
   UserPlus, LogOut, Trash2, Search, ArrowRightLeft, MessageSquare, User as UserIcon, Loader2,
+  Link2, Copy, RefreshCw, Share2, QrCode, Pin, BellOff, Eraser, Ban, Lock, Users, MessageCircle, Image as ImgIcon, Mic, Info as InfoIcon, PinIcon,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSearchUsers } from "@/hooks/useRealtimeChat";
+import { useChatMemberState, clearChatForMe } from "@/hooks/useChatActions";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import type { ChatRow, ProfileRow } from "@/hooks/useRealtimeChat";
 import { ConfirmDialog } from "./ConfirmDialog";
 
+type PermissionKey = "send_messages" | "send_media" | "send_voice" | "add_members" | "edit_info" | "pin_messages";
+type PermissionScope = "everyone" | "admins" | "owner";
+type PermissionsMap = Partial<Record<PermissionKey, PermissionScope>>;
+
+interface ChatWithExtras extends ChatRow {
+  description?: string | null;
+  invite_code?: string | null;
+  invite_enabled?: boolean | null;
+  permissions?: PermissionsMap | null;
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
-  chat: (ChatRow & { description?: string | null }) | null;
+  chat: ChatWithExtras | null;
   onChatRemoved?: () => void;
 }
 
@@ -26,7 +40,8 @@ interface MemberRow {
   profile: ProfileRow | null;
 }
 
-type Tab = "info" | "members" | "media" | "settings";
+type Tab = "info" | "members" | "media" | "permissions" | "settings";
+
 
 export function GroupInfoSheet({ open, onClose, chat, onChatRemoved }: Props) {
   const { user } = useAuth();
@@ -44,11 +59,21 @@ export function GroupInfoSheet({ open, onClose, chat, onChatRemoved }: Props) {
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [savingPerm, setSavingPerm] = useState<PermissionKey | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const memberState = useChatMemberState(chat?.id ?? null);
 
   const me = members.find((m) => m.user_id === user?.id);
   const isOwner = chat?.created_by === user?.id;
   const isAdmin = isOwner || me?.role === "admin" || me?.role === "owner";
+
+  const permissions: PermissionsMap = chat?.permissions ?? {};
+  const inviteCode = chat?.invite_code ?? "";
+  const inviteEnabled = chat?.invite_enabled !== false;
+  const inviteUrl = inviteCode ? `${typeof window !== "undefined" ? window.location.origin : ""}/chat?invite=${inviteCode}` : "";
+
 
   const load = useCallback(async () => {
     if (!chat) return;
@@ -196,12 +221,72 @@ export function GroupInfoSheet({ open, onClose, chat, onChatRemoved }: Props) {
     onClose();
   };
 
+  const setPermission = async (key: PermissionKey, value: PermissionScope) => {
+    if (!chat) return;
+    setSavingPerm(key);
+    const rpc = supabase.rpc as unknown as (
+      fn: "set_chat_permission",
+      args: { _chat_id: string; _key: string; _value: string },
+    ) => Promise<{ error: { message: string } | null }>;
+    const { error } = await rpc("set_chat_permission", { _chat_id: chat.id, _key: key, _value: value });
+    setSavingPerm(null);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Permission updated");
+  };
+
+  const rotateInvite = async () => {
+    if (!chat) return;
+    setBusy(true);
+    const rpc = supabase.rpc as unknown as (fn: "rotate_chat_invite", args: { _chat_id: string }) =>
+      Promise<{ data: string | null; error: { message: string } | null }>;
+    const { error } = await rpc("rotate_chat_invite", { _chat_id: chat.id });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Invite link reset");
+  };
+
+  const toggleInviteEnabled = async (enabled: boolean) => {
+    if (!chat) return;
+    const rpc = supabase.rpc as unknown as (fn: "set_chat_invite_enabled", args: { _chat_id: string; _enabled: boolean }) =>
+      Promise<{ error: { message: string } | null }>;
+    const { error } = await rpc("set_chat_invite_enabled", { _chat_id: chat.id, _enabled: enabled });
+    if (error) { toast.error(error.message); return; }
+    toast.success(enabled ? "Invite link enabled" : "Invite link disabled");
+  };
+
+  const copyInvite = async () => {
+    if (!inviteUrl) return;
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      toast.success("Invite link copied");
+    } catch { toast.error("Could not copy"); }
+  };
+
+  const shareInvite = async () => {
+    if (!inviteUrl) return;
+    const nav = navigator as Navigator & { share?: (data: ShareData) => Promise<void> };
+    if (nav.share) {
+      try { await nav.share({ title: chat?.name ?? "Join group", text: `Join ${chat?.name ?? "this group"} on Aurix`, url: inviteUrl }); return; }
+      catch { /* user cancelled */ }
+    }
+    void copyInvite();
+  };
+
+  const clearForMe = async () => {
+    if (!chat || !user) return;
+    const { error } = await clearChatForMe(chat.id, user.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Chat cleared");
+  };
+
   const tabs: { id: Tab; label: string }[] = [
     { id: "info", label: "Info" },
     { id: "members", label: `Members (${members.length})` },
     { id: "media", label: "Media" },
+    { id: "permissions", label: "Permissions" },
     { id: "settings", label: "Settings" },
   ];
+
 
   return (
     <AnimatePresence>
@@ -388,11 +473,86 @@ export function GroupInfoSheet({ open, onClose, chat, onChatRemoved }: Props) {
               </div>
             )}
 
+            {/* PERMISSIONS TAB */}
+            {tab === "permissions" && (
+              <div className="mx-4 mb-6 space-y-3">
+                <div className="glass-panel rounded-2xl p-4 space-y-1">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground">Who can</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Control what members are allowed to do in this group. Owner always has full control.
+                  </p>
+                </div>
+                {([
+                  { key: "send_messages", label: "Send messages", icon: <MessageCircle className="h-4 w-4" /> },
+                  { key: "send_media", label: "Send photos & videos", icon: <ImgIcon className="h-4 w-4" /> },
+                  { key: "send_voice", label: "Send voice messages", icon: <Mic className="h-4 w-4" /> },
+                  { key: "add_members", label: "Add new members", icon: <UserPlus className="h-4 w-4" /> },
+                  { key: "edit_info", label: "Edit group info", icon: <InfoIcon className="h-4 w-4" /> },
+                  { key: "pin_messages", label: "Pin messages", icon: <PinIcon className="h-4 w-4" /> },
+                ] as { key: PermissionKey; label: string; icon: React.ReactNode }[]).map((row) => (
+                  <PermissionRow
+                    key={row.key}
+                    icon={row.icon}
+                    label={row.label}
+                    value={(permissions[row.key] ?? "everyone") as PermissionScope}
+                    disabled={!isAdmin}
+                    saving={savingPerm === row.key}
+                    ownerOnly={row.key === "edit_info" ? false : false}
+                    onChange={(v) => void setPermission(row.key, v)}
+                  />
+                ))}
+                {!isAdmin && (
+                  <p className="text-[11px] text-muted-foreground text-center mt-2">
+                    Only admins can change permissions.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* SETTINGS TAB */}
             {tab === "settings" && (
-              <div className="mx-4 mb-6 space-y-2">
+              <div className="mx-4 mb-6 space-y-4">
+                {/* Invite link */}
                 {isAdmin && (
-                  <>
+                  <div className="glass-panel rounded-2xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                          <Link2 className="h-3 w-3" /> Invite link
+                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          Anyone with this link can join {chat.name ?? "the group"}.
+                        </p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" checked={inviteEnabled}
+                          onChange={(e) => void toggleInviteEnabled(e.target.checked)} />
+                        <span className="w-9 h-5 bg-secondary peer-checked:bg-primary/60 rounded-full relative transition-colors">
+                          <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white transition-transform ${inviteEnabled ? "translate-x-4" : ""}`} />
+                        </span>
+                      </label>
+                    </div>
+                    {inviteEnabled ? (
+                      <>
+                        <div className="flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 text-xs font-mono overflow-hidden">
+                          <span className="truncate flex-1">{inviteUrl}</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2">
+                          <MiniAction icon={<Copy className="h-4 w-4" />} label="Copy" onClick={() => void copyInvite()} />
+                          <MiniAction icon={<Share2 className="h-4 w-4" />} label="Share" onClick={() => void shareInvite()} />
+                          <MiniAction icon={<QrCode className="h-4 w-4" />} label="QR" onClick={() => setQrOpen(true)} />
+                          <MiniAction icon={<RefreshCw className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />} label="Reset" onClick={() => void rotateInvite()} />
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">Invite link is currently disabled.</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Group actions */}
+                {isAdmin && (
+                  <div className="space-y-2">
                     <SettingsRow icon={<Camera className="h-4 w-4" />} label="Change avatar"
                       onClick={() => fileRef.current?.click()} />
                     <SettingsRow icon={<Pencil className="h-4 w-4" />} label="Edit name"
@@ -401,22 +561,45 @@ export function GroupInfoSheet({ open, onClose, chat, onChatRemoved }: Props) {
                       onClick={() => { setTab("info"); setEditing("description"); }} />
                     <SettingsRow icon={<UserPlus className="h-4 w-4" />} label="Add members"
                       onClick={() => { setTab("members"); setAddOpen(true); }} />
-                  </>
+                    <SettingsRow icon={<Lock className="h-4 w-4" />} label="Permissions"
+                      onClick={() => setTab("permissions")} hint={`${Object.keys(permissions).length || 6} settings`} />
+                  </div>
                 )}
-                {isOwner && (
-                  <SettingsRow icon={<ArrowRightLeft className="h-4 w-4" />} label="Transfer ownership"
-                    onClick={() => setTab("members")} hint="Tap a member to transfer" />
-                )}
-                {!isOwner && me && (
-                  <SettingsRow icon={<LogOut className="h-4 w-4" />} label="Leave group" destructive
-                    onClick={() => setConfirmLeave(true)} />
-                )}
-                {isOwner && (
-                  <SettingsRow icon={<Trash2 className="h-4 w-4" />} label="Delete group" destructive
-                    onClick={() => setConfirmDelete(true)} />
-                )}
+
+                {/* Personal actions */}
+                <div className="space-y-2">
+                  <SettingsRow
+                    icon={<Pin className="h-4 w-4" />}
+                    label={memberState.is_pinned ? "Unpin group" : "Pin group"}
+                    onClick={() => void memberState.update({ is_pinned: !memberState.is_pinned })}
+                  />
+                  <SettingsRow
+                    icon={<BellOff className="h-4 w-4" />}
+                    label={memberState.is_muted ? "Unmute notifications" : "Mute notifications"}
+                    onClick={() => void memberState.update({ is_muted: !memberState.is_muted })}
+                  />
+                  <SettingsRow icon={<Eraser className="h-4 w-4" />} label="Clear chat for me"
+                    onClick={() => void clearForMe()} />
+                </div>
+
+                {/* Danger zone */}
+                <div className="space-y-2">
+                  {isOwner && (
+                    <SettingsRow icon={<ArrowRightLeft className="h-4 w-4" />} label="Transfer ownership"
+                      onClick={() => setTab("members")} hint="Tap a member" />
+                  )}
+                  {!isOwner && me && (
+                    <SettingsRow icon={<LogOut className="h-4 w-4" />} label="Leave group" destructive
+                      onClick={() => setConfirmLeave(true)} />
+                  )}
+                  {isOwner && (
+                    <SettingsRow icon={<Trash2 className="h-4 w-4" />} label="Delete group" destructive
+                      onClick={() => setConfirmDelete(true)} />
+                  )}
+                </div>
               </div>
             )}
+
           </motion.div>
 
           {/* Member actions sheet */}
@@ -529,6 +712,39 @@ export function GroupInfoSheet({ open, onClose, chat, onChatRemoved }: Props) {
             destructive
             onConfirm={() => void deleteGroup()}
           />
+
+          {/* QR code dialog */}
+          <AnimatePresence>
+            {qrOpen && inviteUrl && (
+              <>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  onClick={() => setQrOpen(false)} className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-md" />
+                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+                  className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-[81] mx-auto max-w-sm glass-panel rounded-3xl p-6 border border-glass-border">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-display font-semibold text-sm">Scan to join</h3>
+                    <button onClick={() => setQrOpen(false)} className="h-8 w-8 rounded-full hover:bg-secondary flex items-center justify-center">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="mx-auto w-fit rounded-2xl bg-white p-4">
+                    <QRCodeSVG value={inviteUrl} size={220} level="M" />
+                  </div>
+                  <p className="text-center text-xs text-muted-foreground mt-3 truncate">{inviteUrl}</p>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button onClick={() => void copyInvite()}
+                      className="h-10 rounded-xl bg-secondary text-sm font-medium hover:bg-secondary/80 flex items-center justify-center gap-2">
+                      <Copy className="h-4 w-4" /> Copy
+                    </button>
+                    <button onClick={() => void shareInvite()}
+                      className="h-10 rounded-xl bg-primary text-primary-foreground text-sm font-semibold flex items-center justify-center gap-2">
+                      <Share2 className="h-4 w-4" /> Share
+                    </button>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </>
       )}
     </AnimatePresence>
@@ -552,6 +768,50 @@ function SettingsRow({
   );
 }
 
+function MiniAction({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick}
+      className="flex flex-col items-center gap-1 py-2 rounded-xl bg-secondary/60 hover:bg-secondary text-neon transition-colors">
+      {icon}
+      <span className="text-[10px] font-medium text-foreground/80">{label}</span>
+    </button>
+  );
+}
+
+function PermissionRow({
+  icon, label, value, onChange, disabled, saving,
+}: {
+  icon: React.ReactNode; label: string; value: PermissionScope;
+  onChange: (v: PermissionScope) => void; disabled?: boolean; saving?: boolean; ownerOnly?: boolean;
+}) {
+  const options: { value: PermissionScope; label: string }[] = [
+    { value: "everyone", label: "Everyone" },
+    { value: "admins", label: "Admins" },
+    { value: "owner", label: "Owner" },
+  ];
+  return (
+    <div className="glass-panel rounded-2xl p-3">
+      <div className="flex items-center gap-3 mb-2">
+        <span className="h-8 w-8 rounded-full bg-primary/15 text-neon flex items-center justify-center">{icon}</span>
+        <span className="flex-1 text-sm font-medium">{label}</span>
+        {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
+        {options.map((o) => (
+          <button key={o.value} disabled={disabled || saving} onClick={() => onChange(o.value)}
+            className={`h-8 rounded-lg text-[11px] font-medium transition-colors ${
+              value === o.value
+                ? "bg-primary/25 text-neon border border-primary/40"
+                : "bg-secondary/60 text-muted-foreground hover:bg-secondary"
+            } disabled:opacity-50 disabled:cursor-not-allowed`}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ActionItem({
   icon, label, onClick, destructive,
 }: { icon: React.ReactNode; label: string; onClick: () => void; destructive?: boolean }) {
@@ -563,6 +823,7 @@ function ActionItem({
     </button>
   );
 }
+
 
 /* ───────────────────────── Add Members Dialog ───────────────────────── */
 
