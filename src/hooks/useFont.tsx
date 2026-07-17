@@ -46,26 +46,31 @@ export function FontProvider({ children }: { children: ReactNode }) {
   const [fontId, setFontId] = useState<string>(() => {
     if (typeof window === "undefined") return DEFAULT_FONT_ID;
     const stored = localStorage.getItem(FONT_KEY);
-    return stored && FONTS.some(f => f.id === stored) ? stored : DEFAULT_FONT_ID;
+    if (!stored) return DEFAULT_FONT_ID;
+    if (isDefaultFont(stored)) return AURIX_DEFAULT_ID;
+    return FONTS.some(f => f.id === stored) ? stored : DEFAULT_FONT_ID;
   });
   const [favorites, setFavorites] = useState<string[]>(() => readList(FAV_KEY));
-  const [recent, setRecent] = useState<string[]>(() => readList(RECENT_KEY));
+  const [recent, setRecent] = useState<string[]>(() => readList(RECENT_KEY).filter(id => !isDefaultFont(id)));
 
   // Apply on mount + change (also preloads via Google Fonts CSS link)
   useEffect(() => { applyFont(fontId); }, [fontId]);
 
   // Warm-load favorites so switching feels instant
-  useEffect(() => { favorites.forEach(id => ensureFontLoaded(getFontById(id))); }, [favorites]);
+  useEffect(() => { favorites.forEach(id => { if (!isDefaultFont(id)) ensureFontLoaded(getFontById(id)); }); }, [favorites]);
 
   const setFont = useCallback((id: string) => {
-    if (!FONTS.some(f => f.id === id)) return;
+    if (!isDefaultFont(id) && !FONTS.some(f => f.id === id)) return;
     setFontId(id);
     try { localStorage.setItem(FONT_KEY, id); } catch {}
-    setRecent(prev => {
-      const next = [id, ...prev.filter(x => x !== id)].slice(0, MAX_RECENT);
-      writeList(RECENT_KEY, next);
-      return next;
-    });
+    if (!isDefaultFont(id)) {
+      setRecent(prev => {
+        const next = [id, ...prev.filter(x => x !== id && !isDefaultFont(x))].slice(0, MAX_RECENT);
+        writeList(RECENT_KEY, next);
+        return next;
+      });
+    }
+
     // Haptic on mobile
     if (typeof navigator !== "undefined" && "vibrate" in navigator) {
       try { (navigator as Navigator & { vibrate?: (p: number | number[]) => boolean }).vibrate?.(8); } catch {}
