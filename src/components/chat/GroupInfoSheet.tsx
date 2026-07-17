@@ -59,11 +59,21 @@ export function GroupInfoSheet({ open, onClose, chat, onChatRemoved }: Props) {
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
+  const [savingPerm, setSavingPerm] = useState<PermissionKey | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const memberState = useChatMemberState(chat?.id ?? null);
 
   const me = members.find((m) => m.user_id === user?.id);
   const isOwner = chat?.created_by === user?.id;
   const isAdmin = isOwner || me?.role === "admin" || me?.role === "owner";
+
+  const permissions: PermissionsMap = chat?.permissions ?? {};
+  const inviteCode = chat?.invite_code ?? "";
+  const inviteEnabled = chat?.invite_enabled !== false;
+  const inviteUrl = inviteCode ? `${typeof window !== "undefined" ? window.location.origin : ""}/chat?invite=${inviteCode}` : "";
+
 
   const load = useCallback(async () => {
     if (!chat) return;
