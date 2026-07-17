@@ -395,7 +395,6 @@ function MemberAvatarDot({ profile, z }: { profile: { avatar_url: string | null;
   const initial = (profile.display_name ?? "?").charAt(0).toUpperCase();
   return (
     <motion.div
-      whileHover={{ scale: 1.15, zIndex: 20 }}
       style={{ zIndex: z }}
       className="h-6 w-6 rounded-full ring-2 ring-background overflow-hidden bg-gradient-to-br from-primary/40 to-accent/40 flex items-center justify-center text-[10px] font-bold text-primary-foreground"
     >
