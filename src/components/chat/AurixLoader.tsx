@@ -31,6 +31,17 @@ export function AurixLoader() {
       exit={{ opacity: 0, scale: 1.04, filter: "blur(6px)" }}
       transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
       className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-black"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 50,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
+        background: "#020205",
+        color: "rgba(255,255,255,0.92)",
+      }}
     >
       {/* Ambient radial gradient */}
       <div
@@ -70,9 +81,19 @@ export function AurixLoader() {
         style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.65) 100%)" }}
       />
 
-      <div className="relative flex flex-col items-center gap-10 px-6">
+      <div
+        className="relative flex flex-col items-center gap-10 px-6"
+        style={{
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "2.5rem",
+          paddingInline: "1.5rem",
+        }}
+      >
         {/* Logo stack */}
-        <div className="relative h-32 w-32">
+        <div className="relative h-32 w-32" style={{ position: "relative", width: 128, height: 128 }}>
           {!reduce && (
             <>
               <motion.div
@@ -98,6 +119,11 @@ export function AurixLoader() {
           <motion.div
             className="absolute inset-0 rounded-[28px] border border-white/10 backdrop-blur-xl"
             style={{
+              position: "absolute",
+              inset: 0,
+              borderRadius: 28,
+              border: "1px solid rgba(255,255,255,0.1)",
+              backdropFilter: "blur(20px)",
               background: `linear-gradient(145deg, ${mix(45)}, ${mix(8)} 60%, transparent), radial-gradient(circle at 30% 25%, rgba(255,255,255,0.4), transparent 45%)`,
               boxShadow: `0 30px 60px -20px ${mix(55)}, inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -20px 40px rgba(0,0,0,0.45)`,
             }}
@@ -113,7 +139,10 @@ export function AurixLoader() {
                 mixBlendMode: "overlay",
               }}
             />
-            <div className="absolute inset-0 grid place-items-center">
+            <div
+              className="absolute inset-0 grid place-items-center"
+              style={{ position: "absolute", inset: 0, display: "grid", placeItems: "center" }}
+            >
               <motion.div
                 animate={reduce ? {} : { scale: [1, 1.06, 1] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
@@ -121,7 +150,7 @@ export function AurixLoader() {
                 <MessageCircle
                   className="h-12 w-12 text-white"
                   strokeWidth={1.6}
-                  style={{ filter: `drop-shadow(0 4px 14px ${mix(85)})` }}
+                  style={{ width: 48, height: 48, color: "white", filter: `drop-shadow(0 4px 14px ${mix(85)})` }}
                 />
               </motion.div>
             </div>
@@ -134,11 +163,22 @@ export function AurixLoader() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.6 }}
           className="text-center"
+          style={{ textAlign: "center" }}
         >
-          <h1 className="font-display text-2xl font-semibold tracking-[0.35em] text-white/90">
+          <h1
+            className="font-display text-2xl font-semibold tracking-[0.35em] text-white/90"
+            style={{
+              margin: 0,
+              fontSize: 24,
+              lineHeight: "32px",
+              fontWeight: 600,
+              letterSpacing: "0.35em",
+              color: "rgba(255,255,255,0.92)",
+            }}
+          >
             AURIX
           </h1>
-          <div className="mt-3 h-5 overflow-hidden">
+          <div className="mt-3 h-5 overflow-hidden" style={{ marginTop: 12, height: 20, overflow: "hidden" }}>
             <AnimatePresence mode="wait">
               <motion.p
                 key={i}
@@ -147,6 +187,14 @@ export function AurixLoader() {
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
                 className="text-[13px] font-medium tracking-wide text-white/70"
+                style={{
+                  margin: 0,
+                  minWidth: 240,
+                  fontSize: 13,
+                  lineHeight: "20px",
+                  fontWeight: 500,
+                  color: "rgba(255,255,255,0.72)",
+                }}
               >
                 {PHRASES[i]}
               </motion.p>
@@ -155,7 +203,17 @@ export function AurixLoader() {
         </motion.div>
 
         {/* Capsule progress */}
-        <div className="relative h-[3px] w-48 overflow-hidden rounded-full bg-white/10">
+        <div
+          className="relative h-[3px] w-48 overflow-hidden rounded-full bg-white/10"
+          style={{
+            position: "relative",
+            width: 192,
+            height: 3,
+            overflow: "hidden",
+            borderRadius: 999,
+            background: "rgba(255,255,255,0.12)",
+          }}
+        >
           <motion.div
             className="absolute inset-y-0 w-1/3 rounded-full"
             style={{
