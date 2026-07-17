@@ -34,6 +34,8 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { Pin, BellOff, Timer, Ban, ShieldOff } from "lucide-react";
 import { useCalls } from "@/hooks/useCalls";
 import { StoryReplyCard } from "./StoryReplyCard";
+import { ReactionPicker, ReactionChips } from "./ReactionPicker";
+import { useMessageReactions, useToggleReaction } from "@/hooks/useMessageReactions";
 
 
 interface ChatWindowProps {
@@ -69,6 +71,10 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const { allDeliveredAt, allReadAt } = useChatReceipts(chatId);
   const [infoMsg, setInfoMsg] = useState<MessageRow | null>(null);
   const longPressTimer = useRef<number | null>(null);
+  const [reactionTarget, setReactionTarget] = useState<{ msg: MessageRow; rect: DOMRect } | null>(null);
+  const messageIds = messages.map(m => m.id);
+  const { byMessage: reactionsByMessage } = useMessageReactions("chat", chatId, messageIds);
+  const toggleReaction = useToggleReaction("chat");
 
 
   const initiateCall = (type: "voice" | "video") => {
@@ -375,15 +381,20 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
               else if (allDeliveredAt && msg.created_at <= allDeliveredAt) tickState = "delivered";
             }
 
-            const openInfo = () => { if (isMe) setInfoMsg(msg); };
-            const onPointerDown = () => {
-              if (!isMe) return;
+            const openPicker = (target: Element | null) => {
+              const rect = target?.getBoundingClientRect() ?? null;
+              if (rect) setReactionTarget({ msg, rect });
+              try { navigator.vibrate?.(10); } catch { /* noop */ }
+            };
+            const onPointerDown = (e: React.PointerEvent) => {
+              const target = e.currentTarget as Element;
               if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
-              longPressTimer.current = window.setTimeout(() => setInfoMsg(msg), 450);
+              longPressTimer.current = window.setTimeout(() => openPicker(target), 380);
             };
             const cancelPress = () => {
               if (longPressTimer.current) { window.clearTimeout(longPressTimer.current); longPressTimer.current = null; }
             };
+            const msgReactions = reactionsByMessage.get(msg.id) ?? [];
 
             return (
               <motion.div
@@ -397,9 +408,10 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                 onPointerUp={cancelPress}
                 onPointerCancel={cancelPress}
                 onPointerLeave={cancelPress}
-                onContextMenu={(e) => { if (isMe) { e.preventDefault(); openInfo(); } }}
+                onContextMenu={(e) => { e.preventDefault(); openPicker(e.currentTarget); }}
               >
                 <div className="relative max-w-[78%]">
+
                   <div className={cn(
                     "text-[14px] leading-relaxed rounded-[14px]",
                     bubblePad,
@@ -454,6 +466,13 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                       {tickState === "read" && <CheckCheck className="h-3 w-3 text-sky-400" />}
                     </div>
                   )}
+
+                  <ReactionChips
+                    reactions={msgReactions}
+                    currentUserId={user?.id}
+                    mine={isMe}
+                    onToggle={(emoji) => void toggleReaction(msg.id, emoji)}
+                  />
                 </div>
               </motion.div>
             );
@@ -602,6 +621,18 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
         onUseRewrite={(t) => setInput(t)}
       />
       <MessageInfoSheet message={infoMsg} onClose={() => setInfoMsg(null)} isGroup={!!chatMeta?.is_group} />
+      {reactionTarget && (
+        <ReactionPicker
+          anchorRect={reactionTarget.rect}
+          mine={reactionTarget.msg.sender_id === user?.id}
+          myEmojis={new Set((reactionsByMessage.get(reactionTarget.msg.id) ?? []).filter(r => r.user_id === user?.id).map(r => r.emoji))}
+          onPick={(emoji) => {
+            void toggleReaction(reactionTarget.msg.id, emoji);
+            setReactionTarget(null);
+          }}
+          onClose={() => setReactionTarget(null)}
+        />
+      )}
     </div>
   );
 }

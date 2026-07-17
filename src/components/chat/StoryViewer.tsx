@@ -8,7 +8,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDeleteStory, useReactToStory, useRecordStoryView, useSendStoryMessage, useStoryAudience, type StoryGroup } from "@/hooks/useStories";
 import { formatDistanceToNow } from "date-fns";
 
-const REACTIONS = ["❤️", "😂", "😍", "😮", "🔥", "👏", "😭", "👍", "✨"];
 const IMAGE_DURATION = 5000;
 
 interface Props {
@@ -254,19 +253,6 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
             </button>
           ) : (
             <div className="space-y-3">
-              <div className="flex justify-between gap-1 overflow-x-auto no-scrollbar px-1">
-                {REACTIONS.map(r => (
-                  <motion.button
-                    key={r}
-                    whileTap={{ scale: 1.4 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 15 }}
-                    onClick={() => handleReact(r)}
-                    className="h-10 w-10 flex-shrink-0 rounded-full bg-white/15 backdrop-blur flex items-center justify-center text-lg hover:bg-white/25"
-                  >
-                    {r}
-                  </motion.button>
-                ))}
-              </div>
               <div className="flex items-center gap-2">
 
                 <input

@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { ArrowLeft, Send, Image as ImageIcon, Smile, X, Reply, Info } from "lucide-react";
 import { motion, useMotionValue, useTransform, animate, type PanInfo } from "framer-motion";
 import { useRoom, useRoomMessages, useRoomActions, useSignedRoomMedia, type RoomMessageRow } from "@/hooks/useRooms";
+import { ReactionPicker, ReactionChips } from "./ReactionPicker";
+import { useMessageReactions, useToggleReaction, type ReactionRow } from "@/hooks/useMessageReactions";
 
 const ScrollingContext = createContext(false);
 
@@ -39,9 +41,14 @@ export function RoomChat({ roomId, onBack }: Props) {
   const [reply, setReply] = useState<RoomMessageRow | null>(null);
   const [recording, setRecording] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [reactionTarget, setReactionTarget] = useState<{ msgId: string; mine: boolean; rect: DOMRect } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+
+  const messageIds = useMemo(() => messages.map(m => m.id), [messages]);
+  const { byMessage: reactionsByMessage } = useMessageReactions("room", roomId, messageIds);
+  const toggleReaction = useToggleReaction("room");
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages.length]);
 
@@ -157,6 +164,10 @@ export function RoomChat({ roomId, onBack }: Props) {
               grouped={isGrouped}
               replyMsg={replyMsg ?? null}
               onReply={() => setReply(m)}
+              reactions={reactionsByMessage.get(m.id) ?? []}
+              currentUserId={user?.id}
+              onToggleReaction={(emoji) => void toggleReaction(m.id, emoji)}
+              onLongPress={(rect) => setReactionTarget({ msgId: m.id, mine, rect })}
             />
           );
         })}
@@ -231,20 +242,46 @@ export function RoomChat({ roomId, onBack }: Props) {
       </div>
 
       <RoomInfoSheet roomId={roomId} open={infoOpen} onClose={() => setInfoOpen(false)} onLeft={onBack} />
+      {reactionTarget && (
+        <ReactionPicker
+          anchorRect={reactionTarget.rect}
+          mine={reactionTarget.mine}
+          myEmojis={new Set((reactionsByMessage.get(reactionTarget.msgId) ?? []).filter(r => r.user_id === user?.id).map(r => r.emoji))}
+          onPick={(emoji) => { void toggleReaction(reactionTarget.msgId, emoji); setReactionTarget(null); }}
+          onClose={() => setReactionTarget(null)}
+        />
+      )}
     </div>
   );
 }
 
 /* ─── Message row with swipe-to-reply ─── */
 function MessageRow({
-  m, mine, grouped, replyMsg, onReply,
+  m, mine, grouped, replyMsg, onReply, reactions, currentUserId, onToggleReaction, onLongPress,
 }: {
   m: RoomMessageRow;
   mine: boolean;
   grouped: boolean;
   replyMsg: RoomMessageRow | null;
   onReply: () => void;
+  reactions: ReactionRow[];
+  currentUserId: string | undefined;
+  onToggleReaction: (emoji: string) => void;
+  onLongPress: (rect: DOMRect) => void;
 }) {
+  const longPressTimer = useRef<number | null>(null);
+  const startLongPress = (e: React.PointerEvent) => {
+    const target = e.currentTarget as Element;
+    if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
+    longPressTimer.current = window.setTimeout(() => {
+      const rect = target.getBoundingClientRect();
+      onLongPress(rect);
+      try { navigator.vibrate?.(10); } catch { /* noop */ }
+    }, 380);
+  };
+  const cancelLongPress = () => {
+    if (longPressTimer.current) { window.clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+  };
   const x = useMotionValue(0);
   // Reply indicator opacity fades in as user swipes left
   const indicatorOpacity = useTransform(x, [-80, -20, 0], [1, 0, 0]);
@@ -325,6 +362,11 @@ function MessageRow({
             } ${grouped ? (mine ? "rounded-tr-[6px]" : "rounded-tl-[6px]") : ""} ${
               isText ? "shadow-[0_1px_2px_rgba(0,0,0,0.25)]" : ""
             }`}
+            onPointerDown={startLongPress}
+            onPointerUp={cancelLongPress}
+            onPointerCancel={cancelLongPress}
+            onPointerLeave={cancelLongPress}
+            onContextMenu={(e) => { e.preventDefault(); onLongPress((e.currentTarget as Element).getBoundingClientRect()); }}
           >
             {replyMsg && (
               <div className={`text-[11px] opacity-75 border-l-2 border-current pl-2 mb-1 truncate ${isMedia ? "mx-1 mt-0.5" : ""}`}>
@@ -334,6 +376,12 @@ function MessageRow({
             <RoomMsgBody m={m} />
           </div>
 
+          <ReactionChips
+            reactions={reactions}
+            currentUserId={currentUserId}
+            mine={mine}
+            onToggle={onToggleReaction}
+          />
 
 
           {/* Reply icon outside bubble (bottom-right / bottom-left depending on side) */}
