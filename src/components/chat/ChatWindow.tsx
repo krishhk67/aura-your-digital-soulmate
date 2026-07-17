@@ -466,6 +466,13 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                       {tickState === "read" && <CheckCheck className="h-3 w-3 text-sky-400" />}
                     </div>
                   )}
+
+                  <ReactionChips
+                    reactions={msgReactions}
+                    currentUserId={user?.id}
+                    mine={isMe}
+                    onToggle={(emoji) => void toggleReaction(msg.id, emoji)}
+                  />
                 </div>
               </motion.div>
             );
