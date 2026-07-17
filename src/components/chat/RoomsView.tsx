@@ -409,7 +409,7 @@ function FeaturedRoom({ room, onOpen }: { room: Room; onOpen: (r: Room) => void 
   return (
     <motion.button
       initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: "easeOut" }}
-      whileHover={{ y: -3 }} whileTap={{ scale: 0.99 }}
+      whileTap={{ scale: 0.98 }}
       onClick={() => onOpen(room)}
       className="group relative w-full text-left rounded-3xl overflow-hidden border border-glass-border bg-gradient-to-br from-secondary/60 via-secondary/30 to-secondary/50 backdrop-blur-xl p-4 pt-5 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6)]"
     >
