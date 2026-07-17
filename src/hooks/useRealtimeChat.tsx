@@ -71,7 +71,7 @@ export function useMyChats(opts?: { hiddenOnly?: boolean }) {
     // Get chat memberships (with per-user state)
     const { data: memberships } = await supabase
       .from("chat_members")
-      .select("chat_id,is_pinned,is_muted,cleared_at,is_hidden")
+      .select("chat_id,is_pinned,is_muted,cleared_at,is_hidden,is_favorite,is_archived")
       .eq("user_id", user.id);
 
     if (!memberships?.length) { setChats([]); setLoading(false); return; }
