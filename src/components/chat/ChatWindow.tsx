@@ -122,11 +122,32 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
         }
       }
 
-      await supabase.from("chat_members")
-        .update({ last_read_at: new Date().toISOString() })
-        .eq("chat_id", chatId)
-        .eq("user_id", user.id);
+      type RpcCall = (fn: string, args: Record<string, unknown>) => Promise<unknown>;
+      await (supabase.rpc as unknown as RpcCall)("mark_chat_read", { _chat_id: chatId });
     })();
+  }, [chatId, user]);
+
+  // Keep marking as read as new messages arrive while chat is open & tab visible
+  useEffect(() => {
+    if (!chatId || !user || visibleMessages.length === 0) return;
+    if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+    const last = visibleMessages[visibleMessages.length - 1];
+    if (last.sender_id === user.id) return;
+    type RpcCall = (fn: string, args: Record<string, unknown>) => Promise<unknown>;
+    void (supabase.rpc as unknown as RpcCall)("mark_chat_read", { _chat_id: chatId });
+  }, [chatId, user, visibleMessages]);
+
+  // Also mark on tab focus
+  useEffect(() => {
+    if (!chatId || !user) return;
+    const onVis = () => {
+      if (document.visibilityState === "visible") {
+        type RpcCall = (fn: string, args: Record<string, unknown>) => Promise<unknown>;
+        void (supabase.rpc as unknown as RpcCall)("mark_chat_read", { _chat_id: chatId });
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
   }, [chatId, user]);
 
   const handleSend = async () => {
