@@ -34,9 +34,15 @@ import {
   Monitor,
   Terminal,
   ChevronRight,
+  Smartphone,
+  Download,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import heroMockup from "@/assets/hero-mockup.jpg";
+
 
 /* ────────────────────────────────────────────────────────────────
    Shared motion helpers
