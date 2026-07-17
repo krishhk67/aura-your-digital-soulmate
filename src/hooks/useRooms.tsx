@@ -146,9 +146,10 @@ export function useRoomMessages(roomId: string | null) {
 
   useEffect(() => { fetchMsgs(); }, [fetchMsgs]);
 
+  const msgsChanId = useMemo(() => crypto.randomUUID(), []);
   useEffect(() => {
     if (!roomId) return;
-    const ch = supabase.channel(`room-msgs:${roomId}`)
+    const ch = supabase.channel(`room-msgs:${roomId}:${msgsChanId}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "room_messages", filter: `room_id=eq.${roomId}` }, async (payload) => {
         const m = payload.new as RoomMessageRow;
         if (!cache.current[m.sender_id]) {
