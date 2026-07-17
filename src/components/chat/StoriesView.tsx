@@ -3,50 +3,31 @@ import { motion } from "framer-motion";
 import { Plus, Sparkles, Loader2 } from "lucide-react";
 import { useStoriesFeed, type StoryGroup } from "@/hooks/useStories";
 import { useAuth } from "@/hooks/useAuth";
+import { useCurrentProfile } from "@/hooks/useCurrentProfile";
 import { StoryComposer } from "./StoryComposer";
 import { StoryViewer } from "./StoryViewer";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
 
 
 export function StoriesView() {
   const { user } = useAuth();
+  const { profile } = useCurrentProfile();
   const { groups, myStories, loading } = useStoriesFeed();
   const [composerOpen, setComposerOpen] = useState(false);
   const [viewerGroups, setViewerGroups] = useState<StoryGroup[] | null>(null);
   const [viewerStart, setViewerStart] = useState(0);
-  const [myAvatar, setMyAvatar] = useState<string | null>(null);
-  const [myDisplayName, setMyDisplayName] = useState<string | null>(null);
+  const myAvatar = profile?.avatar_url ?? null;
+  const myDisplayName = profile?.display_name ?? profile?.username ?? null;
 
   useEffect(() => {
-    if (!user) { setMyAvatar(null); return; }
-    let cancelled = false;
-    const load = async () => {
-      const { data } = await supabase
-        .from("profiles")
-        .select("avatar_url,display_name,username")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (cancelled || !data) return;
-      setMyAvatar(data.avatar_url ?? null);
-      setMyDisplayName(data.display_name ?? data.username ?? null);
-    };
-    load();
-    const ch = supabase
-      .channel(`me-profile-${user.id}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${user.id}` },
-        (payload) => {
-          const row = payload.new as { avatar_url: string | null; display_name: string | null; username: string | null };
-          setMyAvatar(row.avatar_url ?? null);
-          setMyDisplayName(row.display_name ?? row.username ?? null);
-        },
-      )
-      .subscribe();
-    return () => { cancelled = true; supabase.removeChannel(ch); };
-  }, [user]);
+    console.info("[Aurix Stories] Your Story avatar source", {
+      component: "StoriesView",
+      source: "profiles.avatar_url",
+      value: myAvatar,
+      profileId: profile?.id ?? user?.id ?? null,
+    });
+  }, [myAvatar, profile?.id, user?.id]);
 
 
   const openViewer = (gs: StoryGroup[], idx: number) => {
