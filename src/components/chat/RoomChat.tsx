@@ -374,13 +374,14 @@ function MetaRow({ mine, name, time }: { mine: boolean; name: string; time: stri
 function RoomMsgBody({ m }: { m: RoomMessageRow }) {
   const url = useSignedRoomMedia(m.media_url);
   if (m.message_type === "image" && url) {
-    return <img src={url} alt="" className="rounded-xl max-h-64 object-cover" />;
+    return <img src={url} alt="" className="block rounded-[10px] max-h-64 w-full object-cover" />;
   }
   if (m.message_type === "video" && url) {
-    return <video src={url} controls className="rounded-xl max-h-64" />;
+    return <video src={url} controls className="block rounded-[10px] max-h-64 w-full" />;
   }
   if (m.message_type === "voice" && url) {
     return <AudioMessage url={url} durationHintMs={Number(m.content) || undefined} />;
   }
   return <div className="text-[14.5px] leading-snug whitespace-pre-wrap break-words">{m.content}</div>;
 }
+
