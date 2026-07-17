@@ -5,9 +5,9 @@ import {
   Eye, EyeOff, Ghost, Volume2, VolumeX, Sun, Moon, Sparkles, Save, Loader2, ShieldOff, ChevronRight
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useCurrentProfile } from "@/hooks/useCurrentProfile";
 import { useTheme, THEMES, type ThemeId } from "@/hooks/useTheme";
 import { supabase } from "@/integrations/supabase/client";
-import type { ProfileRow } from "@/hooks/useRealtimeChat";
 import { useBlockedList, useBlockUser } from "@/hooks/useChatActions";
 import { useStoryPrivacy } from "@/hooks/useStories";
 import { useHiddenSpace } from "@/hooks/useHiddenSpace";
@@ -32,9 +32,9 @@ const tabs: { id: Tab; label: string; icon: typeof User }[] = [
 
 export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
   const { user, signOut } = useAuth();
+  const { profile, loading: profileLoading, refreshProfile, updateProfile } = useCurrentProfile();
   const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<Tab>("profile");
-  const [profile, setProfile] = useState<ProfileRow | null>(null);
   const [settings, setSettings] = useState<{
     theme: string;
     notifications_enabled: boolean;
@@ -59,20 +59,10 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     if (!user || !open) return;
     (async () => {
       setLoading(true);
-      const [{ data: p }, { data: s }] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", user.id).single(),
+      const [, { data: s }] = await Promise.all([
+        refreshProfile(),
         supabase.from("user_settings").select("*").eq("user_id", user.id).single(),
       ]);
-      if (p) {
-        const prof = p as ProfileRow & { ghost_mode?: boolean };
-        setProfile(prof);
-        setDisplayName(prof.display_name ?? "");
-        setUsername(prof.username ?? "");
-        setBio(prof.bio ?? "");
-        setStatusText(prof.status_text ?? "");
-        setShowOnline(prof.is_online);
-        setGhostMode(!!prof.ghost_mode);
-      }
 
       if (s) {
         setSettings({
@@ -83,7 +73,23 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
       }
       setLoading(false);
     })();
-  }, [user, open]);
+  }, [user, open, refreshProfile]);
+
+  useEffect(() => {
+    if (!open || !profile) return;
+    setDisplayName(profile.display_name ?? "");
+    setUsername(profile.username ?? "");
+    setBio(profile.bio ?? "");
+    setStatusText(profile.status_text ?? "");
+    setShowOnline(profile.is_online);
+    setGhostMode(!!profile.ghost_mode);
+    console.info("[Aurix Settings] Avatar source", {
+      component: "SettingsPanel",
+      source: "profiles.avatar_url",
+      value: profile.avatar_url,
+      profileId: profile.id,
+    });
+  }, [open, profile]);
 
   const saveProfile = async () => {
     if (!user) return;
@@ -98,15 +104,15 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
       const { error } = await rpc("set_my_username", { _username: newUser });
       if (error) { toast.error(error.message); setSaving(false); return; }
     }
-    const { error } = await supabase.from("profiles").update({
+    const { error } = await updateProfile({
       display_name: displayName.trim() || null,
       bio: bio.trim() || null,
       status_text: statusText.trim() || null,
-    }).eq("id", user.id);
+    });
     if (error) toast.error("Failed to save profile");
     else {
       toast.success("Profile updated");
-      setProfile(prev => prev ? { ...prev, display_name: displayName, username: newUser, bio, status_text: statusText } : prev);
+      await refreshProfile();
     }
     setSaving(false);
   };
@@ -120,11 +126,8 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     if (uploadErr) { toast.error("Upload failed"); setUploading(false); return; }
     const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
     const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-    await supabase.from("profiles").update({ avatar_url: avatarUrl }).eq("id", user.id);
-    // Mirror onto auth user_metadata so every subscriber to useAuth (StoriesView,
-    // etc.) re-renders instantly via the USER_UPDATED event — single source of truth.
-    await supabase.auth.updateUser({ data: { avatar_url: avatarUrl } });
-    setProfile(prev => prev ? { ...prev, avatar_url: avatarUrl } : prev);
+    const { error } = await updateProfile({ avatar_url: avatarUrl });
+    if (error) { toast.error("Could not save avatar"); setUploading(false); return; }
     toast.success("Avatar updated");
     setUploading(false);
   };
@@ -143,7 +146,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
   const toggleOnlineVisibility = async (val: boolean) => {
     if (!user) return;
     setShowOnline(val);
-    await supabase.from("profiles").update({ is_online: val }).eq("id", user.id);
+    await updateProfile({ is_online: val });
   };
 
   const toggleGhostMode = async (val: boolean) => {
@@ -151,7 +154,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
     setGhostMode(val);
     // When entering ghost mode, immediately appear offline.
     const patch = val ? { ghost_mode: true, is_online: false } : { ghost_mode: false };
-    const { error } = await supabase.from("profiles").update(patch).eq("id", user.id);
+    const { error } = await updateProfile(patch);
 
     if (error) { toast.error("Failed to update ghost mode"); setGhostMode(!val); return; }
     if (val) setShowOnline(false);
@@ -220,7 +223,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-5">
-              {loading ? (
+              {loading || profileLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-6 w-6 animate-spin text-neon" />
                 </div>

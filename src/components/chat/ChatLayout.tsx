@@ -14,12 +14,15 @@ import { CallOverlay } from "@/components/calls/CallOverlay";
 import { CallsHistoryView } from "@/components/calls/CallsHistoryView";
 import { HiddenSpaceProvider, useHiddenSpace } from "@/hooks/useHiddenSpace";
 import { useAuth } from "@/hooks/useAuth";
+import { CurrentProfileProvider } from "@/hooks/useCurrentProfile";
 import { AccountOnboardingDialog } from "@/components/auth/AccountOnboardingDialog";
 
 export function ChatLayout() {
   return (
     <HiddenSpaceProvider>
-      <ChatLayoutInner />
+      <CurrentProfileProvider>
+        <ChatLayoutInner />
+      </CurrentProfileProvider>
     </HiddenSpaceProvider>
   );
 }
