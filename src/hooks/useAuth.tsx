@@ -62,21 +62,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const signUp = useCallback(async (email: string, password: string, username?: string) => {
+    // Pre-check username uniqueness if provided
+    if (username) {
+      const clean = username.trim();
+      if (!/^[a-zA-Z0-9_]{3,32}$/.test(clean)) {
+        return { error: new Error("Username must be 3-32 chars: letters, numbers, underscore.") };
+      }
+      const rpc = supabase.rpc as unknown as (
+        fn: "is_username_available", args: { _username: string }
+      ) => Promise<{ data: boolean | null; error: { message: string } | null }>;
+      const { data: available, error: chkErr } = await rpc("is_username_available", { _username: clean });
+      if (chkErr) return { error: new Error(chkErr.message) };
+      if (!available) return { error: new Error("Username already taken") };
+    }
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: window.location.origin,
-        data: username ? { username } : undefined,
+        data: username ? { username: username.trim() } : undefined,
       },
     });
-    if (!error && username) {
-      // username will be set after profile is created by trigger, then updated
-    }
     return { error: error ? new Error(error.message) : null };
   }, []);
 
-  const signIn = useCallback(async (email: string, password: string) => {
+  const signIn = useCallback(async (identifier: string, password: string) => {
+    let email = identifier.trim();
+    if (!EMAIL_RE.test(email)) {
+      // Treat as username; look up email
+      const rpc = supabase.rpc as unknown as (
+        fn: "get_email_for_username", args: { _username: string }
+      ) => Promise<{ data: string | null; error: { message: string } | null }>;
+      const { data, error } = await rpc("get_email_for_username", { _username: email });
+      if (error) return { error: new Error(error.message) };
+      if (!data) return { error: new Error("No account with that username") };
+      email = data;
+    }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error: error ? new Error(error.message) : null };
   }, []);
