@@ -155,7 +155,7 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
         progressSecondsRef.current = nextProgress;
         progressRef.current = nextProgress / totalDuration;
 
-        if (t - lastTimeLabelT > 120 || !playingRef.current) {
+        if (t - lastTimeLabelT > 120) {
           lastTimeLabelT = t;
           setProgress((prev) => (Math.abs(prev - nextProgress) > 0.035 ? nextProgress : prev));
         }
