@@ -9,9 +9,10 @@ import {
 } from "@tanstack/react-router";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { FontProvider } from "@/hooks/useFont";
 import { Toaster } from "@/components/ui/sonner";
 
-const NO_FLASH_THEME = `(function(){try{var t=localStorage.getItem('aura-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`;
+const NO_FLASH_THEME = `(function(){try{var t=localStorage.getItem('aura-theme');if(t)document.documentElement.setAttribute('data-theme',t);var f=localStorage.getItem('aurix-font');var map={inter:'"Inter"',poppins:'"Poppins"',manrope:'"Manrope"',jakarta:'"Plus Jakarta Sans"',outfit:'"Outfit"',urbanist:'"Urbanist"',nunito:'"Nunito Sans"','dm-sans':'"DM Sans"',geist:'"Geist"','ibm-plex-sans':'"IBM Plex Sans"','space-grotesk':'"Space Grotesk"',lexend:'"Lexend"',figtree:'"Figtree"',onest:'"Onest"',montserrat:'"Montserrat"',roboto:'"Roboto"','open-sans':'"Open Sans"',lato:'"Lato"',playfair:'"Playfair Display"',merriweather:'"Merriweather"',cormorant:'"Cormorant Garamond"','jetbrains-mono':'"JetBrains Mono"','ibm-plex-mono':'"IBM Plex Mono"','fira-code':'"Fira Code"','sf-pro':'-apple-system,BlinkMacSystemFont,"SF Pro Display"','general-sans':'"General Sans"',satoshi:'"Satoshi"','cabinet-grotesk':'"Cabinet Grotesk"'};if(f&&map[f])document.documentElement.style.setProperty('--app-font',map[f]+',system-ui,sans-serif');}catch(e){}})();`;
 
 import appCss from "../styles.css?url";
 
