@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { DEFAULT_FONT_ID, FONTS, ensureFontLoaded, getFontById } from "@/lib/fonts";
+import { AURIX_DEFAULT_ID, DEFAULT_FONT_ID, FONTS, ensureFontLoaded, getFontById, isDefaultFont } from "@/lib/fonts";
+
 
 const FONT_KEY = "aurix-font";
 const FAV_KEY = "aurix-font-favorites";
