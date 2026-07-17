@@ -141,7 +141,7 @@ export function useMyChats(opts?: { hiddenOnly?: boolean }) {
 
     setChats(enriched as typeof chats);
     setLoading(false);
-  }, [user]);
+  }, [user, hiddenOnly]);
 
   useEffect(() => { fetchChats(); }, [fetchChats]);
 
