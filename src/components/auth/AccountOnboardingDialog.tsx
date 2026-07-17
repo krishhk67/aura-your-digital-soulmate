@@ -268,6 +268,25 @@ export function AccountOnboardingDialog() {
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                 {busy ? "Saving..." : "Continue"}
               </button>
+
+              {/* Skip is only available when username is already set — password
+                  is the only thing left. Username is mandatory (identity). */}
+              {!needsUsername && needsPassword && (
+                <button
+                  onClick={() => {
+                    if (!user) return;
+                    sessionStorage.setItem(`aurix:pw-skip:${user.id}`, "1");
+                    completedRef.current = true;
+                    setOpen(false);
+                    toast("You can set an Aurix password anytime in Settings → Account.");
+                  }}
+                  disabled={busy}
+                  className="mt-2 w-full h-11 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors disabled:opacity-50"
+                >
+                  Set up later
+                </button>
+              )}
+
             </div>
           </motion.div>
         </>
