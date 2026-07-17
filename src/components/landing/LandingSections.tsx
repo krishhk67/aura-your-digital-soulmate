@@ -193,16 +193,17 @@ export function HeroSection() {
                 <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Button>
             </Link>
-            <a href="#features">
-              <Button
-                size="lg"
-                variant="outline"
-                className="rounded-full border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.06] hover:text-white h-12 px-6"
-              >
-                Learn More
-              </Button>
-            </a>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => setDownloadOpen(true)}
+              className="rounded-full border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.06] hover:text-white h-12 px-6"
+            >
+              <Download className="mr-1.5 h-4 w-4" />
+              Download
+            </Button>
           </motion.div>
+
 
           <motion.ul
             variants={fadeUp}
