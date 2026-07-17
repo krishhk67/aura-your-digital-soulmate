@@ -345,6 +345,7 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                         />
 
                         <StoriesPrivacySection />
+                        <HiddenSpaceEntry />
                         <BlockedUsersSection />
                       </div>
                     )}
