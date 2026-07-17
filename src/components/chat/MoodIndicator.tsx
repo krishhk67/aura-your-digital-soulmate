@@ -64,36 +64,59 @@ export function MoodIndicator({ messages, currentUserId, onMoodChange }: Props) 
     }
   };
 
+  const stop = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
+  };
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    analyze();
+  };
+
   if (!mood) {
     return (
-      <button
-        onClick={analyze}
-        disabled={loading}
-        className="inline-flex items-center gap-1 px-2 py-[2px] rounded-full text-[10px] border border-glass-border bg-background/60 text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors disabled:opacity-60"
+      <motion.span
+        role="button"
+        tabIndex={0}
+        aria-disabled={loading}
+        whileTap={{ scale: 0.97 }}
+        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        onPointerDown={stop}
+        onMouseDown={stop}
+        onClick={handleClick}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); e.preventDefault(); analyze(); } }}
+        className="inline-flex items-center gap-1 px-2 py-[2px] rounded-full text-[10px] border border-glass-border bg-background/60 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:shadow-[0_0_12px_-4px_hsl(var(--primary)/0.6)] transition-all cursor-pointer select-none aria-disabled:opacity-60"
         title="Analyze chat mood"
       >
         {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Smile className="h-3 w-3" />}
         {loading ? "Analyzing…" : "Mood"}
-      </button>
+      </motion.span>
     );
   }
 
   const meta = MOOD_META[mood];
   return (
     <AnimatePresence>
-      <motion.button
+      <motion.span
         key={mood}
-        onClick={analyze}
-        disabled={loading}
+        role="button"
+        tabIndex={0}
+        aria-disabled={loading}
         initial={{ opacity: 0, y: -4, scale: 0.9 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
-        className="inline-flex items-center gap-1 px-1.5 py-[2px] rounded-full text-[10px] border border-glass-border bg-background/60 hover:border-primary/40 transition-colors disabled:opacity-60"
+        whileTap={{ scale: 0.97 }}
+        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        onPointerDown={stop}
+        onMouseDown={stop}
+        onClick={handleClick}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); e.preventDefault(); analyze(); } }}
+        className="inline-flex items-center gap-1 px-1.5 py-[2px] rounded-full text-[10px] border border-glass-border bg-background/60 hover:border-primary/40 hover:shadow-[0_0_12px_-4px_hsl(var(--primary)/0.6)] transition-all cursor-pointer select-none aria-disabled:opacity-60"
         title={`Mood: ${meta.label} — tap to re-analyze`}
       >
         {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <span>{meta.emoji}</span>}
         <span className="text-muted-foreground">{meta.label}</span>
-      </motion.button>
+      </motion.span>
     </AnimatePresence>
   );
 }
