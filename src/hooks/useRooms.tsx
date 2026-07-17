@@ -164,7 +164,7 @@ export function useRoomMessages(roomId: string | null) {
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [roomId]);
+  }, [roomId, msgsChanId]);
 
   return { messages, loading };
 }
