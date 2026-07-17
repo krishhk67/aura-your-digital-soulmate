@@ -221,12 +221,72 @@ export function GroupInfoSheet({ open, onClose, chat, onChatRemoved }: Props) {
     onClose();
   };
 
+  const setPermission = async (key: PermissionKey, value: PermissionScope) => {
+    if (!chat) return;
+    setSavingPerm(key);
+    const rpc = supabase.rpc as unknown as (
+      fn: "set_chat_permission",
+      args: { _chat_id: string; _key: string; _value: string },
+    ) => Promise<{ error: { message: string } | null }>;
+    const { error } = await rpc("set_chat_permission", { _chat_id: chat.id, _key: key, _value: value });
+    setSavingPerm(null);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Permission updated");
+  };
+
+  const rotateInvite = async () => {
+    if (!chat) return;
+    setBusy(true);
+    const rpc = supabase.rpc as unknown as (fn: "rotate_chat_invite", args: { _chat_id: string }) =>
+      Promise<{ data: string | null; error: { message: string } | null }>;
+    const { error } = await rpc("rotate_chat_invite", { _chat_id: chat.id });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Invite link reset");
+  };
+
+  const toggleInviteEnabled = async (enabled: boolean) => {
+    if (!chat) return;
+    const rpc = supabase.rpc as unknown as (fn: "set_chat_invite_enabled", args: { _chat_id: string; _enabled: boolean }) =>
+      Promise<{ error: { message: string } | null }>;
+    const { error } = await rpc("set_chat_invite_enabled", { _chat_id: chat.id, _enabled: enabled });
+    if (error) { toast.error(error.message); return; }
+    toast.success(enabled ? "Invite link enabled" : "Invite link disabled");
+  };
+
+  const copyInvite = async () => {
+    if (!inviteUrl) return;
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      toast.success("Invite link copied");
+    } catch { toast.error("Could not copy"); }
+  };
+
+  const shareInvite = async () => {
+    if (!inviteUrl) return;
+    const nav = navigator as Navigator & { share?: (data: ShareData) => Promise<void> };
+    if (nav.share) {
+      try { await nav.share({ title: chat?.name ?? "Join group", text: `Join ${chat?.name ?? "this group"} on Aurix`, url: inviteUrl }); return; }
+      catch { /* user cancelled */ }
+    }
+    void copyInvite();
+  };
+
+  const clearForMe = async () => {
+    if (!chat || !user) return;
+    const { error } = await clearChatForMe(chat.id, user.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Chat cleared");
+  };
+
   const tabs: { id: Tab; label: string }[] = [
     { id: "info", label: "Info" },
     { id: "members", label: `Members (${members.length})` },
     { id: "media", label: "Media" },
+    { id: "permissions", label: "Permissions" },
     { id: "settings", label: "Settings" },
   ];
+
 
   return (
     <AnimatePresence>
