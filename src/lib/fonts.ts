@@ -10,9 +10,12 @@ export type FontCategory =
   | "Professional"
   | "Luxury"
   | "Gaming"
+  | "Display"
+  | "Cursive"
   | "Monospace"
   | "Classic"
   | "Serif";
+
 
 export interface FontDef {
   id: string;
