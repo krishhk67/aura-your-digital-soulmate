@@ -7,8 +7,8 @@ import { Sparkles } from "lucide-react";
 export const Route = createFileRoute("/chat")({
   head: () => ({
     meta: [
-      { title: "Chat — Aura" },
-      { name: "description", content: "Your Aura conversations" },
+      { title: "Chat — Aurix" },
+      { name: "description", content: "Your Aurix conversations" },
     ],
   }),
   component: ChatPage,
