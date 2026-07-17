@@ -190,7 +190,7 @@ export function useSendStoryMessage() {
       sender_id: user.id,
       content,
       message_type: kind,
-      metadata: metadata as unknown as Record<string, unknown>,
+      metadata: metadata as unknown as never,
     });
     return { error: error ? new Error(error.message) : null, chatId };
   }, [user]);
