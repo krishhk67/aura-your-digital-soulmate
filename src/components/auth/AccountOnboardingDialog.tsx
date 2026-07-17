@@ -48,14 +48,21 @@ export function AccountOnboardingDialog() {
       const hasPassword = !!p?.password_configured;
       const missUser = !hasUsername;
       const missPass = !hasPassword;
+      // Session-scoped skip: if the user tapped "Set up later" for password
+      // this session, don't nag again until next login. Username is still
+      // required (can't be skipped) since it's how people find them.
+      const skipKey = `aurix:pw-skip:${user.id}`;
+      const skippedPassword = sessionStorage.getItem(skipKey) === "1";
+      const showForPass = missPass && !skippedPassword;
       setNeedsUsername(missUser);
       setNeedsPassword(missPass);
-      setOpen(missUser || missPass);
+      setOpen(missUser || showForPass);
     })();
     return () => {
       cancelled = true;
     };
   }, [user]);
+
 
   // Live username availability check
   useEffect(() => {
