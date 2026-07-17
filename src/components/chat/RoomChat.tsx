@@ -158,7 +158,7 @@ function RoomMsgBody({ m }: { m: RoomMessageRow }) {
     return <video src={url} controls className="rounded-xl max-h-72" />;
   }
   if (m.message_type === "voice" && url) {
-    return <AudioMessage url={url} />;
+    return <AudioMessage url={url} durationHintMs={Number(m.content) || undefined} />;
   }
   return <div className="text-sm whitespace-pre-wrap break-words">{m.content}</div>;
 }
