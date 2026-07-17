@@ -248,14 +248,31 @@ export function RoomChat({ roomId, onBack }: Props) {
 
 /* ─── Message row with swipe-to-reply ─── */
 function MessageRow({
-  m, mine, grouped, replyMsg, onReply,
+  m, mine, grouped, replyMsg, onReply, reactions, currentUserId, onToggleReaction, onLongPress,
 }: {
   m: RoomMessageRow;
   mine: boolean;
   grouped: boolean;
   replyMsg: RoomMessageRow | null;
   onReply: () => void;
+  reactions: ReactionRow[];
+  currentUserId: string | undefined;
+  onToggleReaction: (emoji: string) => void;
+  onLongPress: (rect: DOMRect) => void;
 }) {
+  const longPressTimer = useRef<number | null>(null);
+  const startLongPress = (e: React.PointerEvent) => {
+    const target = e.currentTarget as Element;
+    if (longPressTimer.current) window.clearTimeout(longPressTimer.current);
+    longPressTimer.current = window.setTimeout(() => {
+      const rect = target.getBoundingClientRect();
+      onLongPress(rect);
+      try { navigator.vibrate?.(10); } catch { /* noop */ }
+    }, 380);
+  };
+  const cancelLongPress = () => {
+    if (longPressTimer.current) { window.clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+  };
   const x = useMotionValue(0);
   // Reply indicator opacity fades in as user swipes left
   const indicatorOpacity = useTransform(x, [-80, -20, 0], [1, 0, 0]);
