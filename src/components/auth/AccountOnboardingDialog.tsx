@@ -39,16 +39,15 @@ export function AccountOnboardingDialog() {
     (async () => {
       const { data: prof } = await supabase
         .from("profiles")
-        .select("username")
+        .select("username, password_configured")
         .eq("id", user.id)
         .maybeSingle();
       if (cancelled) return;
-      const hasUsername = !!(prof as { username?: string | null } | null)?.username;
-      const hasPasswordIdentity = (user.identities ?? []).some(
-        (i) => i.provider === "email",
-      );
+      const p = prof as { username?: string | null; password_configured?: boolean | null } | null;
+      const hasUsername = !!p?.username;
+      const hasPassword = !!p?.password_configured;
       const missUser = !hasUsername;
-      const missPass = !hasPasswordIdentity;
+      const missPass = !hasPassword;
       setNeedsUsername(missUser);
       setNeedsPassword(missPass);
       setOpen(missUser || missPass);
@@ -121,8 +120,11 @@ export function AccountOnboardingDialog() {
       if (needsPassword) {
         const { error } = await supabase.auth.updateUser({ password });
         if (error) throw new Error(error.message);
-        // Force the auth client to pull the freshest user (with the new
-        // email identity attached) so downstream screens see it.
+        // Persist the "password configured" flag so we never ask again.
+        const markRpc = supabase.rpc as unknown as (
+          fn: "mark_password_configured",
+        ) => Promise<{ error: { message: string } | null }>;
+        await markRpc("mark_password_configured");
         await supabase.auth.refreshSession().catch(() => {});
       }
       // Success — mark complete BEFORE closing so the user-effect
