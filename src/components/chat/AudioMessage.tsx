@@ -160,7 +160,6 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
       lineWidth: number,
       offset: number,
     ) => {
-      const dt = Math.min(64, t - last);
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
       const mid = h / 2;
