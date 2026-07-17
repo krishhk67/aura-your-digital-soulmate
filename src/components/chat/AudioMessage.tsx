@@ -17,7 +17,10 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
   const rafRef = useRef<number | null>(null);
   const phaseRef = useRef(0);
   const progressRef = useRef(0);
+  const progressSecondsRef = useRef(0);
   const playingRef = useRef(false);
+  const durationRef = useRef(0);
+  const draggingRef = useRef(false);
 
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -40,7 +43,13 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
       if (isFinite(d) && d > 0) setDuration(d);
       else if (durationHintMs && durationHintMs > 0) setDuration(durationHintMs / 1000);
     };
-    const onTime = () => { if (!dragging) setProgress(a.currentTime); };
+    const onTime = () => {
+      if (draggingRef.current) return;
+      const nextProgress = a.currentTime;
+      progressSecondsRef.current = nextProgress;
+      progressRef.current = durationRef.current ? nextProgress / durationRef.current : 0;
+      setProgress(nextProgress);
+    };
     const onLoad = () => {
       // MediaRecorder webm often reports Infinity for duration. Trigger the seek trick to force the browser to compute it.
       if (!isFinite(a.duration) || a.duration === 0) {
@@ -59,7 +68,14 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
         applyDuration(a.duration);
       }
     };
-    const onEnd = () => { setPlaying(false); playingRef.current = false; setProgress(0); progressRef.current = 0; };
+    const onEnd = () => {
+      setPlaying(false);
+      playingRef.current = false;
+      try { a.currentTime = 0; } catch {}
+      setProgress(0);
+      progressSecondsRef.current = 0;
+      progressRef.current = 0;
+    };
     const onPlay = () => { setPlaying(true); playingRef.current = true; };
     const onPause = () => { setPlaying(false); playingRef.current = false; };
     a.addEventListener("timeupdate", onTime);
@@ -78,10 +94,20 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
       a.removeEventListener("play", onPlay);
       a.removeEventListener("pause", onPause);
     };
-  }, [dragging, durationHintMs, url]);
+  }, [durationHintMs, url]);
 
   useEffect(() => {
-    progressRef.current = duration ? progress / duration : 0;
+    durationRef.current = duration;
+    progressRef.current = duration ? progressSecondsRef.current / duration : 0;
+  }, [duration]);
+
+  useEffect(() => {
+    draggingRef.current = dragging;
+  }, [dragging]);
+
+  useEffect(() => {
+    progressSecondsRef.current = progress;
+    progressRef.current = durationRef.current ? progress / durationRef.current : 0;
   }, [progress, duration]);
 
   // Canvas render loop — liquid dual-wave visualization
@@ -92,6 +118,7 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
     if (!ctx) return;
 
     let lastT = performance.now();
+    let lastTimeLabelT = 0;
 
     const resize = () => {
       const parent = canvas.parentElement;
@@ -117,16 +144,30 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
       const dt = Math.min(64, t - lastT);
       lastT = t;
 
-      // Advance phase only while playing for the flowing motion; keep gentle idle drift.
-      const speed = playingRef.current ? 0.0035 : 0.0006;
+      // Animation clock is intentionally independent from audio currentTime.
+      // The waves stay alive during idle, playback, pause, seek, and resume.
+      const speed = playingRef.current ? 0.0024 : 0.0009;
       phaseRef.current += dt * speed;
+
+      const audio = audioRef.current;
+      const totalDuration = durationRef.current;
+      if (audio && !draggingRef.current && totalDuration > 0) {
+        const nextProgress = Math.max(0, Math.min(totalDuration, audio.currentTime || 0));
+        progressSecondsRef.current = nextProgress;
+        progressRef.current = nextProgress / totalDuration;
+
+        if (t - lastTimeLabelT > 120) {
+          lastTimeLabelT = t;
+          setProgress((prev) => (Math.abs(prev - nextProgress) > 0.035 ? nextProgress : prev));
+        }
+      }
 
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
       ctx.clearRect(0, 0, w, h);
 
       const midY = h / 2;
-      const progress = progressRef.current;
+      const progress = Math.max(0, Math.min(1, progressRef.current));
       const playedX = progress * w;
 
       // Dual liquid waves — synchronized primary + counter-phase secondary
@@ -179,7 +220,7 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
       }
 
       // Glowing progress dot pinned to the primary wave, with gentle pulse
-      if (duration > 0) {
+      if (durationRef.current > 0) {
         const y = waveY(progress, 0);
         const pulse = 1 + Math.sin(t * 0.006) * 0.18;
         ctx.save();
@@ -204,7 +245,7 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       ro.disconnect();
     };
-  }, [mine, duration]);
+  }, [mine]);
 
   const toggle = () => {
     const a = audioRef.current;
@@ -220,11 +261,15 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
     const rect = el.getBoundingClientRect();
     const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     a.currentTime = pct * duration;
-    setProgress(pct * duration);
+    const nextProgress = pct * duration;
+    progressSecondsRef.current = nextProgress;
+    progressRef.current = pct;
+    setProgress(nextProgress);
   }, [duration]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    draggingRef.current = true;
     setDragging(true);
     seekFromEvent(e.clientX);
   };
@@ -233,6 +278,7 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
     seekFromEvent(e.clientX);
   };
   const onPointerUp = (e: React.PointerEvent) => {
+    draggingRef.current = false;
     setDragging(false);
     try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
   };
