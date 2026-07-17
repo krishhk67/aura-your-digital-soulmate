@@ -101,8 +101,15 @@ export function AudioMessage({ url, mine }: Props) {
       const progress = progressRef.current;
       const playedX = progress * w;
 
-      // Two overlaid sine waves for organic water feel
-      const drawWave = (opts: { color: string; amp: number; freq: number; phaseOffset: number; alpha: number; lineWidth: number; clipLeft?: number; clipRight?: number }) => {
+      // Single elegant liquid wave
+      const mutedColor = mine ? "rgba(255,255,255,0.32)" : "rgba(148,148,160,0.5)";
+
+      const waveY = (nx: number) =>
+        midY +
+        Math.sin(nx * 6.2 + phaseRef.current * 2) * (h * 0.22) +
+        Math.sin(nx * 11.4 - phaseRef.current * 1.2) * (h * 0.07);
+
+      const drawWave = (opts: { stroke: string | CanvasGradient; alpha: number; lineWidth: number; clipLeft?: number; clipRight?: number; shadow?: string }) => {
         ctx.save();
         if (opts.clipLeft !== undefined || opts.clipRight !== undefined) {
           ctx.beginPath();
@@ -110,54 +117,47 @@ export function AudioMessage({ url, mine }: Props) {
           ctx.clip();
         }
         ctx.beginPath();
-        const step = 2;
-        for (let x = 0; x <= w; x += step) {
-          const nx = x / w;
-          // Combined sines create a rippling, non-repeating look while remaining loop-friendly
-          const y =
-            midY +
-            Math.sin(nx * opts.freq + phaseRef.current * 2 + opts.phaseOffset) * opts.amp +
-            Math.sin(nx * (opts.freq * 1.9) - phaseRef.current * 1.3 + opts.phaseOffset * 0.7) * opts.amp * 0.35;
+        for (let x = 0; x <= w; x += 2) {
+          const y = waveY(x / w);
           if (x === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
         ctx.globalAlpha = opts.alpha;
-        ctx.strokeStyle = opts.color;
+        ctx.strokeStyle = opts.stroke;
         ctx.lineWidth = opts.lineWidth;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
+        if (opts.shadow) { ctx.shadowColor = opts.shadow; ctx.shadowBlur = 6; }
         ctx.stroke();
         ctx.restore();
       };
 
-      // Base (unplayed) muted wave — glow layer + main line
-      const mutedColor = mine ? "rgba(255,255,255,0.35)" : "rgba(160,160,170,0.55)";
-      const mutedGlow = mine ? "rgba(255,255,255,0.15)" : "rgba(140,140,150,0.25)";
+      // Unplayed portion — muted gray, clipped from the playhead onward
+      drawWave({ stroke: mutedColor, alpha: 1, lineWidth: 1.8, clipLeft: playedX });
 
-      drawWave({ color: mutedGlow, amp: h * 0.22, freq: 6.5, phaseOffset: 0, alpha: 1, lineWidth: 5 });
-      drawWave({ color: mutedColor, amp: h * 0.22, freq: 6.5, phaseOffset: 0, alpha: 1, lineWidth: 2 });
-      drawWave({ color: mutedColor, amp: h * 0.13, freq: 10.5, phaseOffset: 1.7, alpha: 0.55, lineWidth: 1.3 });
-
-      // Played portion — accent gradient wave, clipped to progress
+      // Played portion — accent gradient with soft glow
       if (playedX > 0.5) {
         const grad = ctx.createLinearGradient(0, 0, playedX, 0);
         grad.addColorStop(0, primary);
         grad.addColorStop(1, primaryLight);
-
-        drawWave({ color: primary, amp: h * 0.22, freq: 6.5, phaseOffset: 0, alpha: 0.35, lineWidth: 6, clipRight: playedX });
-        drawWave({ color: grad as unknown as string, amp: h * 0.22, freq: 6.5, phaseOffset: 0, alpha: 1, lineWidth: 2.2, clipRight: playedX });
-        drawWave({ color: primary, amp: h * 0.13, freq: 10.5, phaseOffset: 1.7, alpha: 0.75, lineWidth: 1.4, clipRight: playedX });
+        drawWave({ stroke: grad, alpha: 1, lineWidth: 2, clipRight: playedX, shadow: primary });
       }
 
-      // Playhead — soft glowing dot
+      // Glowing progress dot pinned to the wave, with gentle pulse
       if (duration > 0) {
-        const y = midY + Math.sin(phaseRef.current * 2) * h * 0.05;
+        const y = waveY(progress);
+        const pulse = 1 + Math.sin(t * 0.006) * 0.18;
         ctx.save();
-        ctx.shadowColor = primary;
-        ctx.shadowBlur = 8;
+        ctx.globalAlpha = 0.3;
         ctx.fillStyle = primary;
         ctx.beginPath();
-        ctx.arc(playedX, y, 2.6, 0, Math.PI * 2);
+        ctx.arc(playedX, y, 6.5 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.shadowColor = primary;
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(playedX, y, 3.2, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       }
@@ -249,8 +249,8 @@ export function AudioMessage({ url, mine }: Props) {
         >
           <canvas ref={canvasRef} className="block w-full h-full" />
         </div>
-        <span className={cn("text-[10px] font-mono", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>
-          {playing || progress > 0 ? fmt(progress) : fmt(duration)}
+        <span className={cn("text-[10px] font-mono tabular-nums", mine ? "text-primary-foreground/70" : "text-muted-foreground")}>
+          {fmt(progress)} / {fmt(duration)}
         </span>
       </div>
     </div>
