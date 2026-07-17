@@ -25,7 +25,8 @@ export function AurixLoader() {
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
+      data-aurix-loader
+      initial={false}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0, scale: 1.04, filter: "blur(6px)" }}
       transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}

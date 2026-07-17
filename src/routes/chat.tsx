@@ -27,7 +27,7 @@ function ChatPage() {
 
   return (
     <>
-      <AnimatePresence>{loading && <AurixLoader key="loader" />}</AnimatePresence>
+      <AnimatePresence>{(loading || !user) && <AurixLoader key="loader" />}</AnimatePresence>
       {!loading && user ? <ChatLayout /> : null}
     </>
   );
