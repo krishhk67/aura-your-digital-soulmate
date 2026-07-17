@@ -141,6 +141,7 @@ function ChatLayoutInner() {
       </div>
       <CallOverlay />
       <HiddenSpaceOverlay />
+      <AccountOnboardingDialog />
     </CallProvider>
   );
 }
