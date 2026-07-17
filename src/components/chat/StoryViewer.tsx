@@ -8,7 +8,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useDeleteStory, useReactToStory, useRecordStoryView, useSendStoryMessage, useStoryAudience, type StoryGroup } from "@/hooks/useStories";
 import { formatDistanceToNow } from "date-fns";
 
-const REACTIONS = ["❤️", "😂", "😍", "😮", "🔥", "👏", "😭", "👍", "✨"];
 const IMAGE_DURATION = 5000;
 
 interface Props {
