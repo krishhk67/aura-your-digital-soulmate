@@ -3,19 +3,33 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Image as ImageIcon, Camera, Pencil, Check, UserMinus, Crown, Shield,
   UserPlus, LogOut, Trash2, Search, ArrowRightLeft, MessageSquare, User as UserIcon, Loader2,
+  Link2, Copy, RefreshCw, Share2, QrCode, Pin, BellOff, Eraser, Ban, Lock, Users, MessageCircle, Image as ImgIcon, Mic, Info as InfoIcon, PinIcon,
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSearchUsers } from "@/hooks/useRealtimeChat";
+import { useChatMemberState, clearChatForMe } from "@/hooks/useChatActions";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import type { ChatRow, ProfileRow } from "@/hooks/useRealtimeChat";
 import { ConfirmDialog } from "./ConfirmDialog";
 
+type PermissionKey = "send_messages" | "send_media" | "send_voice" | "add_members" | "edit_info" | "pin_messages";
+type PermissionScope = "everyone" | "admins" | "owner";
+type PermissionsMap = Partial<Record<PermissionKey, PermissionScope>>;
+
+interface ChatWithExtras extends ChatRow {
+  description?: string | null;
+  invite_code?: string | null;
+  invite_enabled?: boolean | null;
+  permissions?: PermissionsMap | null;
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
-  chat: (ChatRow & { description?: string | null }) | null;
+  chat: ChatWithExtras | null;
   onChatRemoved?: () => void;
 }
 
@@ -26,7 +40,8 @@ interface MemberRow {
   profile: ProfileRow | null;
 }
 
-type Tab = "info" | "members" | "media" | "settings";
+type Tab = "info" | "members" | "media" | "permissions" | "settings";
+
 
 export function GroupInfoSheet({ open, onClose, chat, onChatRemoved }: Props) {
   const { user } = useAuth();
