@@ -146,7 +146,8 @@ export function GroupInfoSheet({ open, onClose, chat, onChatRemoved }: Props) {
     setSavingAvatar(true);
     try {
       const ext = (file.name.split(".").pop() ?? "jpg").toLowerCase();
-      const path = `group-${chat.id}-${Date.now()}.${ext}`;
+      // Path MUST start with auth.uid() to satisfy the avatars bucket RLS policy.
+      const path = `${user.id}/group-${chat.id}-${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { contentType: file.type, upsert: true });
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
@@ -154,7 +155,9 @@ export function GroupInfoSheet({ open, onClose, chat, onChatRemoved }: Props) {
       if (error) throw error;
       toast.success("Group photo updated");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Upload failed");
+      const msg = e instanceof Error ? e.message : "Upload failed";
+      const denied = /row-level security|permission denied|not allowed|unauthorized/i.test(msg);
+      toast.error(denied ? "You don't have permission to change this group's profile picture." : msg);
     } finally {
       setSavingAvatar(false);
     }
