@@ -345,7 +345,13 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
             const isVideo = msg.message_type === "video" && !!msg.media_url;
             const isAudio = msg.message_type === "audio" && !!msg.media_url;
             const isFile = msg.message_type === "file" && !!msg.media_url;
+            const isStoryReply = msg.message_type === "story_reply";
+            const isStoryReaction = msg.message_type === "story_reaction";
+            const isStory = isStoryReply || isStoryReaction;
             const isMedia = isImage || isVideo;
+            const storyMeta = isStory
+              ? (msg.metadata as unknown as import("@/hooks/useStories").StoryMessageMeta | null)
+              : null;
 
             const bubblePad = isMedia
               ? "p-1 overflow-hidden"
@@ -353,7 +359,10 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
               ? "px-2 py-1"
               : isFile
               ? "px-2 py-1.5"
+              : isStory
+              ? "px-2 py-1.5"
               : "px-2.5 py-1";
+
 
             const tailPrev = groupedWithPrev ? (isMe ? "rounded-tr-[6px]" : "rounded-tl-[6px]") : "";
             const tailNext = groupedWithNext ? (isMe ? "rounded-br-[10px]" : "rounded-bl-[10px]") : (isMe ? "rounded-br-[6px]" : "rounded-bl-[6px]");
