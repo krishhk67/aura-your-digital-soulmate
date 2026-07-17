@@ -143,8 +143,11 @@ export type Database = {
           description: string | null
           disappear_seconds: number | null
           id: string
+          invite_code: string | null
+          invite_enabled: boolean
           is_group: boolean | null
           name: string | null
+          permissions: Json
           updated_at: string | null
         }
         Insert: {
@@ -154,8 +157,11 @@ export type Database = {
           description?: string | null
           disappear_seconds?: number | null
           id?: string
+          invite_code?: string | null
+          invite_enabled?: boolean
           is_group?: boolean | null
           name?: string | null
+          permissions?: Json
           updated_at?: string | null
         }
         Update: {
@@ -165,8 +171,11 @@ export type Database = {
           description?: string | null
           disappear_seconds?: number | null
           id?: string
+          invite_code?: string | null
+          invite_enabled?: boolean
           is_group?: boolean | null
           name?: string | null
+          permissions?: Json
           updated_at?: string | null
         }
         Relationships: []
@@ -923,6 +932,10 @@ export type Database = {
         Args: { _author: string; _viewer: string }
         Returns: boolean
       }
+      chat_permission_ok: {
+        Args: { _chat_id: string; _key: string; _user_id: string }
+        Returns: boolean
+      }
       cleanup_expired_messages: { Args: never; Returns: undefined }
       delete_chat: { Args: { _chat_id: string }; Returns: undefined }
       get_or_create_direct_chat: {
@@ -941,14 +954,35 @@ export type Database = {
         Args: { _room: string; _user: string }
         Returns: boolean
       }
+      join_chat_by_invite: { Args: { _invite_code: string }; Returns: string }
       join_room: {
         Args: { _invite_code?: string; _room_id: string }
         Returns: string
       }
       join_room_by_code: { Args: { _invite_code: string }; Returns: string }
+      preview_chat_invite: {
+        Args: { _invite_code: string }
+        Returns: {
+          already_member: boolean
+          avatar_url: string
+          chat_id: string
+          description: string
+          member_count: number
+          name: string
+        }[]
+      }
       room_role: { Args: { _room: string; _user: string }; Returns: string }
+      rotate_chat_invite: { Args: { _chat_id: string }; Returns: string }
       set_chat_hidden: {
         Args: { _chat_id: string; _hidden: boolean }
+        Returns: undefined
+      }
+      set_chat_invite_enabled: {
+        Args: { _chat_id: string; _enabled: boolean }
+        Returns: undefined
+      }
+      set_chat_permission: {
+        Args: { _chat_id: string; _key: string; _value: string }
         Returns: undefined
       }
       setup_hidden_space: {
