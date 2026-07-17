@@ -184,7 +184,7 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
         </div>
 
         {/* Search */}
-        <div className="relative mb-3">
+        <div className="relative mb-2">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
@@ -197,7 +197,7 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
 
         {/* Filter chips */}
         <div className="-mx-5 px-5 overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-2 pb-1 pr-2 w-max">
+          <div className="flex items-center gap-1.5 py-1.5 pr-2 w-max">
             {visibleFilters.map((f) => {
               const selected = activeFilter === f.key;
               const badge = counts[f.key] ?? 0;
@@ -205,21 +205,23 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
               return (
                 <motion.button
                   key={f.key}
-                  whileTap={{ scale: 0.97 }}
+                  whileTap={{ scale: 0.96 }}
                   onClick={() => setActiveFilter(f.key)}
                   className={cn(
-                    "relative flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-all duration-200",
+                    "relative flex items-center gap-1 h-[26px] px-2.5 rounded-full text-[12.5px] font-medium whitespace-nowrap transition-colors duration-200",
+                    // extend tap target to ~44px without altering visual size
+                    "before:content-[''] before:absolute before:inset-x-0 before:-inset-y-[9px]",
                     selected
-                      ? "bg-primary text-primary-foreground shadow-[0_0_16px_var(--neon-glow)] border border-primary"
-                      : "bg-transparent text-muted-foreground border border-border hover:text-foreground hover:border-primary/40"
+                      ? "bg-primary text-primary-foreground border border-primary/80 shadow-[0_0_8px_-1px_var(--neon-glow),inset_0_1px_0_0_rgb(255_255_255_/_0.15),inset_0_-1px_2px_0_rgb(0_0_0_/_0.25)]"
+                      : "bg-transparent text-muted-foreground/80 border border-border/70 hover:text-foreground hover:bg-secondary/40"
                   )}
                 >
-                  <Icon className="h-3.5 w-3.5" />
+                  <Icon className="h-4 w-4" strokeWidth={2} />
                   <span>{f.label}</span>
                   {badge > 0 && f.key !== "all" && (
                     <span className={cn(
-                      "ml-0.5 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-semibold flex items-center justify-center",
-                      selected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary/20 text-neon"
+                      "ml-0.5 min-w-[15px] h-[15px] px-[3px] rounded-full text-[9.5px] font-semibold leading-none flex items-center justify-center",
+                      selected ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary/15 text-neon"
                     )}>
                       {badge > 99 ? "99+" : badge}
                     </span>
