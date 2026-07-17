@@ -132,6 +132,16 @@ function ChatLayoutInner() {
         <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       </div>
       <CallOverlay />
+      <HiddenSpaceOverlay />
     </CallProvider>
+  );
+}
+
+function HiddenSpaceOverlay() {
+  const hs = useHiddenSpace();
+  return (
+    <AnimatePresence>
+      {hs.unlocked && <HiddenSpaceView key="hs" onClose={() => hs.lock()} />}
+    </AnimatePresence>
   );
 }
