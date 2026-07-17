@@ -82,8 +82,11 @@ export function useMyChats(opts?: { hiddenOnly?: boolean }) {
       .eq("blocker_id", user.id);
     const blockedIds = new Set((blockedRows ?? []).map(b => b.blocked_id));
 
-    const memberMap = new Map(memberships.map(m => [m.chat_id, m]));
-    const chatIds = memberships.map(m => m.chat_id);
+    // Filter memberships by hidden mode
+    const filteredMemberships = memberships.filter(m => hiddenOnly ? m.is_hidden : !m.is_hidden);
+    if (!filteredMemberships.length) { setChats([]); setLoading(false); return; }
+    const memberMap = new Map(filteredMemberships.map(m => [m.chat_id, m]));
+    const chatIds = filteredMemberships.map(m => m.chat_id);
 
     const { data: chatRows } = await supabase
       .from("chats")
