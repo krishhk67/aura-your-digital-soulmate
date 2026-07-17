@@ -480,14 +480,19 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    font-family: var(--font-body);
+    font-family: var(--app-font, var(--font-body));
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: font-family 250ms ease;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-display);
+  /* Typography changes cascade automatically — components must inherit. */
+  h1, h2, h3, h4, h5, h6, p, span, button, input, textarea, select, label, a, li {
+    font-family: inherit;
   }
+
+  /* Headings inherit the user-selected app font. The Tailwind `font-display`
+     utility still overrides where a designer explicitly wants the display face. */
 }
 
 @layer components {
