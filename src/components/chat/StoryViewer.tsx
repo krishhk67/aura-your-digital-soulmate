@@ -39,6 +39,7 @@ export function StoryViewer({ open, groups, startGroupIndex, onClose }: Props) {
   const del = useDeleteStory();
   const createChat = useCreateChat();
   const sendMessage = useSendMessage();
+  const sendStoryMessage = useSendStoryMessage();
 
   useEffect(() => { if (open) { setGroupIdx(startGroupIndex); setStoryIdx(0); } }, [open, startGroupIndex]);
 
