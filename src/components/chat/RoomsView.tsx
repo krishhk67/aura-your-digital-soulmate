@@ -219,7 +219,7 @@ export function RoomsView() {
       </div>
 
       {/* CONTENT */}
-      <div className="relative z-10 flex-1 overflow-y-auto px-4 pb-6 pt-1 space-y-5">
+      <div className="relative z-10 flex-1 overflow-y-auto px-4 pb-6 pt-3 space-y-5">
         {loading && <SkeletonList />}
 
         {!loading && filtered.length === 0 && (
