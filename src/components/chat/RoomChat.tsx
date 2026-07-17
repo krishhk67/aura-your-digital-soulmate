@@ -140,7 +140,7 @@ export function RoomChat({ roomId, onBack }: Props) {
 
       {/* Messages */}
       <ScrollingContext.Provider value={scrolling}>
-      <div onScroll={onScroll} className="flex-1 overflow-y-auto px-2.5 py-2 space-y-0.5 overscroll-contain">
+      <div onScroll={onScroll} className="flex-1 overflow-y-auto px-2.5 py-2 space-y-0 overscroll-contain">
 
         {loading && <div className="text-center text-xs text-muted-foreground py-4">Loading…</div>}
         {!loading && messages.length === 0 && (
