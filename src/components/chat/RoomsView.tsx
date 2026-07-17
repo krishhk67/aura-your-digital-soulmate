@@ -100,8 +100,14 @@ export function RoomsView() {
       <AmbientBackdrop />
 
       {/* HEADER */}
-      <div className="relative z-10 px-5 pt-[env(safe-area-inset-top,12px)] pt-4 pb-3">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+      <div
+        className="relative z-10 px-5 pb-5"
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 20px)" }}
+      >
+        <div
+          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3"
+          style={{ paddingRight: "env(safe-area-inset-right, 0px)" }}
+        >
           <div className="min-w-0 flex items-center gap-2.5">
             <div className="relative h-10 w-10 rounded-2xl bg-gradient-to-br from-primary/30 to-accent/20 flex items-center justify-center border border-primary/30 shadow-[0_0_24px_var(--neon-glow)]">
               <Users className="h-5 w-5 text-neon" />
@@ -109,7 +115,7 @@ export function RoomsView() {
             </div>
             <div className="min-w-0">
               <h1 className="font-display font-bold text-[22px] leading-none gradient-text">Rooms</h1>
-              <p className="text-[11px] text-muted-foreground mt-1">Communities · live right now</p>
+              <p className="text-[11px] text-muted-foreground mt-1.5">Communities · live right now</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -123,7 +129,7 @@ export function RoomsView() {
         </div>
 
         {/* SEARCH */}
-        <div className="mt-4 relative">
+        <div className="mt-6 relative">
           <motion.div
             animate={{
               boxShadow: focused
@@ -143,7 +149,7 @@ export function RoomsView() {
               className="flex-1 bg-transparent outline-none text-sm placeholder:text-muted-foreground/70"
             />
             {search && (
-              <button onClick={() => setSearch("")} className="text-xs text-muted-foreground px-2 py-0.5 rounded-full hover:bg-secondary">
+              <button onClick={() => setSearch("")} className="text-xs text-muted-foreground px-2 py-0.5 rounded-full active:bg-secondary">
                 clear
               </button>
             )}
@@ -155,7 +161,7 @@ export function RoomsView() {
           {showJoin && (
             <motion.div
               initial={{ opacity: 0, height: 0, marginTop: 0 }}
-              animate={{ opacity: 1, height: "auto", marginTop: 10 }}
+              animate={{ opacity: 1, height: "auto", marginTop: 12 }}
               exit={{ opacity: 0, height: 0, marginTop: 0 }}
               className="overflow-hidden"
             >
@@ -169,7 +175,7 @@ export function RoomsView() {
                 />
                 <button
                   onClick={joinWithCode}
-                  className="h-10 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold shadow-[0_0_18px_var(--neon-glow)]"
+                  className="h-10 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold shadow-[0_0_18px_var(--neon-glow)] active:scale-95 transition-transform"
                 >
                   Join
                 </button>
@@ -179,8 +185,8 @@ export function RoomsView() {
         </AnimatePresence>
 
         {/* FILTER CHIPS */}
-        <div className="mt-3 -mx-5 px-5 overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-2 pb-1 w-max">
+        <div className="mt-6 -mx-5 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-2 py-1 px-5 w-max">
             {FILTERS.map(f => {
               const Icon = "icon" in f ? f.icon : undefined;
               const active = filter === f.id;
@@ -188,11 +194,12 @@ export function RoomsView() {
                 <motion.button
                   key={f.id}
                   whileTap={{ scale: 0.94 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 28 }}
                   onClick={() => setFilter(f.id)}
                   className={`relative h-8 px-3.5 rounded-full text-[12.5px] font-medium flex items-center gap-1.5 transition-colors ${
                     active
                       ? "text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground bg-secondary/40 backdrop-blur border border-glass-border"
+                      : "text-muted-foreground bg-secondary/40 backdrop-blur border border-glass-border"
                   }`}
                 >
                   {active && (
@@ -212,7 +219,7 @@ export function RoomsView() {
       </div>
 
       {/* CONTENT */}
-      <div className="relative z-10 flex-1 overflow-y-auto px-4 pb-6 pt-1 space-y-5">
+      <div className="relative z-10 flex-1 overflow-y-auto px-4 pb-6 pt-3 space-y-5">
         {loading && <SkeletonList />}
 
         {!loading && filtered.length === 0 && (
@@ -256,15 +263,15 @@ function GlassIconButton({
 }: { children: React.ReactNode; onClick: () => void; label: string; primary?: boolean }) {
   return (
     <motion.button
-      whileTap={{ scale: 0.9 }}
-      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.92 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
       onClick={onClick}
       aria-label={label}
       title={label}
-      className={`h-10 w-10 rounded-full flex items-center justify-center border transition-shadow ${
+      className={`h-10 w-10 rounded-full flex items-center justify-center border ${
         primary
           ? "bg-gradient-to-br from-primary to-accent text-primary-foreground border-primary/50 shadow-[0_0_22px_var(--neon-glow)]"
-          : "bg-secondary/40 backdrop-blur-xl border-glass-border text-foreground hover:shadow-[0_0_14px_hsl(var(--neon-glow)/0.35)]"
+          : "bg-secondary/40 backdrop-blur-xl border-glass-border text-foreground"
       }`}
     >
       {children}
@@ -388,7 +395,6 @@ function MemberAvatarDot({ profile, z }: { profile: { avatar_url: string | null;
   const initial = (profile.display_name ?? "?").charAt(0).toUpperCase();
   return (
     <motion.div
-      whileHover={{ scale: 1.15, zIndex: 20 }}
       style={{ zIndex: z }}
       className="h-6 w-6 rounded-full ring-2 ring-background overflow-hidden bg-gradient-to-br from-primary/40 to-accent/40 flex items-center justify-center text-[10px] font-bold text-primary-foreground"
     >
@@ -403,7 +409,7 @@ function FeaturedRoom({ room, onOpen }: { room: Room; onOpen: (r: Room) => void 
   return (
     <motion.button
       initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: "easeOut" }}
-      whileHover={{ y: -3 }} whileTap={{ scale: 0.99 }}
+      whileTap={{ scale: 0.98 }}
       onClick={() => onOpen(room)}
       className="group relative w-full text-left rounded-3xl overflow-hidden border border-glass-border bg-gradient-to-br from-secondary/60 via-secondary/30 to-secondary/50 backdrop-blur-xl p-4 pt-5 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.6)]"
     >
@@ -462,7 +468,7 @@ function FeaturedRoom({ room, onOpen }: { room: Room; onOpen: (r: Room) => void 
         <span className="text-[11px] text-muted-foreground">
           {room.is_member ? "You're in" : room.is_private ? "Private community" : "Open to everyone"}
         </span>
-        <span className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground text-[12.5px] font-semibold shadow-[0_0_20px_var(--neon-glow)] group-hover:shadow-[0_0_30px_var(--neon-glow)] transition-shadow">
+        <span className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground text-[12.5px] font-semibold shadow-[0_0_20px_var(--neon-glow)]">
           {room.is_member ? "Enter" : "Join"} <LogIn className="h-3.5 w-3.5" />
         </span>
       </div>
@@ -486,10 +492,10 @@ function RoomCard({ room, index, onOpen }: { room: Room; index: number; onOpen: 
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index, 8) * 0.04, duration: 0.35, ease: "easeOut" }}
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.985 }}
+      whileTap={{ scale: 0.98 }}
       onClick={() => onOpen(room)}
-      className="group relative w-full text-left rounded-2xl border border-glass-border bg-secondary/30 backdrop-blur-xl p-3.5 flex flex-col gap-3 overflow-hidden hover:border-primary/40 hover:shadow-[0_10px_30px_-14px_hsl(var(--neon-glow)/0.6),0_0_0_1px_hsl(var(--primary)/0.25)] transition-all"
+      className="group relative w-full text-left rounded-2xl border border-glass-border bg-secondary/30 backdrop-blur-xl p-3.5 flex flex-col gap-3 overflow-hidden"
+      style={{ WebkitTapHighlightColor: "transparent" }}
     >
       {/* per-room tint spill */}
       <span aria-hidden className="absolute -inset-8 blur-3xl opacity-70 pointer-events-none -z-10" style={{ background: `radial-gradient(circle at 20% 0%, ${tint}, transparent 60%)` }} />
@@ -536,10 +542,10 @@ function RoomCard({ room, index, onOpen }: { room: Room; index: number; onOpen: 
           </span>
         </div>
         <span
-          className={`inline-flex items-center gap-1 h-8 px-3.5 rounded-full text-[12px] font-semibold transition-all ${
+          className={`inline-flex items-center gap-1 h-8 px-3.5 rounded-full text-[12px] font-semibold ${
             room.is_member
               ? "bg-secondary/70 text-foreground border border-glass-border"
-              : "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_0_14px_var(--neon-glow)] group-hover:shadow-[0_0_22px_var(--neon-glow)]"
+              : "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-[0_0_14px_var(--neon-glow)]"
           }`}
         >
           {room.is_member ? "Enter" : "Join"}
@@ -589,7 +595,7 @@ function EmptyState({ onCreate, search, filter }: { onCreate: () => void; search
       {!filtered && (
         <button
           onClick={onCreate}
-          className="inline-flex items-center gap-2 px-5 h-11 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold text-sm shadow-[0_0_24px_var(--neon-glow)] hover:scale-[1.03] active:scale-95 transition-transform"
+          className="inline-flex items-center gap-2 px-5 h-11 rounded-full bg-gradient-to-r from-primary to-accent text-primary-foreground font-semibold text-sm shadow-[0_0_24px_var(--neon-glow)] active:scale-95 transition-transform"
         >
           <Plus className="h-4 w-4" /> Create Room
         </button>
