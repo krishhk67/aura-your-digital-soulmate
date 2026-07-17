@@ -10,6 +10,10 @@ const PHRASES = [
   "Almost ready",
 ];
 
+// Helpers: build translucent variants of the theme's primary color.
+// Tokens are stored as oklch(...) so we mix through color-mix.
+const mix = (pct: number) => `color-mix(in oklab, var(--primary) ${pct}%, transparent)`;
+
 export function AurixLoader() {
   const [i, setI] = useState(0);
   const reduce = useReducedMotion();
@@ -32,8 +36,7 @@ export function AurixLoader() {
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
-          background:
-            "radial-gradient(ellipse 60% 50% at 50% 45%, hsl(var(--primary) / 0.18), transparent 70%), radial-gradient(ellipse 40% 30% at 50% 90%, hsl(var(--neon, var(--primary)) / 0.12), transparent 70%)",
+          background: `radial-gradient(ellipse 60% 50% at 50% 45%, ${mix(22)}, transparent 70%), radial-gradient(ellipse 40% 30% at 50% 90%, ${mix(14)}, transparent 70%)`,
         }}
       />
 
@@ -49,8 +52,8 @@ export function AurixLoader() {
             return (
               <motion.span
                 key={k}
-                className="absolute rounded-full bg-white/40 blur-[1px]"
-                style={{ left: `${left}%`, top: `${top}%`, width: size, height: size }}
+                className="absolute rounded-full bg-white/40"
+                style={{ left: `${left}%`, top: `${top}%`, width: size, height: size, filter: "blur(1px)" }}
                 animate={{ y: [0, -30, 0], opacity: [0, 0.7, 0] }}
                 transition={{ duration: dur, delay, repeat: Infinity, ease: "easeInOut" }}
               />
@@ -63,19 +66,18 @@ export function AurixLoader() {
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
-        style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.6) 100%)" }}
+        style={{ background: "radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.65) 100%)" }}
       />
 
       <div className="relative flex flex-col items-center gap-10 px-6">
         {/* Logo stack */}
         <div className="relative h-32 w-32">
-          {/* Outer glow rings */}
           {!reduce && (
             <>
               <motion.div
                 className="absolute inset-0 rounded-full"
-                style={{ background: "radial-gradient(circle, hsl(var(--primary) / 0.55), transparent 65%)", filter: "blur(24px)" }}
-                animate={{ scale: [1, 1.15, 1], opacity: [0.6, 0.9, 0.6] }}
+                style={{ background: `radial-gradient(circle, ${mix(55)}, transparent 65%)`, filter: "blur(24px)" }}
+                animate={{ scale: [1, 1.15, 1], opacity: [0.6, 0.95, 0.6] }}
                 transition={{ duration: 3.4, repeat: Infinity, ease: "easeInOut" }}
               />
               <motion.div
@@ -95,26 +97,21 @@ export function AurixLoader() {
           <motion.div
             className="absolute inset-0 rounded-[28px] border border-white/10 backdrop-blur-xl"
             style={{
-              background:
-                "linear-gradient(145deg, hsl(var(--primary) / 0.35), hsl(var(--primary) / 0.05) 60%, transparent), radial-gradient(circle at 30% 25%, rgba(255,255,255,0.35), transparent 45%)",
-              boxShadow:
-                "0 30px 60px -20px hsl(var(--primary) / 0.55), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 -20px 40px rgba(0,0,0,0.4)",
+              background: `linear-gradient(145deg, ${mix(45)}, ${mix(8)} 60%, transparent), radial-gradient(circle at 30% 25%, rgba(255,255,255,0.4), transparent 45%)`,
+              boxShadow: `0 30px 60px -20px ${mix(55)}, inset 0 1px 0 rgba(255,255,255,0.28), inset 0 -20px 40px rgba(0,0,0,0.45)`,
             }}
-            animate={reduce ? {} : { y: [0, -6, 0], rotateX: [0, 6, 0], rotateY: [0, -6, 0] }}
+            animate={reduce ? {} : { y: [0, -6, 0], rotate: [0, 1.5, 0, -1.5, 0] }}
             transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
           >
-            {/* Specular highlight */}
             <div
               aria-hidden
               className="absolute inset-0 rounded-[28px] opacity-70"
               style={{
                 background:
-                  "linear-gradient(160deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.05) 30%, transparent 55%)",
+                  "linear-gradient(160deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.05) 32%, transparent 55%)",
                 mixBlendMode: "overlay",
               }}
             />
-
-            {/* Icon */}
             <div className="absolute inset-0 grid place-items-center">
               <motion.div
                 animate={reduce ? {} : { scale: [1, 1.06, 1] }}
@@ -123,7 +120,7 @@ export function AurixLoader() {
                 <MessageCircle
                   className="h-12 w-12 text-white"
                   strokeWidth={1.6}
-                  style={{ filter: "drop-shadow(0 4px 12px hsl(var(--primary) / 0.8))" }}
+                  style={{ filter: `drop-shadow(0 4px 14px ${mix(85)})` }}
                 />
               </motion.div>
             </div>
@@ -145,7 +142,7 @@ export function AurixLoader() {
               <motion.p
                 key={i}
                 initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 0.7, y: 0 }}
+                animate={{ opacity: 0.75, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
                 className="text-[13px] font-medium tracking-wide text-white/70"
@@ -161,11 +158,10 @@ export function AurixLoader() {
           <motion.div
             className="absolute inset-y-0 w-1/3 rounded-full"
             style={{
-              background:
-                "linear-gradient(90deg, transparent, hsl(var(--primary)), hsl(var(--primary) / 0.9), transparent)",
-              boxShadow: "0 0 16px hsl(var(--primary) / 0.8)",
+              background: `linear-gradient(90deg, transparent, var(--primary), ${mix(80)}, transparent)`,
+              boxShadow: `0 0 16px ${mix(80)}`,
             }}
-            animate={{ x: ["-100%", "300%"] }}
+            animate={{ x: ["-140%", "300%"] }}
             transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
           />
         </div>
