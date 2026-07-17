@@ -189,28 +189,28 @@ export function RoomsView({ onActiveRoomChange }: { onActiveRoomChange?: (active
         </AnimatePresence>
 
         {/* FILTER CHIPS */}
-        <div className="mt-6 -mx-5 overflow-x-auto no-scrollbar">
-          <div className="flex items-center gap-2 py-1 px-5 w-max">
+        <div className="mt-4 -mx-5 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-2 px-5 w-max">
             {FILTERS.map(f => {
               const Icon = "icon" in f ? f.icon : undefined;
               const active = filter === f.id;
               return (
                 <motion.button
                   key={f.id}
-                  whileTap={{ scale: 0.94 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                  whileTap={{ scale: 0.96 }}
+                  transition={{ type: "spring", stiffness: 420, damping: 28 }}
                   onClick={() => setFilter(f.id)}
-                  className={`relative h-8 px-3.5 rounded-full text-[12.5px] font-medium flex items-center gap-1.5 transition-colors ${
+                  className={`relative h-9 px-3 rounded-[14px] text-[13.5px] font-medium flex items-center gap-1.5 whitespace-nowrap transition-colors ${
                     active
                       ? "text-primary-foreground"
-                      : "text-muted-foreground bg-secondary/40 backdrop-blur border border-glass-border"
+                      : "text-muted-foreground/90 bg-secondary/35 backdrop-blur border border-glass-border/80"
                   }`}
                 >
                   {active && (
                     <motion.span
                       layoutId="chip-active-bg"
-                      transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                      className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-accent shadow-[0_0_16px_var(--neon-glow),inset_0_1px_0_hsl(var(--foreground)/0.12)]"
+                      transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                      className="absolute inset-0 rounded-[14px] bg-gradient-to-br from-primary to-accent shadow-[0_0_10px_-1px_var(--neon-glow),inset_0_1px_0_hsl(var(--foreground)/0.12)]"
                     />
                   )}
                   {Icon && <Icon className="h-3.5 w-3.5 relative" />}
@@ -221,6 +221,7 @@ export function RoomsView({ onActiveRoomChange }: { onActiveRoomChange?: (active
           </div>
         </div>
       </div>
+
 
       {/* CONTENT */}
       <div className="relative z-10 flex-1 overflow-y-auto px-4 pb-6 pt-3 space-y-5">
