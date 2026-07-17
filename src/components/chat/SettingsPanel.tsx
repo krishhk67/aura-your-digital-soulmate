@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, User, Palette, Shield, Bell, LogOut, Trash2, Camera,
-  Eye, EyeOff, Ghost, Volume2, VolumeX, Sun, Moon, Sparkles, Save, Loader2, ShieldOff
+  Eye, EyeOff, Ghost, Volume2, VolumeX, Sun, Moon, Sparkles, Save, Loader2, ShieldOff, ChevronRight
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme, THEMES, type ThemeId } from "@/hooks/useTheme";
@@ -10,6 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import type { ProfileRow } from "@/hooks/useRealtimeChat";
 import { useBlockedList, useBlockUser } from "@/hooks/useChatActions";
 import { useStoryPrivacy } from "@/hooks/useStories";
+import { useHiddenSpace } from "@/hooks/useHiddenSpace";
+import { HiddenSpaceSetupDialog } from "./HiddenSpaceSetupDialog";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 
