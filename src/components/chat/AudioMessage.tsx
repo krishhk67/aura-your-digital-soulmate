@@ -6,12 +6,15 @@ import { cn } from "@/lib/utils";
 /**
  * VoicePlayer (AudioMessage)
  *
- * Fully rebuilt UI. Reuses the existing <audio> element for playback and the
- * same props/message schema as before. Three fully independent systems:
- *   1. Wave animation loop  → canvas RAF driven by its own phase clock
- *   2. Playback progress    → derived from <audio>.currentTime via events
- *   3. Audio state          → play/pause/ended listeners
- * None of them can stop, freeze, or replace the others.
+ * Reuses the existing <audio> playback logic and props/message schema.
+ * Rendering is intentionally split into independent layers:
+ *   1. Static bubble/background
+ *   2. Decorative Wave #1 canvas — RAF loop A only
+ *   3. Decorative Wave #2 canvas — RAF loop A only
+ *   4. Playback progress overlay — RAF loop B only
+ *   5. Glowing progress indicator — RAF loop B only
+ * The audio player never redraws, replaces, pauses, or manipulates the wave
+ * canvases. It only updates time/progress refs.
  */
 interface Props {
   url: string;
@@ -22,13 +25,17 @@ interface Props {
 
 export function AudioMessage({ url, mine, durationHintMs }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const waveOneRef = useRef<HTMLCanvasElement | null>(null);
+  const waveTwoRef = useRef<HTMLCanvasElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
+  const progressFillRef = useRef<HTMLDivElement | null>(null);
+  const progressDotRef = useRef<HTMLDivElement | null>(null);
 
-  // Refs the RAF loop reads without triggering React re-renders
+  // Refs the playback RAF loop reads without triggering React re-renders.
   const playingRef = useRef(false);
   const progressRatioRef = useRef(0); // 0..1
   const durationRef = useRef(0);
+  const currentTimeRef = useRef(0);
   const draggingRef = useRef(false);
 
   const [playing, setPlaying] = useState(false);
@@ -74,6 +81,7 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
       if (draggingRef.current) return;
       const d = durationRef.current;
       const ct = a.currentTime || 0;
+      currentTimeRef.current = ct;
       progressRatioRef.current = d > 0 ? Math.min(1, ct / d) : 0;
       setCurrentTime(ct);
     };
@@ -83,6 +91,7 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
       playingRef.current = false;
       setPlaying(false);
       try { a.currentTime = 0; } catch {}
+      currentTimeRef.current = 0;
       progressRatioRef.current = 0;
       setCurrentTime(0);
     };
@@ -109,127 +118,84 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
     };
   }, [url, durationHintMs]);
 
-  // ─── 2. WAVE ANIMATION LOOP ─────────────────────────────────────
-  // Runs forever. Independent from audio state. Reads progressRatioRef so the
-  // played/unplayed colour split follows playback without ever stopping.
+  // ─── 2. LOOP A: DECORATIVE WAVE MOTION ONLY ──────────────────────
+  // Runs forever. Never reads playback state, progress, duration, or timers.
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const waveOne = waveOneRef.current;
+    const waveTwo = waveTwoRef.current;
+    if (!waveOne || !waveTwo) return;
+
+    const ctxOne = waveOne.getContext("2d");
+    const ctxTwo = waveTwo.getContext("2d");
+    if (!ctxOne || !ctxTwo) return;
 
     let raf = 0;
-    let phase = 0;
+    let phaseOne = 0;
+    let phaseTwo = 1.7;
     let last = performance.now();
 
     const resize = () => {
-      const parent = canvas.parentElement;
+      const parent = waveOne.parentElement;
       if (!parent) return;
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = parent.clientWidth;
       const h = parent.clientHeight;
-      canvas.width = w * dpr;
-      canvas.height = h * dpr;
-      canvas.style.width = w + "px";
-      canvas.style.height = h + "px";
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      for (const [canvas, ctx] of [[waveOne, ctxOne], [waveTwo, ctxTwo]] as const) {
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        canvas.style.width = w + "px";
+        canvas.style.height = h + "px";
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
     };
     resize();
     const ro = new ResizeObserver(resize);
-    if (canvas.parentElement) ro.observe(canvas.parentElement);
+    if (waveOne.parentElement) ro.observe(waveOne.parentElement);
 
-    const styles = getComputedStyle(document.documentElement);
-    const primary = `hsl(${styles.getPropertyValue("--primary").trim() || "160 84% 45%"})`;
-
-    const draw = (t: number) => {
+    const drawWave = (
+      ctx: CanvasRenderingContext2D,
+      canvas: HTMLCanvasElement,
+      phase: number,
+      alpha: number,
+      lineWidth: number,
+      offset: number,
+    ) => {
       const dt = Math.min(64, t - last);
-      last = t;
-      // Wave keeps flowing at all times — a touch faster while playing.
-      phase += dt * (playingRef.current ? 0.0022 : 0.0009);
-
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
       const mid = h / 2;
       ctx.clearRect(0, 0, w, h);
-
-      const progress = Math.max(0, Math.min(1, progressRatioRef.current));
-      const playedX = progress * w;
-
-      const yA = (nx: number) =>
-        mid +
-        Math.sin(nx * 6.2 + phase * 2.0) * (h * 0.24) +
-        Math.sin(nx * 11.4 - phase * 1.2) * (h * 0.07);
-      const yB = (nx: number) =>
-        mid +
-        Math.sin(nx * 5.4 - phase * 1.6 + 1.1) * (h * 0.17) +
-        Math.sin(nx * 9.8 + phase * 1.0 + 0.4) * (h * 0.05);
-
-      const stroke = (
-        fn: (nx: number) => number,
-        color: string | CanvasGradient,
-        lineWidth: number,
-        alpha: number,
-        clip?: { left?: number; right?: number },
-        glow?: string,
-      ) => {
-        ctx.save();
-        if (clip) {
-          const l = clip.left ?? 0;
-          const r = clip.right ?? w;
-          ctx.beginPath();
-          ctx.rect(l, 0, r - l, h);
-          ctx.clip();
-        }
-        ctx.beginPath();
-        for (let x = 0; x <= w; x += 2) {
-          const y = fn(x / w);
-          if (x === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.globalAlpha = alpha;
-        ctx.strokeStyle = color;
-        ctx.lineWidth = lineWidth;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        if (glow) { ctx.shadowColor = glow; ctx.shadowBlur = 6; }
-        ctx.stroke();
-        ctx.restore();
-      };
-
       const mutedStrong = mine ? "rgba(255,255,255,0.34)" : "rgba(150,150,164,0.55)";
-      const mutedSoft = mine ? "rgba(255,255,255,0.18)" : "rgba(150,150,164,0.3)";
+      const mutedSoft = mine ? "rgba(255,255,255,0.18)" : "rgba(150,150,164,0.30)";
 
-      // Unplayed dual wave (always visible along the full track)
-      stroke(yB, mutedSoft, 1.4, 1, { left: playedX });
-      stroke(yA, mutedStrong, 1.8, 1, { left: playedX });
-
-      // Played dual wave in accent (progress overlay)
-      if (playedX > 0.5) {
-        const grad = ctx.createLinearGradient(0, 0, playedX, 0);
-        grad.addColorStop(0, primary);
-        grad.addColorStop(1, primary);
-        stroke(yB, primary, 1.5, 0.55, { right: playedX });
-        stroke(yA, grad, 2, 1, { right: playedX }, primary);
+      ctx.save();
+      ctx.beginPath();
+      for (let x = 0; x <= w; x += 2) {
+        const nx = x / Math.max(w, 1);
+        const y =
+          mid +
+          Math.sin(nx * 6.1 + phase + offset) * (h * 0.20) +
+          Math.sin(nx * 12.4 - phase * 0.72 + offset * 0.6) * (h * 0.055);
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       }
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = lineWidth > 1.5 ? mutedStrong : mutedSoft;
+      ctx.lineWidth = lineWidth;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.stroke();
+      ctx.restore();
+    };
 
-      // Glowing playhead — sits on top, pulses gently
-      if (durationRef.current > 0) {
-        const y = yA(progress);
-        const pulse = 1 + Math.sin(t * 0.006) * 0.2;
-        ctx.save();
-        ctx.globalAlpha = 0.32;
-        ctx.fillStyle = primary;
-        ctx.beginPath();
-        ctx.arc(playedX, y, 6.5 * pulse, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-        ctx.shadowColor = primary;
-        ctx.shadowBlur = 10;
-        ctx.beginPath();
-        ctx.arc(playedX, y, 3.2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
+    const draw = (t: number) => {
+      const dt = Math.min(64, t - last);
+      last = t;
+      phaseOne += dt * 0.00145;
+      phaseTwo -= dt * 0.00105;
+
+      drawWave(ctxTwo, waveTwo, phaseTwo, 0.86, 1.35, 1.1);
+      drawWave(ctxOne, waveOne, phaseOne, 1, 1.85, 0);
 
       raf = requestAnimationFrame(draw);
     };
@@ -241,7 +207,47 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
     };
   }, [mine]);
 
-  // ─── 3. INTERACTION ─────────────────────────────────────────────
+  // ─── 3. LOOP B: PLAYBACK PROGRESS ONLY ──────────────────────────
+  // Reads currentTime/duration and updates only overlay transforms + timer.
+  // It never touches the decorative wave canvases.
+  useEffect(() => {
+    let raf = 0;
+    let lastRenderedSecond = -1;
+
+    const renderProgress = () => {
+      const fill = progressFillRef.current;
+      const dot = progressDotRef.current;
+      const track = trackRef.current;
+      const a = audioRef.current;
+
+      if (a && !draggingRef.current) {
+        const d = durationRef.current || (isFinite(a.duration) ? a.duration : 0);
+        const ct = a.currentTime || 0;
+        currentTimeRef.current = ct;
+        progressRatioRef.current = d > 0 ? Math.max(0, Math.min(1, ct / d)) : 0;
+
+        const wholeSecond = Math.floor(ct);
+        if (wholeSecond !== lastRenderedSecond) {
+          lastRenderedSecond = wholeSecond;
+          setCurrentTime(ct);
+        }
+      }
+
+      const progress = Math.max(0, Math.min(1, progressRatioRef.current));
+      if (fill) fill.style.transform = `scaleX(${progress})`;
+      if (dot && track) {
+        const x = progress * track.clientWidth;
+        dot.style.transform = `translate3d(${x}px, -50%, 0)`;
+      }
+
+      raf = requestAnimationFrame(renderProgress);
+    };
+
+    raf = requestAnimationFrame(renderProgress);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  // ─── 4. INTERACTION ─────────────────────────────────────────────
   const toggle = () => {
     const a = audioRef.current;
     if (!a) return;
@@ -258,6 +264,7 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
     const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     const nt = pct * d;
     try { a.currentTime = nt; } catch {}
+    currentTimeRef.current = nt;
     progressRatioRef.current = pct;
     setCurrentTime(nt);
   }, []);
@@ -334,9 +341,55 @@ export function AudioMessage({ url, mine, durationHintMs }: Props) {
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
-          className="relative w-full h-10 cursor-pointer touch-none select-none"
+          className="relative w-full h-10 cursor-pointer touch-none select-none overflow-hidden rounded-full"
         >
-          <canvas ref={canvasRef} className="block w-full h-full" />
+          {/* Layer 1: static voice bubble */}
+          <div
+            aria-hidden
+            className={cn(
+              "absolute inset-x-0 top-1/2 h-7 -translate-y-1/2 rounded-full border backdrop-blur-sm",
+              mine
+                ? "border-primary-foreground/15 bg-primary-foreground/8"
+                : "border-border/50 bg-background/45",
+            )}
+          />
+
+          {/* Layer 2 + 3: purely decorative waves. Audio never manipulates these. */}
+          <canvas ref={waveTwoRef} aria-hidden className="absolute inset-0 h-full w-full" />
+          <canvas ref={waveOneRef} aria-hidden className="absolute inset-0 h-full w-full" />
+
+          {/* Layer 4: independent playback overlay. No shared paths/canvases. */}
+          <div className="pointer-events-none absolute inset-x-0 top-1/2 h-7 -translate-y-1/2 overflow-hidden rounded-full">
+            <div
+              ref={progressFillRef}
+              aria-hidden
+              className={cn(
+                "h-full w-full origin-left rounded-full will-change-transform",
+                mine
+                  ? "bg-gradient-to-r from-primary-foreground/28 via-primary-foreground/18 to-primary-foreground/5"
+                  : "bg-gradient-to-r from-primary/26 via-primary/16 to-primary/4",
+              )}
+              style={{ transform: "scaleX(0)" }}
+            />
+          </div>
+
+          {/* Layer 5: independent glowing progress indicator. */}
+          <div
+            ref={progressDotRef}
+            aria-hidden
+            className={cn(
+              "pointer-events-none absolute left-0 top-1/2 h-3.5 w-3.5 rounded-full will-change-transform",
+              mine ? "bg-primary-foreground shadow-[0_0_16px_rgba(255,255,255,0.55)]" : "bg-primary shadow-[0_0_16px_hsl(var(--primary)/0.65)]",
+            )}
+            style={{ transform: "translate3d(0px, -50%, 0)" }}
+          >
+            <span
+              className={cn(
+                "absolute inset-0 rounded-full animate-ping",
+                mine ? "bg-primary-foreground/35" : "bg-primary/35",
+              )}
+            />
+          </div>
         </div>
         <span
           className={cn(
