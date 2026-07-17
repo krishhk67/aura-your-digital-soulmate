@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquare, Phone, User as UserIcon, X } from "lucide-react";
 import type { ProfileRow } from "@/hooks/useRealtimeChat";
-import { FullscreenImageViewer } from "./FullscreenImageViewer";
+import { ProfileImageViewer } from "./ProfileImageViewer";
 
 interface Props {
   open: boolean;
@@ -34,6 +34,26 @@ export function ProfilePhotoPreview({
     .charAt(0)
     .toUpperCase();
 
+  useEffect(() => {
+    if (!open) setFullscreen(false);
+  }, [open]);
+
+  useEffect(() => {
+    setFullscreen(false);
+  }, [profile?.id, avatar]);
+
+  useEffect(() => {
+    if (!open) return;
+    console.info("[Aurix ProfilePhotoPreview]", {
+      component: "ProfilePhotoPreview",
+      userId: profile?.id ?? null,
+      avatar_url: avatar,
+      profile_photo_url: null,
+      resolvedUrl: avatar,
+      heroTransitionId: heroId ?? null,
+      viewerState: fullscreen ? "fullscreen-requested" : "preview-open",
+    });
+  }, [open, fullscreen, profile?.id, avatar, heroId]);
 
   return (
     <>
@@ -143,11 +163,12 @@ export function ProfilePhotoPreview({
         )}
       </AnimatePresence>
 
-      <FullscreenImageViewer
+      <ProfileImageViewer
         open={fullscreen}
         src={avatar}
         alt={profile?.display_name ?? ""}
         heroId={heroId}
+        userId={profile?.id ?? null}
         onClose={() => setFullscreen(false)}
       />
 
