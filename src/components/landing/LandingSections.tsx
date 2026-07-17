@@ -30,7 +30,7 @@ import {
   ArrowUpRight,
   Check,
   Apple,
-  Github,
+  GitBranch,
   Monitor,
   Terminal,
   ChevronRight,
@@ -813,7 +813,7 @@ export function FooterSection() {
               aria-label="GitHub"
               className="h-9 w-9 inline-flex items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white/60 hover:text-white transition"
             >
-              <Github className="h-4 w-4" />
+              <GitBranch className="h-4 w-4" />
             </a>
             <a
               href="#"

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { MessageCircle, Github, Menu, X } from "lucide-react";
+import { MessageCircle, GitBranch, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -68,7 +68,7 @@ export function Navbar() {
             aria-label="GitHub"
             className="hidden sm:inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.03] text-white/70 hover:text-white hover:bg-white/[0.06] transition"
           >
-            <Github className="h-4 w-4" />
+            <GitBranch className="h-4 w-4" />
           </a>
           <Link to="/login" className="hidden sm:block">
             <Button variant="ghost" size="sm" className="text-white/70 hover:text-white">
