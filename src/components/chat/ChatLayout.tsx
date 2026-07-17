@@ -32,6 +32,7 @@ function ChatLayoutInner() {
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<NavTab>("chats");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [roomActive, setRoomActive] = useState(false);
   const { user } = useAuth();
 
   const handleSelectChat = useCallback((id: string) => {
@@ -52,6 +53,7 @@ function ChatLayoutInner() {
 
   // Mobile: show either chat list or chat window (not both)
   const showChatWindow = activeTab === "chats" && selectedChat;
+  const hideNav = !!showChatWindow || (activeTab === "rooms" && roomActive);
 
   return (
     <CallProvider>
@@ -78,7 +80,7 @@ function ChatLayoutInner() {
               exit={{ opacity: 0, y: -20 }}
               className="absolute inset-0"
             >
-              <RoomsView />
+              <RoomsView onActiveRoomChange={setRoomActive} />
             </motion.div>
           ) : activeTab === "stories" ? (
             <motion.div
@@ -119,13 +121,13 @@ function ChatLayoutInner() {
         </AnimatePresence>
       </div>
 
-      {/* Bottom nav - hide when chat is open */}
-      {!showChatWindow && (
+      {/* Bottom nav - hide when chat or room is open */}
+      {!hideNav && (
         <BottomNav active={activeTab} onChange={handleTabChange} />
       )}
 
       {/* Safe area spacer for bottom nav */}
-      {!showChatWindow && <div className="h-[72px]" />}
+      {!hideNav && <div className="h-[72px]" />}
 
       <NewChatDialog
         open={newChatOpen}

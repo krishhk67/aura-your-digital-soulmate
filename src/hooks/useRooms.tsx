@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import type { ProfileRow } from "./useRealtimeChat";
@@ -79,14 +79,15 @@ export function useRooms(search = "") {
 
   useEffect(() => { fetchRooms(); }, [fetchRooms]);
 
+  const chanId = useMemo(() => crypto.randomUUID(), []);
   useEffect(() => {
     if (!user) return;
-    const ch = supabase.channel("rooms-global")
+    const ch = supabase.channel(`rooms-global:${chanId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "rooms" }, () => fetchRooms())
       .on("postgres_changes", { event: "*", schema: "public", table: "room_members" }, () => fetchRooms())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [user, fetchRooms]);
+  }, [user, fetchRooms, chanId]);
 
   return { rooms, loading, refetch: fetchRooms };
 }
@@ -110,14 +111,15 @@ export function useRoom(roomId: string | null) {
 
   useEffect(() => { fetch(); }, [fetch]);
 
+  const chanId = useMemo(() => crypto.randomUUID(), []);
   useEffect(() => {
     if (!roomId) return;
-    const ch = supabase.channel(`room:${roomId}`)
+    const ch = supabase.channel(`room:${roomId}:${chanId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "rooms", filter: `id=eq.${roomId}` }, () => fetch())
       .on("postgres_changes", { event: "*", schema: "public", table: "room_members", filter: `room_id=eq.${roomId}` }, () => fetch())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [roomId, fetch]);
+  }, [roomId, fetch, chanId]);
 
   return { room, members, refetch: fetch };
 }
@@ -144,9 +146,10 @@ export function useRoomMessages(roomId: string | null) {
 
   useEffect(() => { fetchMsgs(); }, [fetchMsgs]);
 
+  const msgsChanId = useMemo(() => crypto.randomUUID(), []);
   useEffect(() => {
     if (!roomId) return;
-    const ch = supabase.channel(`room-msgs:${roomId}`)
+    const ch = supabase.channel(`room-msgs:${roomId}:${msgsChanId}`)
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "room_messages", filter: `room_id=eq.${roomId}` }, async (payload) => {
         const m = payload.new as RoomMessageRow;
         if (!cache.current[m.sender_id]) {
@@ -161,7 +164,7 @@ export function useRoomMessages(roomId: string | null) {
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [roomId]);
+  }, [roomId, msgsChanId]);
 
   return { messages, loading };
 }
