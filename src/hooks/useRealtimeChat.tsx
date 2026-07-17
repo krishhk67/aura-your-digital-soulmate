@@ -59,9 +59,10 @@ export interface ProfileRow {
 }
 
 
-export function useMyChats() {
+export function useMyChats(opts?: { hiddenOnly?: boolean }) {
   const { user } = useAuth();
-  const [chats, setChats] = useState<(ChatRow & { last_message?: MessageRow; other_user?: ProfileRow; unread_count?: number; is_pinned?: boolean; is_muted?: boolean; cleared_at?: string | null; is_blocked?: boolean })[]>([]);
+  const hiddenOnly = !!opts?.hiddenOnly;
+  const [chats, setChats] = useState<(ChatRow & { last_message?: MessageRow; other_user?: ProfileRow; unread_count?: number; is_pinned?: boolean; is_muted?: boolean; cleared_at?: string | null; is_blocked?: boolean; is_hidden?: boolean })[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchChats = useCallback(async () => {
@@ -69,7 +70,7 @@ export function useMyChats() {
     // Get chat memberships (with per-user state)
     const { data: memberships } = await supabase
       .from("chat_members")
-      .select("chat_id,is_pinned,is_muted,cleared_at")
+      .select("chat_id,is_pinned,is_muted,cleared_at,is_hidden")
       .eq("user_id", user.id);
 
     if (!memberships?.length) { setChats([]); setLoading(false); return; }
