@@ -57,7 +57,7 @@ export function FullscreenImageViewer({ open, src, alt, onClose }: Props) {
     }
   };
 
-  const dist = (t1: Touch, t2: Touch) =>
+  const dist = (t1: React.Touch, t2: React.Touch) =>
     Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
 
   const onTouchStart = (e: React.TouchEvent) => {
