@@ -329,7 +329,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                 initial={{ opacity: 0, y: 8, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                className={cn("flex", isMe ? "justify-end" : "justify-start", groupedWithPrev ? "mt-px" : "mt-1.5")}
+                className={cn("flex", isMe ? "justify-end" : "justify-start", groupedWithPrev ? "mt-[2px]" : "mt-[12px]")}
               >
                 <div className="relative max-w-[78%]">
                   <div className={cn(
