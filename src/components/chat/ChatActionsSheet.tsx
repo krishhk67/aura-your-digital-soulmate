@@ -58,7 +58,7 @@ export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, on
     const text = data.map(m => `[${new Date(m.created_at!).toLocaleString()}] ${m.sender_id.slice(0, 8)}: ${m.content ?? `(${m.message_type})`}`).join("\n");
     const blob = new Blob([text], { type: "text/plain" });
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob); a.download = `aura-chat-${chatId.slice(0, 8)}.txt`; a.click();
+    a.href = URL.createObjectURL(blob); a.download = `aurix-chat-${chatId.slice(0, 8)}.txt`; a.click();
     URL.revokeObjectURL(a.href);
     toast.success("Chat exported");
     onClose();
