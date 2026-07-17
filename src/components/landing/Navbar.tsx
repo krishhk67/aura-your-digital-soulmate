@@ -14,7 +14,7 @@ export function Navbar() {
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 group">
           <MessageCircle className="h-6 w-6 text-neon group-hover:animate-pulse-neon" />
-          <span className="font-display font-bold text-xl gradient-text">Aura</span>
+          <span className="font-display font-bold text-xl gradient-text">Aurix</span>
         </Link>
 
         <div className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">

@@ -40,7 +40,7 @@ function ResetPasswordPage() {
         <div className="glass-panel rounded-3xl p-8">
           <div className="flex items-center justify-center gap-2 mb-8">
             <MessageCircle className="h-8 w-8 text-neon" />
-            <span className="font-display font-bold text-2xl gradient-text">Aura</span>
+            <span className="font-display font-bold text-2xl gradient-text">Aurix</span>
           </div>
           <h1 className="text-xl font-display font-bold text-center mb-6">Set New Password</h1>
           {!ready ? (

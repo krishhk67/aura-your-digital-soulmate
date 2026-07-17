@@ -45,7 +45,7 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
         <div className="flex items-center justify-between py-3">
           <div className="flex items-center gap-2">
             <MessageCircle className="h-6 w-6 text-neon" />
-            <span className="font-display font-bold text-2xl gradient-text">Aura</span>
+            <span className="font-display font-bold text-2xl gradient-text">Aurix</span>
           </div>
           <motion.button
             whileTap={{ scale: 0.9 }}
@@ -81,7 +81,7 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
               <MessageCircle className="h-10 w-10 text-neon" />
             </div>
             <p className="font-display font-semibold text-lg mb-2">Start Chatting</p>
-            <p className="text-sm text-muted-foreground mb-5">Find people and start your first conversation on Aura</p>
+            <p className="text-sm text-muted-foreground mb-5">Find people and start your first conversation on Aurix</p>
             <motion.button
               whileTap={{ scale: 0.95 }}
               onClick={onNewChat}

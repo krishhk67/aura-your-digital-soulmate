@@ -38,7 +38,7 @@ const features = [
 ];
 
 const testimonials = [
-  { name: "Luna K.", handle: "@lunakay", text: "Aura literally changed how I talk to people. The vibe is unmatched.", avatar: "🌙" },
+  { name: "Luna K.", handle: "@lunakay", text: "Aurix literally changed how I talk to people. The vibe is unmatched.", avatar: "🌙" },
   { name: "Dev R.", handle: "@devraz", text: "Ghost mode + AI replies = I'm never going back to boring chats.", avatar: "⚡" },
   { name: "Mia Chen", handle: "@miavibes", text: "The mood themes are insane. It feels like my chat is alive.", avatar: "🎭" },
 ];
@@ -58,7 +58,7 @@ export function HeroSection() {
           </motion.div>
 
           <motion.h1 variants={fadeUp} custom={1} className="text-5xl sm:text-6xl lg:text-7xl font-bold font-display tracking-tight leading-[1.1]">
-            <span className="gradient-text">Aura</span>
+            <span className="gradient-text">Aurix</span>
             <br />
             <span className="text-foreground">Chat that feels</span>
             <br />
@@ -72,7 +72,7 @@ export function HeroSection() {
           <motion.div variants={fadeUp} custom={3} className="mt-8 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
             <Link to="/chat">
               <Button variant="hero" size="xl">
-                Enter Aura <ArrowRight className="ml-2 h-5 w-5" />
+                Enter Aurix <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
             <Link to="/login">
@@ -93,7 +93,7 @@ export function HeroSection() {
             <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/30 to-accent/30 blur-3xl animate-pulse-neon" />
             <img
               src={heroMockup}
-              alt="Aura chat app interface"
+              alt="Aurix chat app interface"
               width={1024}
               height={1024}
               className="relative rounded-3xl max-w-sm lg:max-w-md w-full shadow-2xl"
@@ -202,10 +202,10 @@ export function FooterSection() {
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-2">
           <MessageCircle className="h-6 w-6 text-neon" />
-          <span className="font-display font-bold text-xl gradient-text">Aura</span>
+          <span className="font-display font-bold text-xl gradient-text">Aurix</span>
         </div>
         <p className="text-sm text-muted-foreground">
-          © 2026 Aura. The social app from 2030.
+          © 2026 Aurix. The social app from 2030.
         </p>
         <div className="flex gap-6 text-sm text-muted-foreground">
           <span className="hover:text-foreground transition-colors cursor-pointer">Privacy</span>

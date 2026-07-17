@@ -81,12 +81,12 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
     setChatMeta(null);
     setMemberCount(0);
     window.setTimeout(() => inputRef.current?.focus(), 250);
-    console.info("[Aura] switching conversation", { chatId });
+    console.info("[Aurix] switching conversation", { chatId });
     (async () => {
       const { data: chat } = await supabase.from("chats").select("*").eq("id", chatId).single();
       if (!chat) return;
       setChatMeta(chat as ChatRow);
-      console.info("[Aura] chat loaded", { chatId, is_group: chat.is_group, name: chat.name });
+      console.info("[Aurix] chat loaded", { chatId, is_group: chat.is_group, name: chat.name });
 
       const { data: members } = await supabase
         .from("chat_members")

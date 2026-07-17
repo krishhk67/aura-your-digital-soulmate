@@ -10,9 +10,9 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Aura — Chat That Feels Alive" },
+      { title: "Aurix — Chat That Feels Alive" },
       { name: "description", content: "AI-powered futuristic messaging with mood detection, cinematic themes, ghost mode, and vibes that evolve with your conversations." },
-      { property: "og:title", content: "Aura — Chat That Feels Alive" },
+      { property: "og:title", content: "Aurix — Chat That Feels Alive" },
       { property: "og:description", content: "The social app from 2030. AI smart replies, mood themes, ghost mode, and more." },
     ],
   }),
