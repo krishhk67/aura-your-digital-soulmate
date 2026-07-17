@@ -566,6 +566,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
         onUseReply={(t) => setInput(t)}
         onUseRewrite={(t) => setInput(t)}
       />
+      <MessageInfoSheet message={infoMsg} onClose={() => setInfoMsg(null)} isGroup={!!chatMeta?.is_group} />
     </div>
   );
 }
