@@ -130,6 +130,8 @@ export function useMyChats(opts?: { hiddenOnly?: boolean }) {
         is_muted: meta?.is_muted ?? false,
         cleared_at: meta?.cleared_at ?? null,
         is_hidden: meta?.is_hidden ?? false,
+        is_favorite: meta?.is_favorite ?? false,
+        is_archived: meta?.is_archived ?? false,
         is_blocked: !!(other_user && blockedIds.has(other_user.id)),
       };
     }));
