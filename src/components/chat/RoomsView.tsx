@@ -164,28 +164,31 @@ export function RoomsView({ onActiveRoomChange }: { onActiveRoomChange?: (active
         <AnimatePresence>
           {showJoin && (
             <motion.div
-              initial={{ opacity: 0, height: 0, marginTop: 0 }}
-              animate={{ opacity: 1, height: "auto", marginTop: 12 }}
-              exit={{ opacity: 0, height: 0, marginTop: 0 }}
+              initial={{ opacity: 0, height: 0, marginTop: 0, marginBottom: 0 }}
+              animate={{ opacity: 1, height: "auto", marginTop: 18, marginBottom: 6 }}
+              exit={{ opacity: 0, height: 0, marginTop: 0, marginBottom: 0 }}
               className="overflow-hidden"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-stretch gap-1.5">
                 <input
                   autoFocus
                   value={joinCode}
                   onChange={e => setJoinCode(e.target.value)}
                   placeholder="Paste invite code"
-                  className="flex-1 h-10 px-3 rounded-xl bg-secondary/50 border border-glass-border text-sm outline-none focus:border-primary/60"
+                  className="flex-1 h-11 px-3.5 rounded-xl bg-secondary/40 border border-glass-border/60 text-sm outline-none placeholder:text-muted-foreground/50 focus:border-primary/50 focus:bg-secondary/55 focus:shadow-[inset_0_0_0_1px_var(--neon-glow)] transition-all"
                 />
-                <button
+                <motion.button
                   onClick={joinWithCode}
-                  className="h-10 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold shadow-[0_0_18px_var(--neon-glow)] active:scale-95 transition-transform"
+                  whileTap={{ scale: 0.97, filter: "brightness(1.12)" }}
+                  transition={{ type: "spring", stiffness: 500, damping: 30, mass: 0.4 }}
+                  className="relative overflow-hidden h-11 w-[86px] rounded-xl text-sm font-medium text-primary-foreground bg-gradient-to-b from-primary to-primary/85 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_1px_2px_rgba(0,0,0,0.35)]"
                 >
                   Join
-                </button>
+                </motion.button>
               </div>
             </motion.div>
           )}
+
         </AnimatePresence>
 
         {/* FILTER CHIPS */}
