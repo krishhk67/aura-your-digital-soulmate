@@ -647,3 +647,26 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
     </div>
   );
 }
+
+/** Premium read-receipt tick with smooth cross-fade between states. */
+function TickIcon({ state }: { state: "sent" | "delivered" | "read" }) {
+  const color = state === "read" ? "text-sky-400" : "text-muted-foreground/70";
+  return (
+    <span className="relative inline-block h-[11px] w-[13px] leading-none">
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={state}
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.85 }}
+          transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+          className={cn("absolute inset-0 flex items-center justify-center", color)}
+        >
+          {state === "sent"
+            ? <Check className="h-[11px] w-[11px]" strokeWidth={2.4} />
+            : <CheckCheck className="h-[13px] w-[13px]" strokeWidth={2.4} />}
+        </motion.span>
+      </AnimatePresence>
+    </span>
+  );
+}
