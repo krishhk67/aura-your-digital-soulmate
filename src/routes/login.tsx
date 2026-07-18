@@ -6,6 +6,9 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
+import { TurnstileWidget, useTurnstile } from "@/components/security/TurnstileWidget";
+import { TURNSTILE } from "@/lib/security/config";
+
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -27,6 +30,7 @@ function LoginPage() {
   const [resetMode, setResetMode] = useState(false);
   const { signUp, signIn, resetPassword, user } = useAuth();
   const navigate = useNavigate();
+  const turnstile = useTurnstile();
 
   // Redirect if already logged in
   if (user) {
@@ -34,18 +38,31 @@ function LoginPage() {
     return null;
   }
 
+  /** Turnstile guard — no-op unless site key is configured. */
+  const needsTurnstile = TURNSTILE.enabled && (
+    (isSignUp && TURNSTILE.requiredFor.signup) ||
+    (resetMode && TURNSTILE.requiredFor.passwordReset) ||
+    (!isSignUp && !resetMode && TURNSTILE.requiredFor.login)
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!identifier || (!resetMode && !password)) return;
+    if (needsTurnstile && !turnstile.token) {
+      toast.error("Please complete the security check");
+      return;
+    }
     setLoading(true);
 
     if (resetMode) {
       const { error } = await resetPassword(identifier);
       if (error) toast.error(error.message);
-      else toast.success("Password reset email sent! Check your inbox.");
+      else toast.success("If an account exists, a reset link has been sent.");
+      turnstile.reset();
       setLoading(false);
       return;
     }
+
 
     if (isSignUp) {
       if (!username.trim()) { toast.error("Please choose a username"); setLoading(false); return; }
@@ -179,10 +196,13 @@ function LoginPage() {
               </button>
             )}
 
-            <Button variant="hero" size="lg" className="w-full rounded-xl" type="submit" disabled={loading}>
+            <TurnstileWidget innerRef={turnstile.widgetRef} />
+
+            <Button variant="hero" size="lg" className="w-full rounded-xl" type="submit" disabled={loading || (needsTurnstile && !turnstile.token)}>
               {loading ? "Loading..." : resetMode ? "Send Reset Link" : isSignUp ? "Create Account" : "Sign In"}{" "}
               {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
             </Button>
+
           </form>
 
           <p className="text-center text-sm text-muted-foreground mt-6">
