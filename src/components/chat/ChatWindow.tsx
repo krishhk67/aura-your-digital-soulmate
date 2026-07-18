@@ -453,17 +453,28 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                             <span className="text-xs underline truncate">{msg.content ?? "Download file"}</span>
                           </a>
                         )}
-                        {(!msg.message_type || msg.message_type === "text") && msg.content}
+                        {(!msg.message_type || msg.message_type === "text") && (
+                          <>
+                            <span className="whitespace-pre-wrap break-words">{msg.content}</span>
+                            {isMe && !groupedWithNext && (
+                              <span
+                                aria-hidden
+                                className="inline-flex items-center gap-0.5 align-baseline ml-1.5 translate-y-[3px] select-none"
+                              >
+                                {msg.expires_at && <Timer className="h-[11px] w-[11px] text-neon" />}
+                                <TickIcon state={tickState} />
+                              </span>
+                            )}
+                          </>
+                        )}
                       </>
                     )}
                   </div>
 
-                  {isMe && !groupedWithNext && (
-                    <div className="absolute -bottom-0.5 right-1 flex items-center gap-0.5 text-[10px] pointer-events-none">
-                      {msg.expires_at && <Timer className="h-2.5 w-2.5 text-neon" />}
-                      {tickState === "sent" && <Check className="h-3 w-3 text-muted-foreground/70" />}
-                      {tickState === "delivered" && <CheckCheck className="h-3 w-3 text-muted-foreground/70" />}
-                      {tickState === "read" && <CheckCheck className="h-3 w-3 text-sky-400" />}
+                  {isMe && !groupedWithNext && msg.message_type && msg.message_type !== "text" && (
+                    <div className="absolute bottom-1.5 right-2 flex items-center gap-0.5 rounded-full bg-black/45 backdrop-blur-md px-1.5 py-[3px] pointer-events-none">
+                      {msg.expires_at && <Timer className="h-[11px] w-[11px] text-neon" />}
+                      <TickIcon state={tickState} />
                     </div>
                   )}
 
@@ -634,5 +645,28 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
         />
       )}
     </div>
+  );
+}
+
+/** Premium read-receipt tick with smooth cross-fade between states. */
+function TickIcon({ state }: { state: "sent" | "delivered" | "read" }) {
+  const color = state === "read" ? "text-sky-400" : "text-muted-foreground/70";
+  return (
+    <span className="relative inline-block h-[11px] w-[13px] leading-none">
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.span
+          key={state}
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.85 }}
+          transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+          className={cn("absolute inset-0 flex items-center justify-center", color)}
+        >
+          {state === "sent"
+            ? <Check className="h-[11px] w-[11px]" strokeWidth={2.4} />
+            : <CheckCheck className="h-[13px] w-[13px]" strokeWidth={2.4} />}
+        </motion.span>
+      </AnimatePresence>
+    </span>
   );
 }
