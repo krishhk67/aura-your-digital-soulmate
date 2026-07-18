@@ -323,7 +323,7 @@ export function GroupInfoSheet({ open, onClose, chat, onChatRemoved }: Props) {
                     </div>
                   }
                 />
-                {/* eslint-disable-next-line @typescript-eslint/no-unused-expressions */}
+                
                 {isAdmin && (
                   <button
                     onClick={() => fileRef.current?.click()}
