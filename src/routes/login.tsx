@@ -72,6 +72,16 @@ function LoginPage() {
     navigate({ to: "/chat" });
   };
 
+  // ⚠️ DEV-ONLY: temporary test account login. Remove before production.
+  // To remove: delete this handler and the button below (search "DEV-ONLY").
+  const handleDevLogin = async () => {
+    setLoading(true);
+    const { error } = await signIn("krystladmin@dev.aurix.local", "krystl@500");
+    if (error) toast.error(error.message);
+    else navigate({ to: "/chat" });
+    setLoading(false);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
       <div className="absolute top-1/3 -left-40 h-80 w-80 rounded-full bg-primary/15 blur-[100px] animate-float" />
@@ -189,6 +199,25 @@ function LoginPage() {
               </>
             )}
           </p>
+
+          {/* ⚠️ DEV-ONLY: temporary developer login. Remove this block before production. */}
+          {import.meta.env.DEV && (
+            <div className="mt-4 pt-4 border-t border-dashed border-amber-500/30">
+              <Button
+                variant="glass"
+                size="lg"
+                type="button"
+                onClick={handleDevLogin}
+                disabled={loading}
+                className="w-full rounded-xl border-amber-500/40 text-amber-300 hover:text-amber-200"
+              >
+                🛠️ Developer Login (Temporary)
+              </Button>
+              <p className="text-[10px] text-center text-amber-500/60 mt-2 uppercase tracking-wider">
+                Dev build only — not visible in production
+              </p>
+            </div>
+          )}
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
