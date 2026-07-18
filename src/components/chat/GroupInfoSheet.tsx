@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import type { ChatRow, ProfileRow } from "@/hooks/useRealtimeChat";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { SmoothAvatar } from "./SmoothAvatar";
 
 type PermissionKey = "send_messages" | "send_media" | "send_voice" | "add_members" | "edit_info" | "pin_messages";
 type PermissionScope = "everyone" | "admins" | "owner";
@@ -311,14 +312,18 @@ export function GroupInfoSheet({ open, onClose, chat, onChatRemoved }: Props) {
 
             {/* Avatar + Name (always visible header) */}
             <div className="px-6 pt-6 pb-3 text-center">
-              <div className="relative inline-block">
-                {chat.avatar_url ? (
-                  <img src={chat.avatar_url} alt="" className="h-24 w-24 rounded-full object-cover mx-auto ring-2 ring-primary/40" />
-                ) : (
-                  <div className="h-24 w-24 rounded-full bg-gradient-to-br from-primary/40 to-accent/40 flex items-center justify-center text-3xl mx-auto">
-                    👥
-                  </div>
-                )}
+              <div className="relative inline-block" style={{ width: 96, height: 96 }}>
+                <SmoothAvatar
+                  src={chat.avatar_url ?? null}
+                  size={96}
+                  ringClassName="ring-2 ring-primary/40"
+                  fallback={
+                    <div className="h-full w-full rounded-full bg-gradient-to-br from-primary/40 to-accent/40 flex items-center justify-center text-3xl">
+                      👥
+                    </div>
+                  }
+                />
+                
                 {isAdmin && (
                   <button
                     onClick={() => fileRef.current?.click()}

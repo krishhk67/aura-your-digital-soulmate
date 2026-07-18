@@ -15,6 +15,7 @@ import { useHiddenSpace } from "@/hooks/useHiddenSpace";
 import { HiddenSpaceSetupDialog } from "./HiddenSpaceSetupDialog";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+import { SmoothAvatar } from "./SmoothAvatar";
 
 interface SettingsPanelProps {
   open: boolean;
@@ -241,20 +242,23 @@ export function SettingsPanel({ open, onClose }: SettingsPanelProps) {
                       <div className="space-y-6">
                         {/* Avatar */}
                         <div className="flex flex-col items-center gap-3">
-                          <div className="relative group">
-                            {profile?.avatar_url ? (
-                              <img src={profile.avatar_url} alt="" className="h-24 w-24 rounded-full object-cover ring-2 ring-primary/30" />
-                            ) : (
-                              <div className="h-24 w-24 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-3xl font-bold text-primary-foreground">
-                                {displayName?.charAt(0)?.toUpperCase() || "?"}
-                              </div>
-                            )}
+                          <div className="relative group" style={{ width: 96, height: 96 }}>
+                            <SmoothAvatar
+                              src={profile?.avatar_url ?? null}
+                              size={96}
+                              ringClassName="ring-2 ring-primary/30"
+                              fallback={
+                                <div className="h-full w-full rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-3xl font-bold text-primary-foreground">
+                                  {displayName?.charAt(0)?.toUpperCase() || "?"}
+                                </div>
+                              }
+                            />
                             <motion.button
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
                               onClick={() => fileRef.current?.click()}
                               disabled={uploading}
-                              className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-lg hover:shadow-[0_0_15px_var(--neon-glow)] transition-all"
+                              className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground shadow-lg hover:shadow-[0_0_15px_var(--neon-glow)] transition-all z-10"
                             >
                               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
                             </motion.button>
