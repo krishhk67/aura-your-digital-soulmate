@@ -797,6 +797,63 @@ export type Database = {
         }
         Relationships: []
       }
+      security_events: {
+        Row: {
+          action: string
+          created_at: string
+          event_type: string
+          id: string
+          identifier: string | null
+          metadata: Json
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          event_type: string
+          id?: string
+          identifier?: string | null
+          metadata?: Json
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          identifier?: string | null
+          metadata?: Json
+        }
+        Relationships: []
+      }
+      security_rate_limits: {
+        Row: {
+          action: string
+          attempts: number
+          escalation_level: number
+          identifier: string
+          last_attempt_at: string
+          locked_until: string | null
+          window_started_at: string
+        }
+        Insert: {
+          action: string
+          attempts?: number
+          escalation_level?: number
+          identifier: string
+          last_attempt_at?: string
+          locked_until?: string | null
+          window_started_at?: string
+        }
+        Update: {
+          action?: string
+          attempts?: number
+          escalation_level?: number
+          identifier?: string
+          last_attempt_at?: string
+          locked_until?: string | null
+          window_started_at?: string
+        }
+        Relationships: []
+      }
       stories: {
         Row: {
           caption: string | null
@@ -932,6 +989,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _cooldown_for_level: { Args: { _level: number }; Returns: number }
       add_chat_members: {
         Args: { _chat_id: string; _user_ids: string[] }
         Returns: number
@@ -947,6 +1005,15 @@ export type Database = {
       chat_permission_ok: {
         Args: { _chat_id: string; _key: string; _user_id: string }
         Returns: boolean
+      }
+      check_and_record_rate_limit: {
+        Args: {
+          _action: string
+          _identifier: string
+          _max_attempts: number
+          _window_seconds: number
+        }
+        Returns: Json
       }
       cleanup_expired_messages: { Args: never; Returns: undefined }
       delete_chat: { Args: { _chat_id: string }; Returns: undefined }
@@ -982,6 +1049,15 @@ export type Database = {
         Returns: string
       }
       join_room_by_code: { Args: { _invite_code: string }; Returns: string }
+      log_security_event: {
+        Args: {
+          _action: string
+          _event_type: string
+          _identifier: string
+          _metadata?: Json
+        }
+        Returns: undefined
+      }
       mark_chat_delivered: { Args: { _chat_id: string }; Returns: undefined }
       mark_chat_read: { Args: { _chat_id: string }; Returns: undefined }
       mark_password_configured: { Args: never; Returns: undefined }
@@ -995,6 +1071,10 @@ export type Database = {
           member_count: number
           name: string
         }[]
+      }
+      reset_rate_limit: {
+        Args: { _action: string; _identifier: string }
+        Returns: undefined
       }
       room_role: { Args: { _room: string; _user: string }; Returns: string }
       rotate_chat_invite: { Args: { _chat_id: string }; Returns: string }
