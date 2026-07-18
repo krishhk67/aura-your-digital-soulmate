@@ -1,6 +1,11 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import { checkRateLimit, resetRateLimit, rateLimitMessage, logSecurityEvent, getClientFingerprint } from "@/lib/security/rateLimiter";
+
+/** Generic, enumeration-safe error copy. */
+const GENERIC_LOGIN_ERROR = "Invalid credentials. Please check and try again.";
+
 
 interface AuthContextType {
   user: User | null;
