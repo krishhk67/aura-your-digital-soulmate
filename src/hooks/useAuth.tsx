@@ -67,6 +67,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const signUp = useCallback(async (email: string, password: string, username?: string) => {
+    const emailKey = email.trim().toLowerCase();
+    // Rate limit: per-email AND per-device fingerprint (cheap IP substitute)
+    const guardId = await checkRateLimit("signupAttempts", emailKey);
+    if (!guardId.allowed) {
+      return { error: new Error(rateLimitMessage("signupAttempts", guardId.retryAfter)) };
+    }
+    const guardFp = await checkRateLimit("signupAttempts", `fp:${getClientFingerprint()}`);
+    if (!guardFp.allowed) {
+      return { error: new Error(rateLimitMessage("signupAttempts", guardFp.retryAfter)) };
+    }
+
     // Pre-check username uniqueness if provided
     if (username) {
       const clean = username.trim();
@@ -88,23 +99,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data: username ? { username: username.trim() } : undefined,
       },
     });
-    return { error: error ? new Error(error.message) : null };
+    if (error) {
+      void logSecurityEvent("signupAttempts", "suspicious_signup", emailKey, { reason: error.message });
+      return { error: new Error(error.message) };
+    }
+    void resetRateLimit("signupAttempts", emailKey);
+    return { error: null };
   }, []);
 
   const signIn = useCallback(async (identifier: string, password: string) => {
+    const idKey = identifier.trim().toLowerCase();
+    // Rate limit BEFORE hitting Supabase — protects against brute force
+    const guard = await checkRateLimit("loginAttempts", idKey);
+    if (!guard.allowed) {
+      void logSecurityEvent("loginAttempts", "account_locked", idKey, { retry_after: guard.retryAfter });
+      return { error: new Error(rateLimitMessage("loginAttempts", guard.retryAfter)) };
+    }
+    const guardFp = await checkRateLimit("loginAttempts", `fp:${getClientFingerprint()}`);
+    if (!guardFp.allowed) {
+      return { error: new Error(rateLimitMessage("loginAttempts", guardFp.retryAfter)) };
+    }
+
     let email = identifier.trim();
     if (!EMAIL_RE.test(email)) {
-      // Treat as username; look up email
+      // Treat as username; look up email. Use generic error to prevent enumeration.
       const rpc = supabase.rpc as unknown as (
         fn: "get_email_for_username", args: { _username: string }
       ) => Promise<{ data: string | null; error: { message: string } | null }>;
       const { data, error } = await rpc("get_email_for_username", { _username: email });
-      if (error) return { error: new Error(error.message) };
-      if (!data) return { error: new Error("No account with that username") };
+      if (error || !data) {
+        void logSecurityEvent("loginAttempts", "failed_login", idKey, { stage: "username_lookup" });
+        return { error: new Error(GENERIC_LOGIN_ERROR) };
+      }
       email = data;
     }
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error ? new Error(error.message) : null };
+    if (error) {
+      void logSecurityEvent("loginAttempts", "failed_login", idKey);
+      return { error: new Error(GENERIC_LOGIN_ERROR) };
+    }
+    void resetRateLimit("loginAttempts", idKey);
+    void resetRateLimit("loginAttempts", `fp:${getClientFingerprint()}`);
+    return { error: null };
   }, []);
 
   const signOut = useCallback(async () => {
@@ -115,11 +151,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const resetPassword = useCallback(async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const emailKey = email.trim().toLowerCase();
+    const guard = await checkRateLimit("passwordResets", emailKey);
+    if (!guard.allowed) {
+      return { error: new Error(rateLimitMessage("passwordResets", guard.retryAfter)) };
+    }
+    // Always resolve success-shape to prevent email enumeration.
+    await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
-    return { error: error ? new Error(error.message) : null };
+    return { error: null };
   }, []);
+
 
   return (
     <AuthContext.Provider value={{ user, session, loading, signUp, signIn, signOut, resetPassword }}>
