@@ -6,6 +6,9 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
+import { TurnstileWidget, useTurnstile } from "@/components/security/TurnstileWidget";
+import { TURNSTILE } from "@/lib/security/config";
+
 
 export const Route = createFileRoute("/login")({
   head: () => ({
