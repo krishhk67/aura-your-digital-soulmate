@@ -30,6 +30,7 @@ function LoginPage() {
   const [resetMode, setResetMode] = useState(false);
   const { signUp, signIn, resetPassword, user } = useAuth();
   const navigate = useNavigate();
+  const turnstile = useTurnstile();
 
   // Redirect if already logged in
   if (user) {
@@ -37,18 +38,31 @@ function LoginPage() {
     return null;
   }
 
+  /** Turnstile guard — no-op unless site key is configured. */
+  const needsTurnstile = TURNSTILE.enabled && (
+    (isSignUp && TURNSTILE.requiredFor.signup) ||
+    (resetMode && TURNSTILE.requiredFor.passwordReset) ||
+    (!isSignUp && !resetMode && TURNSTILE.requiredFor.login)
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!identifier || (!resetMode && !password)) return;
+    if (needsTurnstile && !turnstile.token) {
+      toast.error("Please complete the security check");
+      return;
+    }
     setLoading(true);
 
     if (resetMode) {
       const { error } = await resetPassword(identifier);
       if (error) toast.error(error.message);
-      else toast.success("Password reset email sent! Check your inbox.");
+      else toast.success("If an account exists, a reset link has been sent.");
+      turnstile.reset();
       setLoading(false);
       return;
     }
+
 
     if (isSignUp) {
       if (!username.trim()) { toast.error("Please choose a username"); setLoading(false); return; }
