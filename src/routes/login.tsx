@@ -196,10 +196,13 @@ function LoginPage() {
               </button>
             )}
 
-            <Button variant="hero" size="lg" className="w-full rounded-xl" type="submit" disabled={loading}>
+            <TurnstileWidget innerRef={turnstile.widgetRef} />
+
+            <Button variant="hero" size="lg" className="w-full rounded-xl" type="submit" disabled={loading || (needsTurnstile && !turnstile.token)}>
               {loading ? "Loading..." : resetMode ? "Send Reset Link" : isSignUp ? "Create Account" : "Sign In"}{" "}
               {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
             </Button>
+
           </form>
 
           <p className="text-center text-sm text-muted-foreground mt-6">
