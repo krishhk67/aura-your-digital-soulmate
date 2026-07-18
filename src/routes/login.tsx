@@ -72,6 +72,16 @@ function LoginPage() {
     navigate({ to: "/chat" });
   };
 
+  // ⚠️ DEV-ONLY: temporary test account login. Remove before production.
+  // To remove: delete this handler and the button below (search "DEV-ONLY").
+  const handleDevLogin = async () => {
+    setLoading(true);
+    const { error } = await signIn("krystladmin@dev.aurix.local", "krystl@500");
+    if (error) toast.error(error.message);
+    else navigate({ to: "/chat" });
+    setLoading(false);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
       <div className="absolute top-1/3 -left-40 h-80 w-80 rounded-full bg-primary/15 blur-[100px] animate-float" />
