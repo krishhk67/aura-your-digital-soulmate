@@ -15,6 +15,7 @@ import { useHiddenSpace } from "@/hooks/useHiddenSpace";
 import { HiddenSpaceSetupDialog } from "./HiddenSpaceSetupDialog";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
+import { SmoothAvatar } from "./SmoothAvatar";
 
 interface SettingsPanelProps {
   open: boolean;

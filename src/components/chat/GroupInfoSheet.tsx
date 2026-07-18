@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import type { ChatRow, ProfileRow } from "@/hooks/useRealtimeChat";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { SmoothAvatar } from "./SmoothAvatar";
 
 type PermissionKey = "send_messages" | "send_media" | "send_voice" | "add_members" | "edit_info" | "pin_messages";
 type PermissionScope = "everyone" | "admins" | "owner";
