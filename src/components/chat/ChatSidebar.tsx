@@ -277,7 +277,54 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
       </div>
 
       {/* Chat list */}
-      <div className="flex-1 overflow-y-auto px-3 space-y-1 pb-2">
+      <div
+        ref={scrollRef}
+        onTouchStart={onPullStart}
+        onTouchMove={onPullMove}
+        onTouchEnd={onPullEnd}
+        onTouchCancel={onPullEnd}
+        className="flex-1 overflow-y-auto px-3 space-y-1 pb-2"
+      >
+        {activeFilter === "archived" ? (
+          <button
+            onClick={() => setActiveFilter("all")}
+            className="w-full flex items-center gap-2 px-2 py-3 text-sm text-neon"
+          >
+            <ChevronLeft className="h-4 w-4" /> Back to chats
+          </button>
+        ) : archivedChats.length > 0 ? (
+          <motion.div
+            animate={{ height: pullY }}
+            transition={{ type: "spring", stiffness: 400, damping: 40 }}
+            className="overflow-hidden"
+            style={{ height: pullY }}
+          >
+            <div
+              style={{ opacity: Math.min(pullY / REVEAL_THRESHOLD, 1) }}
+              className="pt-2"
+            >
+              <button
+                onClick={() => { setActiveFilter("archived"); setPullY(0); }}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-secondary/40 hover:bg-secondary/60 transition-colors"
+              >
+                <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center text-neon">
+                  <Archive className="h-5 w-5" />
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="text-[15px] font-semibold">Archived Chats</div>
+                  <div className="text-[12px] text-muted-foreground">
+                    {archivedChats.length} conversation{archivedChats.length === 1 ? "" : "s"}
+                  </div>
+                </div>
+                {archivedUnread > 0 && (
+                  <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex items-center justify-center">
+                    {archivedUnread > 99 ? "99+" : archivedUnread}
+                  </span>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        ) : null}
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <div className="h-6 w-6 border-2 border-neon border-t-transparent rounded-full animate-spin" />
