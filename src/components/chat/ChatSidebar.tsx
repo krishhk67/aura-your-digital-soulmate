@@ -313,10 +313,11 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
                     isOnline={!!isOnline}
                     otherUser={chat.is_group ? null : (chat.other_user ?? null)}
                     storyGroup={chat.is_group ? undefined : (chat.other_user ? storyGroups.get(chat.other_user.id) : undefined)}
-                    onOpenChat={() => onSelectChat(chat.id)}
+                    onOpenChat={() => openChat(chat.id)}
                   />
                   <button
-                    onClick={() => onSelectChat(chat.id)}
+                    onClick={() => openChat(chat.id)}
+
                     className="flex-1 min-w-0 text-left active:opacity-80 transition-opacity"
                   >
                     <div className="flex items-center justify-between mb-0.5">
