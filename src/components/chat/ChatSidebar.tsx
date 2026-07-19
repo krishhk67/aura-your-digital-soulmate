@@ -143,19 +143,24 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
     return list;
   }, [source, activeFilter, searchQuery, callChatIds]);
 
-  // Counts for badges (based on normal chats, non-archived)
+  // Badge counters — SINGLE source of truth: a chat contributes only if it
+  // has unread messages from OTHER users (unread_count > 0), i.e. the same
+  // condition that renders the purple dot in the conversation row.
   const counts = useMemo(() => {
     const active = normalChats.filter((c) => !c.is_archived);
+    const unreadActive = active.filter((c) => (c.unread_count ?? 0) > 0);
+    const unreadHidden = hiddenChats.filter((c) => (c.unread_count ?? 0) > 0);
     return {
-      unread: active.filter((c) => (c.unread_count ?? 0) > 0).length,
-      groups: active.filter((c) => c.is_group).length,
-      chats: active.filter((c) => !c.is_group).length,
-      favorites: active.filter((c) => c.is_favorite).length,
-      archived: normalChats.filter((c) => c.is_archived).length,
-      calls: active.filter((c) => callChatIds.has(c.id)).length,
-      hidden: hiddenChats.length,
+      unread: unreadActive.length,
+      groups: unreadActive.filter((c) => c.is_group).length,
+      chats: unreadActive.filter((c) => !c.is_group).length,
+      favorites: unreadActive.filter((c) => c.is_favorite).length,
+      archived: normalChats.filter((c) => c.is_archived && (c.unread_count ?? 0) > 0).length,
+      calls: unreadActive.filter((c) => callChatIds.has(c.id)).length,
+      hidden: unreadHidden.length,
     } as Record<string, number>;
   }, [normalChats, hiddenChats, callChatIds]);
+
 
   const visibleFilters = FILTERS.filter((f) => !f.requiresHidden || hs.unlocked);
 
