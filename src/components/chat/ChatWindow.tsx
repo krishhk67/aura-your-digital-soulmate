@@ -379,6 +379,15 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                 </div>
               );
             }
+            if (msg.message_type === "anonymous_space_ended") {
+              return (
+                <div key={msg.id} id={`msg-${msg.id}`} className="flex justify-center my-3">
+                  <div className="max-w-[85%] rounded-full border border-white/10 bg-white/[0.03] px-4 py-1.5 text-[11.5px] text-center text-white/55 tracking-wide">
+                    {msg.content || "Anonymous Space ended."}
+                  </div>
+                </div>
+              );
+            }
             const isMe = msg.sender_id === user?.id;
             const time = new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
