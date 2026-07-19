@@ -118,6 +118,29 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
         <div className="absolute bottom-0 right-0 h-64 w-64 rounded-full bg-cyan-400/5 blur-3xl" />
       </div>
 
+      {/* Destroyed farewell — lightweight, auto-dismissing, non-blocking */}
+      <AnimatePresence>
+        {destroyed && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.35 }}
+            className="absolute inset-0 z-[80] bg-[#0B0B0D]/95 backdrop-blur-md flex items-center justify-center p-8 text-center"
+          >
+            <motion.div
+              initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.05, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="max-w-sm"
+            >
+              <p className="text-[10px] uppercase tracking-[0.4em] text-white/40">Space ended</p>
+              <h2 className="mt-3 text-xl font-semibold text-white">Everyone has left</h2>
+              <p className="mt-3 text-[13px] leading-relaxed text-white/55">
+                This anonymous space has been permanently destroyed. Nothing was saved.
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Phase: identity picker */}
       {phase === "picking" && !loading && !me && (
         <div className="flex-1 relative flex flex-col items-center justify-center p-6">
