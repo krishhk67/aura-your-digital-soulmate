@@ -31,17 +31,24 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Track whether we actually joined so unmount cleanup doesn't destroy a space
+  // we never entered (fixes StrictMode double-mount + quick-close races).
+  const joinedRef = useRef(false);
+
   // If already joined (rejoining after refresh), skip identity picker.
   useEffect(() => {
     if (loading) return;
-    if (me && phase === "picking") setPhase("chat");
+    if (me) {
+      joinedRef.current = true;
+      if (phase === "picking") setPhase("chat");
+    }
   }, [loading, me, phase]);
 
+  // Destroyed → show a lightweight in-view farewell card, then auto-exit.
   useEffect(() => {
-    if (destroyed) {
-      toast("Anonymous Space closed. Nothing was saved.");
-      onExit();
-    }
+    if (!destroyed) return;
+    const t = window.setTimeout(() => onExit(), 2200);
+    return () => window.clearTimeout(t);
   }, [destroyed, onExit]);
 
   useEffect(() => {
@@ -55,16 +62,20 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Leave on unmount so the space auto-destroys when the last person exits.
+  // Leave on unmount ONLY if we actually joined. The server also guards this,
+  // but keeping the client honest avoids needless RPC calls.
   const leaveRef = useRef(leave);
   leaveRef.current = leave;
-  useEffect(() => () => { void leaveRef.current(spaceId); }, [spaceId]);
+  useEffect(() => () => {
+    if (joinedRef.current) void leaveRef.current(spaceId);
+  }, [spaceId]);
 
   const handlePickIdentity = async (alias: string | null) => {
     setJoining(true);
     const { error } = await join(spaceId, alias ?? undefined);
     setJoining(false);
     if (error) return toast.error(error.message);
+    joinedRef.current = true;
     try { navigator.vibrate?.([10, 30, 10]); } catch { /* noop */ }
     setPhase("transition");
   };
@@ -73,9 +84,13 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
 
   const handleLeave = async () => {
     try { navigator.vibrate?.(15); } catch { /* noop */ }
-    await leave(spaceId);
+    if (joinedRef.current) {
+      await leave(spaceId);
+      joinedRef.current = false;
+    }
     onExit();
   };
+
 
   const handleSend = async () => {
     const text = input.trim();
@@ -102,6 +117,29 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
         <div className="absolute -top-32 left-1/2 -translate-x-1/2 h-72 w-72 rounded-full bg-violet-500/10 blur-3xl" />
         <div className="absolute bottom-0 right-0 h-64 w-64 rounded-full bg-cyan-400/5 blur-3xl" />
       </div>
+
+      {/* Destroyed farewell — lightweight, auto-dismissing, non-blocking */}
+      <AnimatePresence>
+        {destroyed && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.35 }}
+            className="absolute inset-0 z-[80] bg-[#0B0B0D]/95 backdrop-blur-md flex items-center justify-center p-8 text-center"
+          >
+            <motion.div
+              initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.05, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="max-w-sm"
+            >
+              <p className="text-[10px] uppercase tracking-[0.4em] text-white/40">Space ended</p>
+              <h2 className="mt-3 text-xl font-semibold text-white">Everyone has left</h2>
+              <p className="mt-3 text-[13px] leading-relaxed text-white/55">
+                This anonymous space has been permanently destroyed. Nothing was saved.
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Phase: identity picker */}
       {phase === "picking" && !loading && !me && (
