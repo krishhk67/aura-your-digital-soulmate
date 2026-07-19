@@ -31,17 +31,24 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Track whether we actually joined so unmount cleanup doesn't destroy a space
+  // we never entered (fixes StrictMode double-mount + quick-close races).
+  const joinedRef = useRef(false);
+
   // If already joined (rejoining after refresh), skip identity picker.
   useEffect(() => {
     if (loading) return;
-    if (me && phase === "picking") setPhase("chat");
+    if (me) {
+      joinedRef.current = true;
+      if (phase === "picking") setPhase("chat");
+    }
   }, [loading, me, phase]);
 
+  // Destroyed → show a lightweight in-view farewell card, then auto-exit.
   useEffect(() => {
-    if (destroyed) {
-      toast("Anonymous Space closed. Nothing was saved.");
-      onExit();
-    }
+    if (!destroyed) return;
+    const t = window.setTimeout(() => onExit(), 2200);
+    return () => window.clearTimeout(t);
   }, [destroyed, onExit]);
 
   useEffect(() => {
@@ -55,16 +62,20 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Leave on unmount so the space auto-destroys when the last person exits.
+  // Leave on unmount ONLY if we actually joined. The server also guards this,
+  // but keeping the client honest avoids needless RPC calls.
   const leaveRef = useRef(leave);
   leaveRef.current = leave;
-  useEffect(() => () => { void leaveRef.current(spaceId); }, [spaceId]);
+  useEffect(() => () => {
+    if (joinedRef.current) void leaveRef.current(spaceId);
+  }, [spaceId]);
 
   const handlePickIdentity = async (alias: string | null) => {
     setJoining(true);
     const { error } = await join(spaceId, alias ?? undefined);
     setJoining(false);
     if (error) return toast.error(error.message);
+    joinedRef.current = true;
     try { navigator.vibrate?.([10, 30, 10]); } catch { /* noop */ }
     setPhase("transition");
   };
@@ -73,9 +84,13 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
 
   const handleLeave = async () => {
     try { navigator.vibrate?.(15); } catch { /* noop */ }
-    await leave(spaceId);
+    if (joinedRef.current) {
+      await leave(spaceId);
+      joinedRef.current = false;
+    }
     onExit();
   };
+
 
   const handleSend = async () => {
     const text = input.trim();
