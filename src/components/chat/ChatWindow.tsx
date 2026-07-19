@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Paperclip, ArrowLeft, Phone, Video, MoreVertical, Check, CheckCheck, Image as ImageIcon, FileText, Film, X, Trash2, Sparkles } from "lucide-react";
+import { Send, Paperclip, ArrowLeft, Phone, Video, MoreVertical, Check, CheckCheck, Image as ImageIcon, FileText, Film, X, Trash2, Sparkles, Ghost } from "lucide-react";
 import { AiToolsSheet } from "./AiToolsSheet";
 import { SmartReplyBar } from "./SmartReplyBar";
 import { MoodIndicator, MOOD_META, type MoodId } from "./MoodIndicator";
@@ -14,6 +14,11 @@ import type { ProfileRow, ChatRow } from "@/hooks/useRealtimeChat";
 import { toast } from "sonner";
 import { VoiceRecorder, MicButton } from "./VoiceRecorder";
 import { AudioMessage } from "./AudioMessage";
+import { GhostBubble } from "./GhostBubble";
+import { GhostTimerPicker } from "./GhostTimerPicker";
+import { SpaceCard } from "@/components/anonymous/SpaceCard";
+import { CreateSpaceDialog } from "@/components/anonymous/CreateSpaceDialog";
+import { AnonymousSpaceView } from "@/components/anonymous/AnonymousSpaceView";
 
 /** Parse durations stored as message content: "5s", "5.2s", or a raw millisecond number. */
 function parseDurationHint(content?: string | null): number | undefined {
@@ -75,6 +80,13 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const messageIds = messages.map(m => m.id);
   const { byMessage: reactionsByMessage } = useMessageReactions("chat", chatId, messageIds);
   const toggleReaction = useToggleReaction("chat");
+
+  // Ghost + Anonymous Space state
+  const [ghostSeconds, setGhostSeconds] = useState<number | null>(null);
+  const [ghostPickerOpen, setGhostPickerOpen] = useState(false);
+  const [createSpaceOpen, setCreateSpaceOpen] = useState(false);
+  const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null);
+
 
 
   const initiateCall = (type: "voice" | "video") => {
@@ -162,8 +174,22 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   // of whether the chat is 1:1 or a group. Do NOT bypass this.
   const submitText = async (raw: string, source: "manual" | "smart-reply" = "manual") => {
     const text = (raw ?? "").trim();
-    if (!text || !chatId) return { ok: false as const };
-    console.info("[Aurix] submitText", { source, chatId, is_group: chatMeta?.is_group, len: text.length });
+    if (!text || !chatId || !user) return { ok: false as const };
+    console.info("[Aurix] submitText", { source, chatId, is_group: chatMeta?.is_group, len: text.length, ghost: ghostSeconds });
+
+    // Ghost path: insert directly so we can set ghost_reveal_seconds.
+    if (ghostSeconds && source === "manual") {
+      const { error } = await supabase.from("messages").insert({
+        chat_id: chatId,
+        sender_id: user.id,
+        content: text,
+        message_type: "text",
+        ghost_reveal_seconds: ghostSeconds,
+      });
+      if (error) { toast.error(error.message); return { ok: false as const, error: new Error(error.message) }; }
+      return { ok: true as const };
+    }
+
     const { error } = await sendMessage(chatId, text);
     if (error) {
       console.error("[Aurix] submitText failed", { source, chatId, is_group: chatMeta?.is_group, error: error.message });
@@ -183,6 +209,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   };
 
   const sendText = (text: string) => submitText(text, "smart-reply");
+
 
 
   const uploadAndSend = async (file: File) => {
@@ -338,6 +365,20 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
           </div>
         ) : (
           visibleMessages.map((msg, i) => {
+            // Anonymous Space invite renders as its own hero card, no bubble.
+            if (msg.message_type === "anonymous_space_invite") {
+              const meta = (msg.metadata as { space_id?: string } | null) ?? null;
+              return (
+                <div key={msg.id} id={`msg-${msg.id}`}>
+                  <SpaceCard
+                    chatId={chatId}
+                    spaceIdHint={meta?.space_id ?? null}
+                    title={msg.content}
+                    onEnter={(sid) => setActiveSpaceId(sid)}
+                  />
+                </div>
+              );
+            }
             const isMe = msg.sender_id === user?.id;
             const time = new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
@@ -455,7 +496,17 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                         )}
                         {(!msg.message_type || msg.message_type === "text") && (
                           <>
-                            <span className="whitespace-pre-wrap break-words">{msg.content}</span>
+                            {msg.ghost_reveal_seconds ? (
+                              <GhostBubble
+                                messageId={msg.id}
+                                isMine={isMe}
+                                revealSeconds={msg.ghost_reveal_seconds}
+                                revealedAt={msg.ghost_revealed_at ?? null}
+                                content={msg.content}
+                              />
+                            ) : (
+                              <span className="whitespace-pre-wrap break-words">{msg.content}</span>
+                            )}
                             {isMe && !groupedWithNext && (
                               <span
                                 aria-hidden
@@ -571,16 +622,27 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                 title="AI tools">
                 <Sparkles className="h-5 w-5" />
               </button>
+              <button onClick={() => setGhostPickerOpen(true)} disabled={uploading}
+                className={cn(
+                  "h-10 w-10 rounded-full flex items-center justify-center hover:bg-secondary transition-colors flex-shrink-0 disabled:opacity-50",
+                  ghostSeconds ? "text-white bg-white/10" : "text-muted-foreground"
+                )}
+                title="Ghost message">
+                <Ghost className="h-5 w-5" />
+              </button>
               <div className="flex-1 relative">
                 <textarea
                   ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                  placeholder={uploading ? "Uploading..." : "Message..."}
+                  placeholder={ghostSeconds ? `👻 Ghost · ${ghostSeconds}s after reveal` : uploading ? "Uploading..." : "Message..."}
                   rows={1}
                   disabled={uploading}
-                  className="w-full rounded-2xl bg-secondary/50 border border-border px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none max-h-24 disabled:opacity-60"
+                  className={cn(
+                    "w-full rounded-2xl border px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none max-h-24 disabled:opacity-60",
+                    ghostSeconds ? "bg-white/5 border-white/15" : "bg-secondary/50 border-border"
+                  )}
                 />
               </div>
               {input.trim() ? (
@@ -623,6 +685,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
         chatId={chatId} partnerId={chatPartner?.id ?? null} isGroup={!!chatMeta?.is_group}
         onOpenProfile={() => setProfileOpen(true)}
         onSearch={() => setSearchOpen(true)}
+        onCreateAnonymousSpace={() => setCreateSpaceOpen(true)}
       />
       <AiToolsSheet
         open={aiOpen} onClose={() => setAiOpen(false)}
@@ -632,6 +695,21 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
         onUseRewrite={(t) => setInput(t)}
       />
       <MessageInfoSheet message={infoMsg} onClose={() => setInfoMsg(null)} isGroup={!!chatMeta?.is_group} />
+      <GhostTimerPicker
+        open={ghostPickerOpen} current={ghostSeconds}
+        onSelect={setGhostSeconds}
+        onClose={() => setGhostPickerOpen(false)}
+      />
+      <CreateSpaceDialog
+        open={createSpaceOpen} onClose={() => setCreateSpaceOpen(false)}
+        groupChatId={chatMeta?.is_group ? chatId : null}
+        onCreated={(sid) => setActiveSpaceId(sid)}
+      />
+      <AnimatePresence>
+        {activeSpaceId && (
+          <AnonymousSpaceView spaceId={activeSpaceId} onExit={() => setActiveSpaceId(null)} />
+        )}
+      </AnimatePresence>
       {reactionTarget && (
         <ReactionPicker
           anchorRect={reactionTarget.rect}

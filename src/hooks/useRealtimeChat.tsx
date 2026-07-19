@@ -35,6 +35,8 @@ export interface MessageRow {
   created_at: string;
   expires_at?: string | null;
   metadata?: unknown;
+  ghost_reveal_seconds?: number | null;
+  ghost_revealed_at?: string | null;
 }
 
 interface DirectChatResult {

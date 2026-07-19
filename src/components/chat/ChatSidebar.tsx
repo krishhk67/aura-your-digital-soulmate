@@ -371,6 +371,8 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
                 : lmType === "video" ? "🎥 Video"
                 : lmType === "audio" ? "🎙 Voice message"
                 : lmType === "file" ? "📎 File"
+                : lmType === "anonymous_space_invite" ? "✨ Anonymous space opened"
+                : lm.ghost_reveal_seconds ? "👻 Ghost message"
                 : (lm.content ?? "");
               const timeAgo = chat.last_message?.created_at
                 ? formatDistanceToNow(new Date(chat.last_message.created_at), { addSuffix: false })

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Trash2, Image as ImageIcon, Pin, PinOff, Bell, BellOff, Download, Ban, Flag, Users, Timer, Palette, EyeOff, Eye } from "lucide-react";
+import { Search, Trash2, Image as ImageIcon, Pin, PinOff, Bell, BellOff, Download, Ban, Flag, Users, Timer, Palette, EyeOff, Eye, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -21,9 +21,10 @@ interface Props {
   isGroup?: boolean;
   onOpenProfile: () => void;
   onSearch: () => void;
+  onCreateAnonymousSpace?: () => void;
 }
 
-export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, onOpenProfile, onSearch }: Props) {
+export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, onOpenProfile, onSearch, onCreateAnonymousSpace }: Props) {
   const { user } = useAuth();
   const { is_pinned, is_muted, update } = useChatMemberState(chatId);
   const { block } = useBlockUser();
@@ -83,6 +84,12 @@ export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, on
   const items = [
     { icon: Search, label: "Search in chat", onClick: () => { onSearch(); onClose(); } },
     { icon: ImageIcon, label: "Media gallery", onClick: () => { onOpenProfile(); onClose(); } },
+    ...(isGroup && onCreateAnonymousSpace ? [{
+      icon: Sparkles,
+      label: "Create Anonymous Space",
+      onClick: () => { onCreateAnonymousSpace(); onClose(); },
+      accent: true as const,
+    }] : []),
     { icon: is_pinned ? PinOff : Pin, label: is_pinned ? "Unpin conversation" : "Pin conversation", onClick: togglePin },
     { icon: is_muted ? Bell : BellOff, label: is_muted ? "Unmute notifications" : "Mute notifications", onClick: toggleMute },
     { icon: Timer, label: "Disappearing messages", onClick: () => { setDisappearOpen(true); onClose(); } },
@@ -110,7 +117,7 @@ export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, on
       { icon: Flag, label: "Report user", onClick: () => { setReportOpen(true); }, danger: true },
     ] : []),
     ...(isGroup ? [{ icon: Users, label: "View members", onClick: () => { onOpenProfile(); onClose(); } }] : []),
-  ];
+  ] as Array<{ icon: typeof Search; label: string; onClick: () => void; danger?: boolean; accent?: boolean }>;
 
 
   return (
@@ -136,7 +143,11 @@ export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, on
                     onClick={it.onClick}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-secondary/60 transition-colors text-left ${it.danger ? "text-destructive" : ""}`}
                   >
-                    <div className={`h-9 w-9 rounded-full flex items-center justify-center ${it.danger ? "bg-destructive/15" : "bg-primary/15 text-neon"}`}>
+                    <div className={`h-9 w-9 rounded-full flex items-center justify-center ${
+                      it.danger ? "bg-destructive/15"
+                      : it.accent ? "bg-white text-black"
+                      : "bg-primary/15 text-neon"
+                    }`}>
                       <it.icon className="h-4 w-4" />
                     </div>
                     <span className="text-[14px] font-medium">{it.label}</span>
