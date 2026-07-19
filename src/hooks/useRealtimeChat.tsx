@@ -191,8 +191,25 @@ export function useMyChats(opts?: { hiddenOnly?: boolean }) {
     return () => { supabase.removeChannel(channel); };
   }, [user, fetchChats, hiddenOnly]);
 
-  return { chats, loading, refetch: fetchChats };
+  // Optimistically clear a chat's unread badge and persist the read marker.
+  // Guarantees the dot disappears the instant the user opens a conversation,
+  // independent of realtime timing.
+  const markChatRead = useCallback(async (chatId: string) => {
+    if (!user) return;
+    setChats((prev) => prev.map((c) => (c.id === chatId ? { ...c, unread_count: 0 } : c)));
+    type RpcCall = (fn: string, args: Record<string, unknown>) => Promise<unknown>;
+    try {
+      await (supabase.rpc as unknown as RpcCall)("mark_chat_read", { _chat_id: chatId });
+    } catch (err) {
+      console.warn("[Aurix] mark_chat_read failed", err);
+    }
+    // Trailing refetch in case a message landed between local-clear and RPC.
+    void fetchChats();
+  }, [user, fetchChats]);
+
+  return { chats, loading, refetch: fetchChats, markChatRead };
 }
+
 
 /** Watches other members' delivered/read markers for a chat. */
 export function useChatReceipts(chatId: string | null) {
