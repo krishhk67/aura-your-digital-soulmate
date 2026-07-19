@@ -1,57 +1,104 @@
-# Aura Music Presence + Listen Together
+# Anonymous Space — Implementation Plan
 
-Ship in one pass, phased internally so you can test as it lands.
+Aurix's signature feature. Any group can spin up a temporary space where identities are concealed, ghost messages disappear after viewing, and everything is permanently destroyed when the last participant leaves.
 
-## What ships
+Delivered in 3 shippable phases so we can validate each before layering the next.
 
-### Phase 1 — Foundation & Spotify presence
-- **Spotify PKCE OAuth** (no client secret, browser-safe). You paste a Spotify Client ID; the app handles the rest.
-- **Live now-playing**: polls Spotify Web API every 20s while the tab is active; upserts to `music_presence` table. Realtime broadcasts to friends.
-- **Provider abstraction**: `MusicProvider` interface — Spotify implemented now; Apple/YT Music/Amazon stubs render as "search & share" only.
-- **Music Settings panel** with all 6 privacy toggles (show song, show artwork, friends visibility, allow listen-together, auto-share, hide activity) + Preferred Provider picker.
-- **Profile "Currently Listening"** card (album art, title, artist, "Open in Spotify" deep link).
-- **Chat header music banner** — compact, appears when peer is listening and privacy allows. Tap → expands.
+---
 
-### Phase 2 — Share & Listen Together
-- **Share Music dialog** with Spotify Search API — search tracks/albums/artists/playlists, send as a rich card in any chat or room.
-- **Music message card** rendered in `ChatWindow` (new message metadata type `music_share`) with album art + Open in App button.
-- **Listen Together invite**: sends a special card. Recipient taps *Join Session* → opens the track in Spotify (native app deep link `spotify:track:ID` with web fallback). Position sync is **not** promised — browsers can't reliably control the native app; we open the same track at t=0 in both clients. Session state tracked in `listen_together_sessions`.
-- **Notifications** row inserted for: friend started listening (throttled), invite received, invite accepted.
+## Phase 1 — Foundations (backend + Ghost Messages)
 
-### Phase 3 — Rooms & AI
-- **Room now-playing**: room owner/admin can set "Now playing in room" (any Spotify track); members see it in room header with Join Listening button.
-- **AI music recommendations**: adds a "🎵 Suggest music" action in AI Tools sheet — uses existing `aiCall` + a new server fn that returns 3 track queries based on last N messages' mood; renders as tappable Spotify search deep links.
+**Database (single migration)**
 
-## What I'm NOT promising (and why)
-- **Auto-detecting music from Apple/YT Music/Amazon native apps** — browsers can't read what those apps are playing. Those providers get the manual **share** path only.
-- **True cross-user playback sync** — Spotify's Web Playback SDK only controls playback in a browser tab, not the native app the user is actually using. We open the same track; the OS handles the rest.
-- **Push notifications** — in-app notification rows only (already the app's pattern).
+```text
+anonymous_spaces
+  id, group_chat_id (FK chats), title, max_participants,
+  auto_close_at, created_by, created_at, destroyed_at
 
-## Prerequisites you need to do
-1. Go to <https://developer.spotify.com/dashboard>, create an app.
-2. Add redirect URI: `https://<your-published-domain>/music/callback` (and the preview URL if you want to test in preview).
-3. Copy the Client ID → paste when I open the secret form.
+anonymous_participants
+  space_id, user_id, alias, joined_at, left_at
+  UNIQUE(space_id, user_id)
+  UNIQUE(space_id, lower(alias))
 
-## Technical section
+anonymous_messages
+  id, space_id, sender_participant_id, content, media_url,
+  message_type, reply_to, created_at
+  (no user_id — only participant id, which is destroyed on close)
 
-### DB migration
-- `music_connections(user_id PK, provider, access_token, refresh_token, expires_at, scope, connected_at)` — RLS: user owns row.
-- `music_presence(user_id PK, provider, track_id, track_name, artist, album, album_art_url, external_url, is_playing, progress_ms, duration_ms, updated_at)` — RLS: read if `can_view_music(auth.uid(), user_id)` (helper checks settings + share_dm + block). Added to `supabase_realtime`.
-- `music_settings(user_id PK, provider default 'spotify', show_current_song, show_album_art, allow_friends_see, allow_listen_together, auto_share, hide_activity)` — RLS: user owns.
-- `listen_together_sessions(id, host_id, guest_id, chat_id nullable, track_id, provider, status ['pending','accepted','declined','ended'], created_at, updated_at)` — RLS: host or guest.
-- `music_recent_tracks(id, user_id, track_id, track_name, artist, album_art_url, external_url, played_at)` — RLS: read if `can_view_music`.
-- `messages.metadata jsonb` (added if missing) — carries `{ kind: 'music_share'|'listen_together_invite', ...track }`.
+messages.ghost_reveal_seconds  int null       -- ghost timer
+messages.ghost_revealed_at     timestamptz    -- set on first reveal
+```
 
-### Files
-- `src/lib/music/spotify.ts` — PKCE helpers, token refresh, `getCurrentlyPlaying`, `search`.
-- `src/lib/music/provider.ts` — `MusicProvider` interface + registry.
-- `src/lib/music-config.functions.ts` — server fn returning `SPOTIFY_CLIENT_ID` to the browser (safe; it's public).
-- `src/hooks/useMusic.tsx` — connection state, polling loop, settings CRUD, presence subscribers, share/invite helpers.
-- `src/components/music/{MusicPresenceCard,MusicHeaderBanner,MusicSettingsSection,ShareMusicDialog,MusicMessageCard,ListenTogetherInvite}.tsx`
-- `src/routes/music.callback.tsx` — completes PKCE exchange.
-- Wire into: `SettingsPanel`, `ProfileView`, `ChatWindow` (header + composer + message renderer), `RoomChat` (header + message renderer), `AiToolsSheet` (recommendations tab).
+- Enable RLS + GRANTs on all three tables per project rules.
+- RPCs: `create_anonymous_space`, `join_anonymous_space` (assigns/validates alias), `leave_anonymous_space`, `destroy_anonymous_space_if_empty` (trigger on leave), `reveal_ghost_message` (sets `ghost_revealed_at` once, only for recipients).
+- Destroy path: hard `DELETE` cascades — messages, participants, alias map, space row. No soft delete, no audit trail.
+- Alias validation: profanity filter + reserved-name list + collision check inside the RPC.
+- Realtime enabled on `anonymous_messages` and `anonymous_participants`.
 
-### Not touched
-- Auth, existing chat/rooms/stories/calls logic, existing themes.
+**Ghost Messages (works in all chats immediately)**
 
-Ready to build. Say "go" and I'll open the Spotify Client ID secret form first, then ship the migration + all files.
+- Composer gets a Ghost toggle with timer picker (1s / 2s / 5s / 10s / 30s / 1m / custom).
+- Recipient sees a blurred "👻 Ghost Message — Tap to reveal" bubble.
+- On reveal: call `reveal_ghost_message`, start local timer, animate dissolve, then hard-delete the row (client calls delete; RLS restricts to sender OR revealed recipient).
+- Long-press = preview without starting timer (client-only, never calls reveal RPC).
+- Ghost media reuses the same reveal/timer/delete flow; blurred thumbnail until reveal.
+
+## Phase 2 — Anonymous Space UI
+
+**Space card in group chat**
+- Rendered as a special message type `anonymous_space_invite`.
+- Premium floating card: rounded, soft shadow, breathing scale animation, subtle particle field. No neon/RGB.
+- Shows title, live participant count, [Enter] button.
+
+**Enter flow**
+- Cinematic transition (700–900ms): haptic → chat blur → messages collapse inward → dark fade → space fades in.
+- Skip affordance: "Tap anywhere to skip" appears at ~200ms with low opacity. Tap accelerates remaining animation (does not hard-cut).
+- First-entry welcome overlay with the exact copy from the brief, auto-fades after ~4s.
+- Identity picker: Random (rerollable) or Custom, with live validation.
+
+**Inside the space**
+- Distinct visual language: `#0B0B0D` background, `#141417` cards, `#1C1C20` panels, deep violet or ice cyan accent (settings toggle).
+- Slightly larger line-height and letter-spacing than normal chats to create the "different environment" feeling.
+- No avatars, no usernames, no online/read/typing-by-name.
+- Typing indicator: "A participant is typing…"
+- Message bubbles show only alias; alias color is deterministic hash of participant id (only stable within the space's lifetime).
+- Leave button in header; auto-close countdown pill if timer set.
+
+**Gestures** (reuse existing swipe-to-reply infra from `RoomChat`/`ChatWindow`)
+- Swipe → Reply
+- Long swipe → Ghost Reply
+- Double tap → quick reaction
+- Long press → reaction menu
+- Hold ghost message → preview without starting timer
+- Pinch → timeline mode (compact density)
+- Two-finger swipe → jump to unread
+
+## Phase 3 — Polish
+
+- **Motion settings** (Settings → Motion): Minimal / Balanced / Cinematic / Accessibility. Persisted in `user_settings`. Honors `prefers-reduced-motion`. Skip-frequency heuristic surfaces the one-time "shorter transitions?" suggestion.
+- **Haptics** via `navigator.vibrate` with distinct patterns for: enter space, ghost destroyed, identity selected, space destroyed.
+- **Sound design** — small library of soft click/whoosh/pulse; muted by default, toggle in Motion settings.
+- **Accessibility** — every transition skippable, screen-reader labels on alias/ghost states, 44px tap targets, AA contrast on both accent colors.
+- **Perf pass** — virtualized message list inside space, `will-change` only during transitions, RAF-driven particle field with visibility pause.
+
+---
+
+## Technical notes
+
+- New files land under `src/components/anonymous/` (SpaceCard, EnterTransition, IdentityPicker, AnonymousChatWindow, GhostBubble, GhostComposerToggle) and `src/hooks/useAnonymousSpace.tsx`, `src/hooks/useGhostMessage.tsx`.
+- Existing `ChatWindow` gets a Ghost composer control and Ghost bubble renderer; no fork of the chat surface.
+- Group header gets an "Anonymous Space" entry in the actions sheet.
+- All destroy operations run in SQL (RPC + cascade), so a client crash mid-leave still destroys correctly on next join attempt or a scheduled cleanup RPC.
+- Turnstile/rate-limit hooks from the existing security layer wrap create/join to prevent abuse.
+
+## Out of scope (call out before I build)
+
+- Voice/video calls inside Anonymous Space.
+- Cross-device push notification copy changes (only in-app rendering).
+- Community/channel variant — spec says any group; I'll gate creation to `is_group=true` chats only.
+
+---
+
+**Ship order:** Phase 1 → verify Ghost works end-to-end → Phase 2 → verify enter/leave/destroy → Phase 3 polish. Each phase is independently mergeable.
+
+Approve and I'll start with Phase 1.

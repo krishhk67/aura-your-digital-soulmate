@@ -14,6 +14,143 @@ export type Database = {
   }
   public: {
     Tables: {
+      anonymous_messages: {
+        Row: {
+          content: string | null
+          created_at: string
+          ghost_reveal_seconds: number | null
+          ghost_revealed_at: string | null
+          id: string
+          media_url: string | null
+          message_type: string
+          reply_to: string | null
+          sender_participant_id: string
+          space_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          ghost_reveal_seconds?: number | null
+          ghost_revealed_at?: string | null
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          reply_to?: string | null
+          sender_participant_id: string
+          space_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          ghost_reveal_seconds?: number | null
+          ghost_revealed_at?: string | null
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          reply_to?: string | null
+          sender_participant_id?: string
+          space_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anonymous_messages_reply_to_fkey"
+            columns: ["reply_to"]
+            isOneToOne: false
+            referencedRelation: "anonymous_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anonymous_messages_sender_participant_id_fkey"
+            columns: ["sender_participant_id"]
+            isOneToOne: false
+            referencedRelation: "anonymous_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anonymous_messages_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "anonymous_spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      anonymous_participants: {
+        Row: {
+          alias: string
+          id: string
+          joined_at: string
+          left_at: string | null
+          space_id: string
+          user_id: string
+        }
+        Insert: {
+          alias: string
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          space_id: string
+          user_id: string
+        }
+        Update: {
+          alias?: string
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          space_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anonymous_participants_space_id_fkey"
+            columns: ["space_id"]
+            isOneToOne: false
+            referencedRelation: "anonymous_spaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      anonymous_spaces: {
+        Row: {
+          auto_close_at: string | null
+          created_at: string
+          created_by: string
+          destroyed_at: string | null
+          group_chat_id: string
+          id: string
+          max_participants: number | null
+          title: string | null
+        }
+        Insert: {
+          auto_close_at?: string | null
+          created_at?: string
+          created_by: string
+          destroyed_at?: string | null
+          group_chat_id: string
+          id?: string
+          max_participants?: number | null
+          title?: string | null
+        }
+        Update: {
+          auto_close_at?: string | null
+          created_at?: string
+          created_by?: string
+          destroyed_at?: string | null
+          group_chat_id?: string
+          id?: string
+          max_participants?: number | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anonymous_spaces_group_chat_id_fkey"
+            columns: ["group_chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blocked_users: {
         Row: {
           blocked_id: string
@@ -322,6 +459,8 @@ export type Database = {
           content: string | null
           created_at: string | null
           expires_at: string | null
+          ghost_reveal_seconds: number | null
+          ghost_revealed_at: string | null
           id: string
           is_edited: boolean | null
           media_url: string | null
@@ -336,6 +475,8 @@ export type Database = {
           content?: string | null
           created_at?: string | null
           expires_at?: string | null
+          ghost_reveal_seconds?: number | null
+          ghost_revealed_at?: string | null
           id?: string
           is_edited?: boolean | null
           media_url?: string | null
@@ -350,6 +491,8 @@ export type Database = {
           content?: string | null
           created_at?: string | null
           expires_at?: string | null
+          ghost_reveal_seconds?: number | null
+          ghost_revealed_at?: string | null
           id?: string
           is_edited?: boolean | null
           media_url?: string | null
@@ -990,9 +1133,14 @@ export type Database = {
     }
     Functions: {
       _cooldown_for_level: { Args: { _level: number }; Returns: number }
+      _random_alias: { Args: never; Returns: string }
       add_chat_members: {
         Args: { _chat_id: string; _user_ids: string[] }
         Returns: number
+      }
+      can_view_anon_space: {
+        Args: { _space: string; _user: string }
+        Returns: boolean
       }
       can_view_music: {
         Args: { _author: string; _viewer: string }
@@ -1016,6 +1164,15 @@ export type Database = {
         Returns: Json
       }
       cleanup_expired_messages: { Args: never; Returns: undefined }
+      create_anonymous_space: {
+        Args: {
+          _auto_close_minutes?: number
+          _group_chat_id: string
+          _max_participants?: number
+          _title?: string
+        }
+        Returns: string
+      }
       delete_chat: { Args: { _chat_id: string }; Returns: undefined }
       get_email_for_username: { Args: { _username: string }; Returns: string }
       get_message_receipts: {
@@ -1030,6 +1187,10 @@ export type Database = {
         Args: { _other_user_id: string }
         Returns: string
       }
+      is_anon_space_participant: {
+        Args: { _space: string; _user: string }
+        Returns: boolean
+      }
       is_blocked: {
         Args: { _blocked: string; _blocker: string }
         Returns: boolean
@@ -1043,12 +1204,20 @@ export type Database = {
         Returns: boolean
       }
       is_username_available: { Args: { _username: string }; Returns: boolean }
+      join_anonymous_space: {
+        Args: { _custom_alias?: string; _space_id: string }
+        Returns: {
+          alias: string
+          participant_id: string
+        }[]
+      }
       join_chat_by_invite: { Args: { _invite_code: string }; Returns: string }
       join_room: {
         Args: { _invite_code?: string; _room_id: string }
         Returns: string
       }
       join_room_by_code: { Args: { _invite_code: string }; Returns: string }
+      leave_anonymous_space: { Args: { _space_id: string }; Returns: undefined }
       log_security_event: {
         Args: {
           _action: string
@@ -1076,6 +1245,7 @@ export type Database = {
         Args: { _action: string; _identifier: string }
         Returns: undefined
       }
+      reveal_ghost_message: { Args: { _message_id: string }; Returns: string }
       room_role: { Args: { _room: string; _user: string }; Returns: string }
       rotate_chat_invite: { Args: { _chat_id: string }; Returns: string }
       set_chat_hidden: {
