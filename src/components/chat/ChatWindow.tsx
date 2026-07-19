@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, Paperclip, ArrowLeft, Phone, Video, MoreVertical, Check, CheckCheck, Image as ImageIcon, FileText, Film, X, Trash2, Sparkles } from "lucide-react";
+import { Send, Paperclip, ArrowLeft, Phone, Video, MoreVertical, Check, CheckCheck, Image as ImageIcon, FileText, Film, X, Trash2, Sparkles, Ghost } from "lucide-react";
 import { AiToolsSheet } from "./AiToolsSheet";
 import { SmartReplyBar } from "./SmartReplyBar";
 import { MoodIndicator, MOOD_META, type MoodId } from "./MoodIndicator";
@@ -14,6 +14,11 @@ import type { ProfileRow, ChatRow } from "@/hooks/useRealtimeChat";
 import { toast } from "sonner";
 import { VoiceRecorder, MicButton } from "./VoiceRecorder";
 import { AudioMessage } from "./AudioMessage";
+import { GhostBubble } from "./GhostBubble";
+import { GhostTimerPicker } from "./GhostTimerPicker";
+import { SpaceCard } from "@/components/anonymous/SpaceCard";
+import { CreateSpaceDialog } from "@/components/anonymous/CreateSpaceDialog";
+import { AnonymousSpaceView } from "@/components/anonymous/AnonymousSpaceView";
 
 /** Parse durations stored as message content: "5s", "5.2s", or a raw millisecond number. */
 function parseDurationHint(content?: string | null): number | undefined {
