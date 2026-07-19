@@ -14,7 +14,9 @@ import { CallOverlay } from "@/components/calls/CallOverlay";
 import { CallsHistoryView } from "@/components/calls/CallsHistoryView";
 import { HiddenSpaceProvider, useHiddenSpace } from "@/hooks/useHiddenSpace";
 import { useAuth } from "@/hooks/useAuth";
+import { useMyChats } from "@/hooks/useRealtimeChat";
 import { CurrentProfileProvider } from "@/hooks/useCurrentProfile";
+
 import { AccountOnboardingDialog } from "@/components/auth/AccountOnboardingDialog";
 
 export function ChatLayout() {
@@ -34,6 +36,12 @@ function ChatLayoutInner() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [roomActive, setRoomActive] = useState(false);
   const { user } = useAuth();
+  const { chats: allChats } = useMyChats();
+  const totalUnread = allChats.reduce(
+    (sum, c) => sum + (!c.is_archived && (c.unread_count ?? 0) > 0 ? 1 : 0),
+    0,
+  );
+
 
   const handleSelectChat = useCallback((id: string) => {
     setSelectedChat(id);
@@ -123,8 +131,9 @@ function ChatLayoutInner() {
 
       {/* Bottom nav - hide when chat or room is open */}
       {!hideNav && (
-        <BottomNav active={activeTab} onChange={handleTabChange} />
+        <BottomNav active={activeTab} onChange={handleTabChange} unreadCount={totalUnread} />
       )}
+
 
       {/* Safe area spacer for bottom nav */}
       {!hideNav && <div className="h-[72px]" />}
