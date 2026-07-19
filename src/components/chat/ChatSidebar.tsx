@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MessageCircle, Search, Plus, UserPlus, Pin, BellOff,
-  Users, User, Mail, Star, Archive, PhoneCall, Sparkles, Lock, Globe2,
+  Users, User, Mail, Star, Archive, Sparkles, Lock, Globe2, ChevronLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMyChats } from "@/hooks/useRealtimeChat";
@@ -11,7 +11,7 @@ import { SmartAvatarButton } from "./SmartAvatarButton";
 import { useHiddenSpace } from "@/hooks/useHiddenSpace";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface ChatSidebarProps {
   selectedChat: string | null;
@@ -22,7 +22,7 @@ interface ChatSidebarProps {
 
 type FilterKey =
   | "all" | "chats" | "groups" | "unread" | "favorites"
-  | "archived" | "calls" | "ai" | "hidden" | "communities";
+  | "archived" | "ai" | "hidden" | "communities";
 
 interface FilterDef {
   key: FilterKey;
@@ -37,8 +37,6 @@ const FILTERS: FilterDef[] = [
   { key: "groups", label: "Groups", icon: Users },
   { key: "unread", label: "Unread", icon: Mail },
   { key: "favorites", label: "Favorites", icon: Star },
-  { key: "archived", label: "Archived", icon: Archive },
-  { key: "calls", label: "Calls", icon: PhoneCall },
   { key: "ai", label: "AI", icon: Sparkles },
   { key: "hidden", label: "Hidden", icon: Lock, requiresHidden: true },
   { key: "communities", label: "Communities", icon: MessageCircle },
@@ -121,9 +119,6 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
       case "archived":
         list = list.filter((c) => c.is_archived);
         break;
-      case "calls":
-        list = list.filter((c) => callChatIds.has(c.id) && !c.is_archived);
-        break;
       case "ai":
       case "communities":
         list = [];
@@ -161,6 +156,40 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
     } as Record<string, number>;
   }, [normalChats, hiddenChats, callChatIds]);
 
+  const archivedChats = useMemo(() => normalChats.filter((c) => c.is_archived), [normalChats]);
+  const archivedUnread = useMemo(
+    () => archivedChats.filter((c) => (c.unread_count ?? 0) > 0).length,
+    [archivedChats],
+  );
+
+  // Pull-to-reveal archived (Telegram-style)
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [pullY, setPullY] = useState(0);
+  const pullStartY = useRef<number | null>(null);
+  const REVEAL_THRESHOLD = 56;
+
+  const onPullStart = (e: React.TouchEvent) => {
+    if (activeFilter === "archived") return;
+    if (!scrollRef.current || scrollRef.current.scrollTop > 0) return;
+    pullStartY.current = e.touches[0].clientY;
+  };
+  const onPullMove = (e: React.TouchEvent) => {
+    if (pullStartY.current == null) return;
+    const dy = e.touches[0].clientY - pullStartY.current;
+    if (dy <= 0) { setPullY(0); return; }
+    setPullY(Math.min(dy * 0.5, 96));
+  };
+  const onPullEnd = () => {
+    if (pullStartY.current == null) return;
+    pullStartY.current = null;
+    if (pullY >= REVEAL_THRESHOLD && archivedChats.length > 0) {
+      setActiveFilter("archived");
+    }
+    setPullY(0);
+  };
+
+
+
 
   const visibleFilters = FILTERS.filter((f) => !f.requiresHidden || hs.unlocked);
 
@@ -171,7 +200,7 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
       case "groups": return "No group chats yet.";
       case "chats": return "No one-to-one chats yet.";
       case "archived": return "Nothing archived.";
-      case "calls": return "No recent calls.";
+      
       case "ai": return "AI conversations coming soon.";
       case "communities": return "Communities are coming soon.";
       case "hidden": return "No hidden conversations.";
@@ -248,7 +277,54 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
       </div>
 
       {/* Chat list */}
-      <div className="flex-1 overflow-y-auto px-3 space-y-1 pb-2">
+      <div
+        ref={scrollRef}
+        onTouchStart={onPullStart}
+        onTouchMove={onPullMove}
+        onTouchEnd={onPullEnd}
+        onTouchCancel={onPullEnd}
+        className="flex-1 overflow-y-auto px-3 space-y-1 pb-2"
+      >
+        {activeFilter === "archived" ? (
+          <button
+            onClick={() => setActiveFilter("all")}
+            className="w-full flex items-center gap-2 px-2 py-3 text-sm text-neon"
+          >
+            <ChevronLeft className="h-4 w-4" /> Back to chats
+          </button>
+        ) : archivedChats.length > 0 ? (
+          <motion.div
+            animate={{ height: pullY }}
+            transition={{ type: "spring", stiffness: 400, damping: 40 }}
+            className="overflow-hidden"
+            style={{ height: pullY }}
+          >
+            <div
+              style={{ opacity: Math.min(pullY / REVEAL_THRESHOLD, 1) }}
+              className="pt-2"
+            >
+              <button
+                onClick={() => { setActiveFilter("archived"); setPullY(0); }}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-secondary/40 hover:bg-secondary/60 transition-colors"
+              >
+                <div className="h-10 w-10 rounded-full bg-primary/15 flex items-center justify-center text-neon">
+                  <Archive className="h-5 w-5" />
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="text-[15px] font-semibold">Archived Chats</div>
+                  <div className="text-[12px] text-muted-foreground">
+                    {archivedChats.length} conversation{archivedChats.length === 1 ? "" : "s"}
+                  </div>
+                </div>
+                {archivedUnread > 0 && (
+                  <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex items-center justify-center">
+                    {archivedUnread > 99 ? "99+" : archivedUnread}
+                  </span>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        ) : null}
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <div className="h-6 w-6 border-2 border-neon border-t-transparent rounded-full animate-spin" />
