@@ -166,7 +166,7 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
       case "groups": return "No group chats yet.";
       case "chats": return "No one-to-one chats yet.";
       case "archived": return "Nothing archived.";
-      case "calls": return "No recent calls.";
+      
       case "ai": return "AI conversations coming soon.";
       case "communities": return "Communities are coming soon.";
       case "hidden": return "No hidden conversations.";
