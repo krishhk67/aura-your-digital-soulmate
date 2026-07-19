@@ -84,6 +84,12 @@ export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, on
   const items = [
     { icon: Search, label: "Search in chat", onClick: () => { onSearch(); onClose(); } },
     { icon: ImageIcon, label: "Media gallery", onClick: () => { onOpenProfile(); onClose(); } },
+    ...(isGroup && onCreateAnonymousSpace ? [{
+      icon: Sparkles,
+      label: "Create Anonymous Space",
+      onClick: () => { onCreateAnonymousSpace(); onClose(); },
+      accent: true as const,
+    }] : []),
     { icon: is_pinned ? PinOff : Pin, label: is_pinned ? "Unpin conversation" : "Pin conversation", onClick: togglePin },
     { icon: is_muted ? Bell : BellOff, label: is_muted ? "Unmute notifications" : "Mute notifications", onClick: toggleMute },
     { icon: Timer, label: "Disappearing messages", onClick: () => { setDisappearOpen(true); onClose(); } },
@@ -111,7 +117,7 @@ export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, on
       { icon: Flag, label: "Report user", onClick: () => { setReportOpen(true); }, danger: true },
     ] : []),
     ...(isGroup ? [{ icon: Users, label: "View members", onClick: () => { onOpenProfile(); onClose(); } }] : []),
-  ];
+  ] as Array<{ icon: typeof Search; label: string; onClick: () => void; danger?: boolean; accent?: boolean }>;
 
 
   return (
