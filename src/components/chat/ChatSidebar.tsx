@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MessageCircle, Search, Plus, UserPlus, Pin, BellOff,
-  Users, User, Mail, Star, Archive, PhoneCall, Sparkles, Lock, Globe2,
+  Users, User, Mail, Star, Archive, Sparkles, Lock, Globe2, ChevronLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMyChats } from "@/hooks/useRealtimeChat";
@@ -11,7 +11,7 @@ import { SmartAvatarButton } from "./SmartAvatarButton";
 import { useHiddenSpace } from "@/hooks/useHiddenSpace";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface ChatSidebarProps {
   selectedChat: string | null;
