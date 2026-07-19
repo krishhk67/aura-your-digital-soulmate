@@ -622,16 +622,27 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                 title="AI tools">
                 <Sparkles className="h-5 w-5" />
               </button>
+              <button onClick={() => setGhostPickerOpen(true)} disabled={uploading}
+                className={cn(
+                  "h-10 w-10 rounded-full flex items-center justify-center hover:bg-secondary transition-colors flex-shrink-0 disabled:opacity-50",
+                  ghostSeconds ? "text-white bg-white/10" : "text-muted-foreground"
+                )}
+                title="Ghost message">
+                <Ghost className="h-5 w-5" />
+              </button>
               <div className="flex-1 relative">
                 <textarea
                   ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                  placeholder={uploading ? "Uploading..." : "Message..."}
+                  placeholder={ghostSeconds ? `👻 Ghost · ${ghostSeconds}s after reveal` : uploading ? "Uploading..." : "Message..."}
                   rows={1}
                   disabled={uploading}
-                  className="w-full rounded-2xl bg-secondary/50 border border-border px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none max-h-24 disabled:opacity-60"
+                  className={cn(
+                    "w-full rounded-2xl border px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none max-h-24 disabled:opacity-60",
+                    ghostSeconds ? "bg-white/5 border-white/15" : "bg-secondary/50 border-border"
+                  )}
                 />
               </div>
               {input.trim() ? (
