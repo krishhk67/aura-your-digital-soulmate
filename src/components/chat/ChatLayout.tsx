@@ -14,7 +14,9 @@ import { CallOverlay } from "@/components/calls/CallOverlay";
 import { CallsHistoryView } from "@/components/calls/CallsHistoryView";
 import { HiddenSpaceProvider, useHiddenSpace } from "@/hooks/useHiddenSpace";
 import { useAuth } from "@/hooks/useAuth";
+import { useMyChats } from "@/hooks/useRealtimeChat";
 import { CurrentProfileProvider } from "@/hooks/useCurrentProfile";
+
 import { AccountOnboardingDialog } from "@/components/auth/AccountOnboardingDialog";
 
 export function ChatLayout() {
