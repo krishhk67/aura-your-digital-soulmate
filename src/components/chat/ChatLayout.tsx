@@ -131,8 +131,9 @@ function ChatLayoutInner() {
 
       {/* Bottom nav - hide when chat or room is open */}
       {!hideNav && (
-        <BottomNav active={activeTab} onChange={handleTabChange} />
+        <BottomNav active={activeTab} onChange={handleTabChange} unreadCount={totalUnread} />
       )}
+
 
       {/* Safe area spacer for bottom nav */}
       {!hideNav && <div className="h-[72px]" />}
