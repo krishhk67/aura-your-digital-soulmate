@@ -365,6 +365,20 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
           </div>
         ) : (
           visibleMessages.map((msg, i) => {
+            // Anonymous Space invite renders as its own hero card, no bubble.
+            if (msg.message_type === "anonymous_space_invite") {
+              const meta = (msg.metadata as { space_id?: string } | null) ?? null;
+              return (
+                <div key={msg.id} id={`msg-${msg.id}`}>
+                  <SpaceCard
+                    chatId={chatId}
+                    spaceIdHint={meta?.space_id ?? null}
+                    title={msg.content}
+                    onEnter={(sid) => setActiveSpaceId(sid)}
+                  />
+                </div>
+              );
+            }
             const isMe = msg.sender_id === user?.id;
             const time = new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
