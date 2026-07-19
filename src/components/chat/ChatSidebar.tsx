@@ -45,9 +45,17 @@ const FILTERS: FilterDef[] = [
 ];
 
 export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSidebarProps) {
-  const { chats: normalChats, loading } = useMyChats();
+  const { chats: normalChats, loading, markChatRead } = useMyChats();
   const hs = useHiddenSpace();
-  const { chats: hiddenChats } = useMyChats({ hiddenOnly: hs.unlocked });
+  const { chats: hiddenChats, markChatRead: markHiddenRead } = useMyChats({ hiddenOnly: hs.unlocked });
+
+  const openChat = (id: string) => {
+    // Optimistically clear the unread indicator the moment the user taps a row.
+    markChatRead(id);
+    markHiddenRead(id);
+    onSelectChat(id);
+  };
+
   const { user } = useAuth();
   const storyGroups = useAllStoryGroups();
   const [searchQuery, setSearchQuery] = useState("");
