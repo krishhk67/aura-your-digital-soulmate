@@ -685,6 +685,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
         chatId={chatId} partnerId={chatPartner?.id ?? null} isGroup={!!chatMeta?.is_group}
         onOpenProfile={() => setProfileOpen(true)}
         onSearch={() => setSearchOpen(true)}
+        onCreateAnonymousSpace={() => setCreateSpaceOpen(true)}
       />
       <AiToolsSheet
         open={aiOpen} onClose={() => setAiOpen(false)}
@@ -694,6 +695,21 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
         onUseRewrite={(t) => setInput(t)}
       />
       <MessageInfoSheet message={infoMsg} onClose={() => setInfoMsg(null)} isGroup={!!chatMeta?.is_group} />
+      <GhostTimerPicker
+        open={ghostPickerOpen} current={ghostSeconds}
+        onSelect={setGhostSeconds}
+        onClose={() => setGhostPickerOpen(false)}
+      />
+      <CreateSpaceDialog
+        open={createSpaceOpen} onClose={() => setCreateSpaceOpen(false)}
+        groupChatId={chatMeta?.is_group ? chatId : null}
+        onCreated={(sid) => setActiveSpaceId(sid)}
+      />
+      <AnimatePresence>
+        {activeSpaceId && (
+          <AnonymousSpaceView spaceId={activeSpaceId} onExit={() => setActiveSpaceId(null)} />
+        )}
+      </AnimatePresence>
       {reactionTarget && (
         <ReactionPicker
           anchorRect={reactionTarget.rect}
