@@ -174,8 +174,22 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   // of whether the chat is 1:1 or a group. Do NOT bypass this.
   const submitText = async (raw: string, source: "manual" | "smart-reply" = "manual") => {
     const text = (raw ?? "").trim();
-    if (!text || !chatId) return { ok: false as const };
-    console.info("[Aurix] submitText", { source, chatId, is_group: chatMeta?.is_group, len: text.length });
+    if (!text || !chatId || !user) return { ok: false as const };
+    console.info("[Aurix] submitText", { source, chatId, is_group: chatMeta?.is_group, len: text.length, ghost: ghostSeconds });
+
+    // Ghost path: insert directly so we can set ghost_reveal_seconds.
+    if (ghostSeconds && source === "manual") {
+      const { error } = await supabase.from("messages").insert({
+        chat_id: chatId,
+        sender_id: user.id,
+        content: text,
+        message_type: "text",
+        ghost_reveal_seconds: ghostSeconds,
+      });
+      if (error) { toast.error(error.message); return { ok: false as const, error: new Error(error.message) }; }
+      return { ok: true as const };
+    }
+
     const { error } = await sendMessage(chatId, text);
     if (error) {
       console.error("[Aurix] submitText failed", { source, chatId, is_group: chatMeta?.is_group, error: error.message });
@@ -195,6 +209,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   };
 
   const sendText = (text: string) => submitText(text, "smart-reply");
+
 
 
   const uploadAndSend = async (file: File) => {
