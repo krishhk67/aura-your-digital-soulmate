@@ -211,12 +211,14 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header */}
-      <div className="px-5 pt-[env(safe-area-inset-top,12px)] pb-2">
+      <div className="px-6 pt-[env(safe-area-inset-top,12px)] pb-2">
         <div className="flex items-center justify-between py-3">
-          <div className="flex items-center gap-2">
-            <MessageCircle className="h-6 w-6 text-neon" />
-            <span className="font-display font-bold text-2xl gradient-text">Aurix</span>
-          </div>
+          <span
+            className="font-display font-semibold text-[28px] leading-none gradient-text"
+            style={{ letterSpacing: "-0.02em" }}
+          >
+            Aurix
+          </span>
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={onNewChat}
@@ -225,6 +227,7 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
             <Plus className="h-5 w-5" />
           </motion.button>
         </div>
+
 
         {/* Search */}
         <div className="relative mb-2">
