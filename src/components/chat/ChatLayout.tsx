@@ -36,6 +36,12 @@ function ChatLayoutInner() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [roomActive, setRoomActive] = useState(false);
   const { user } = useAuth();
+  const { chats: allChats } = useMyChats();
+  const totalUnread = allChats.reduce(
+    (sum, c) => sum + (!c.is_archived && (c.unread_count ?? 0) > 0 ? 1 : 0),
+    0,
+  );
+
 
   const handleSelectChat = useCallback((id: string) => {
     setSelectedChat(id);
