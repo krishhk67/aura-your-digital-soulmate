@@ -22,7 +22,7 @@ interface ChatSidebarProps {
 
 type FilterKey =
   | "all" | "chats" | "groups" | "unread" | "favorites"
-  | "archived" | "calls" | "ai" | "hidden" | "communities";
+  | "archived" | "ai" | "hidden" | "communities";
 
 interface FilterDef {
   key: FilterKey;
@@ -37,8 +37,6 @@ const FILTERS: FilterDef[] = [
   { key: "groups", label: "Groups", icon: Users },
   { key: "unread", label: "Unread", icon: Mail },
   { key: "favorites", label: "Favorites", icon: Star },
-  { key: "archived", label: "Archived", icon: Archive },
-  { key: "calls", label: "Calls", icon: PhoneCall },
   { key: "ai", label: "AI", icon: Sparkles },
   { key: "hidden", label: "Hidden", icon: Lock, requiresHidden: true },
   { key: "communities", label: "Communities", icon: MessageCircle },
