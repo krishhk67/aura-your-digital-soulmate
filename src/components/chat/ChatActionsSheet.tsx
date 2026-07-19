@@ -21,9 +21,10 @@ interface Props {
   isGroup?: boolean;
   onOpenProfile: () => void;
   onSearch: () => void;
+  onCreateAnonymousSpace?: () => void;
 }
 
-export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, onOpenProfile, onSearch }: Props) {
+export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, onOpenProfile, onSearch, onCreateAnonymousSpace }: Props) {
   const { user } = useAuth();
   const { is_pinned, is_muted, update } = useChatMemberState(chatId);
   const { block } = useBlockUser();
