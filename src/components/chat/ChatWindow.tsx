@@ -496,7 +496,17 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
                         )}
                         {(!msg.message_type || msg.message_type === "text") && (
                           <>
-                            <span className="whitespace-pre-wrap break-words">{msg.content}</span>
+                            {msg.ghost_reveal_seconds ? (
+                              <GhostBubble
+                                messageId={msg.id}
+                                isMine={isMe}
+                                revealSeconds={msg.ghost_reveal_seconds}
+                                revealedAt={msg.ghost_revealed_at ?? null}
+                                content={msg.content}
+                              />
+                            ) : (
+                              <span className="whitespace-pre-wrap break-words">{msg.content}</span>
+                            )}
                             {isMe && !groupedWithNext && (
                               <span
                                 aria-hidden
