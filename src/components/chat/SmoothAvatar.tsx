@@ -26,51 +26,61 @@ export function SmoothAvatar({
   imgClassName,
   ringClassName,
 }: SmoothAvatarProps) {
-  const [current, setCurrent] = useState<string | null>(null);
+  const [current, setCurrent] = useState<string | null>(src ?? null);
   const [loading, setLoading] = useState<boolean>(!!src);
   const lastRequested = useRef<string | null>(null);
 
   useEffect(() => {
     const next = src ?? null;
-    if (next === current) {
-      setLoading(false);
-      return;
-    }
+
     if (!next) {
-      // no new src - clear only if we had nothing (avoid flash)
       lastRequested.current = null;
       setCurrent(null);
       setLoading(false);
       return;
     }
+
+    if (next === current) {
+      setLoading(false);
+      return;
+    }
+
     if (lastRequested.current === next) return;
     lastRequested.current = next;
 
     let cancelled = false;
     setLoading(true);
+
     const img = new Image();
     img.decoding = "async";
-    const commit = () => {
+
+    const finish = (ok: boolean) => {
       if (cancelled) return;
-      setCurrent(next);
+      clearTimeout(watchdog);
+      if (ok) setCurrent(next);
+      // Always clear loading — success, error, or timeout.
       setLoading(false);
     };
+
+    // 3s hard cap — if the network stalls or events never fire,
+    // fall back gracefully instead of spinning forever.
+    const watchdog = setTimeout(() => finish(false), 3000);
+
     img.onload = () => {
       if (typeof img.decode === "function") {
-        img.decode().then(commit).catch(commit);
+        img.decode().then(() => finish(true)).catch(() => finish(true));
       } else {
-        commit();
+        finish(true);
       }
     };
-    img.onerror = () => {
-      if (cancelled) return;
-      // keep previous image; just stop the loader
-      setLoading(false);
-    };
+    img.onerror = () => finish(false);
+
+    // Retry without crossOrigin if it fails (some hosts don't send CORS headers)
     img.src = next;
 
     return () => {
       cancelled = true;
+      clearTimeout(watchdog);
       img.onload = null;
       img.onerror = null;
     };
