@@ -156,6 +156,40 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
     } as Record<string, number>;
   }, [normalChats, hiddenChats, callChatIds]);
 
+  const archivedChats = useMemo(() => normalChats.filter((c) => c.is_archived), [normalChats]);
+  const archivedUnread = useMemo(
+    () => archivedChats.filter((c) => (c.unread_count ?? 0) > 0).length,
+    [archivedChats],
+  );
+
+  // Pull-to-reveal archived (Telegram-style)
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [pullY, setPullY] = useState(0);
+  const pullStartY = useRef<number | null>(null);
+  const REVEAL_THRESHOLD = 56;
+
+  const onPullStart = (e: React.TouchEvent) => {
+    if (activeFilter === "archived") return;
+    if (!scrollRef.current || scrollRef.current.scrollTop > 0) return;
+    pullStartY.current = e.touches[0].clientY;
+  };
+  const onPullMove = (e: React.TouchEvent) => {
+    if (pullStartY.current == null) return;
+    const dy = e.touches[0].clientY - pullStartY.current;
+    if (dy <= 0) { setPullY(0); return; }
+    setPullY(Math.min(dy * 0.5, 96));
+  };
+  const onPullEnd = () => {
+    if (pullStartY.current == null) return;
+    pullStartY.current = null;
+    if (pullY >= REVEAL_THRESHOLD && archivedChats.length > 0) {
+      setActiveFilter("archived");
+    }
+    setPullY(0);
+  };
+
+
+
 
   const visibleFilters = FILTERS.filter((f) => !f.requiresHidden || hs.unlocked);
 
