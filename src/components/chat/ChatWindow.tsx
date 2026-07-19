@@ -81,6 +81,13 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const { byMessage: reactionsByMessage } = useMessageReactions("chat", chatId, messageIds);
   const toggleReaction = useToggleReaction("chat");
 
+  // Ghost + Anonymous Space state
+  const [ghostSeconds, setGhostSeconds] = useState<number | null>(null);
+  const [ghostPickerOpen, setGhostPickerOpen] = useState(false);
+  const [createSpaceOpen, setCreateSpaceOpen] = useState(false);
+  const [activeSpaceId, setActiveSpaceId] = useState<string | null>(null);
+
+
 
   const initiateCall = (type: "voice" | "video") => {
     if (chatMeta?.is_group) { toast("Group calls coming next update"); return; }
