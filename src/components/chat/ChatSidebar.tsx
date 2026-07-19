@@ -119,9 +119,6 @@ export function ChatSidebar({ selectedChat, onSelectChat, onNewChat }: ChatSideb
       case "archived":
         list = list.filter((c) => c.is_archived);
         break;
-      case "calls":
-        list = list.filter((c) => callChatIds.has(c.id) && !c.is_archived);
-        break;
       case "ai":
       case "communities":
         list = [];
