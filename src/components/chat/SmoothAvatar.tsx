@@ -53,8 +53,6 @@ export function SmoothAvatar({
 
     const img = new Image();
     img.decoding = "async";
-    // Allow cross-origin decode without tainting
-    img.crossOrigin = "anonymous";
 
     const finish = (ok: boolean) => {
       if (cancelled) return;
