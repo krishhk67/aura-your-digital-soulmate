@@ -143,7 +143,11 @@ export function ChatActionsSheet({ open, onClose, chatId, partnerId, isGroup, on
                     onClick={it.onClick}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-secondary/60 transition-colors text-left ${it.danger ? "text-destructive" : ""}`}
                   >
-                    <div className={`h-9 w-9 rounded-full flex items-center justify-center ${it.danger ? "bg-destructive/15" : "bg-primary/15 text-neon"}`}>
+                    <div className={`h-9 w-9 rounded-full flex items-center justify-center ${
+                      it.danger ? "bg-destructive/15"
+                      : it.accent ? "bg-white text-black"
+                      : "bg-primary/15 text-neon"
+                    }`}>
                       <it.icon className="h-4 w-4" />
                     </div>
                     <span className="text-[14px] font-medium">{it.label}</span>
