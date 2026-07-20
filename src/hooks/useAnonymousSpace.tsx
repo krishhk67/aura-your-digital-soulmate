@@ -87,21 +87,51 @@ export function useAnonymousSpace(spaceId: string | null) {
   const [destroyed, setDestroyed] = useState(false);
 
   const load = useCallback(async () => {
-    if (!spaceId) return;
+    if (!spaceId) {
+      setSpace(null);
+      setParticipants([]);
+      setMessages([]);
+      setMe(null);
+      setDestroyed(false);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     const [{ data: sp }, { data: parts }, { data: msgs }] = await Promise.all([
       supabase.from("anonymous_spaces").select("*").eq("id", spaceId).maybeSingle(),
       supabase.from("anonymous_participants").select("*").eq("space_id", spaceId).is("left_at", null),
       supabase.from("anonymous_messages").select("*").eq("space_id", spaceId).order("created_at", { ascending: true }),
     ]);
-    if (!sp) { setDestroyed(true); setLoading(false); return; }
-    setSpace(sp as AnonSpace);
-    setParticipants((parts ?? []) as AnonParticipant[]);
+    const nextSpace = sp as AnonSpace | null;
+    const isDestroyed = !nextSpace || !!nextSpace.destroyed_at;
+    if (isDestroyed) {
+      setSpace(nextSpace);
+      setParticipants([]);
+      setMessages([]);
+      setMe(null);
+      setDestroyed(true);
+      setLoading(false);
+      console.info("[AnonymousSpace] load detected closed space", { spaceId, found: !!nextSpace, destroyed_at: nextSpace?.destroyed_at ?? null });
+      return;
+    }
+    const activeParticipants = (parts ?? []) as AnonParticipant[];
+    setSpace(nextSpace);
+    setParticipants(activeParticipants);
     setMessages((msgs ?? []) as AnonMessage[]);
-    if (user) setMe(((parts ?? []) as AnonParticipant[]).find(p => p.user_id === user.id) ?? null);
+    setMe(user ? activeParticipants.find(p => p.user_id === user.id) ?? null : null);
+    setDestroyed(false);
     setLoading(false);
   }, [spaceId, user]);
 
-  useEffect(() => { setDestroyed(false); void load(); }, [load]);
+  useEffect(() => {
+    setSpace(null);
+    setParticipants([]);
+    setMessages([]);
+    setMe(null);
+    setDestroyed(false);
+    setLoading(true);
+    void load();
+  }, [load]);
 
   useEffect(() => {
     if (!spaceId) return;
@@ -114,7 +144,30 @@ export function useAnonymousSpace(spaceId: string | null) {
       .on("postgres_changes", { event: "*", schema: "public", table: "anonymous_participants", filter: `space_id=eq.${spaceId}` },
         () => void load())
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "anonymous_spaces", filter: `id=eq.${spaceId}` },
-        () => setDestroyed(true))
+        () => {
+          console.info("[AnonymousSpace] room status changed", { spaceId, status: "deleted" });
+          setSpace(null);
+          setParticipants([]);
+          setMessages([]);
+          setMe(null);
+          setDestroyed(true);
+          setLoading(false);
+        })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "anonymous_spaces", filter: `id=eq.${spaceId}` },
+        (payload) => {
+          const next = payload.new as AnonSpace;
+          if (next.destroyed_at) {
+            console.info("[AnonymousSpace] room status changed", { spaceId, status: "destroyed", destroyed_at: next.destroyed_at });
+            setSpace(next);
+            setParticipants([]);
+            setMessages([]);
+            setMe(null);
+            setDestroyed(true);
+            setLoading(false);
+          } else {
+            setSpace(next);
+          }
+        })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [spaceId, load]);

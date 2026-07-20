@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Send, Users, X } from "lucide-react";
 import { toast } from "sonner";
@@ -29,11 +29,33 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
   const [joining, setJoining] = useState(false);
   const [showParticipants, setShowParticipants] = useState(false);
   const [input, setInput] = useState("");
+  const [cleanupStatus, setCleanupStatus] = useState<"idle" | "leaving" | "closed" | "exiting" | "exited">("idle");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Track whether we actually joined so unmount cleanup doesn't destroy a space
   // we never entered (fixes StrictMode double-mount + quick-close races).
   const joinedRef = useRef(false);
+  const exitedRef = useRef(false);
+
+  const roomStatus = loading ? "loading" : destroyed ? "closed" : space ? "active" : "missing";
+  const hasJoined = joinedRef.current || !!me;
+  const returnDisabled = false;
+
+  const finishExit = useCallback((reason: string) => {
+    if (exitedRef.current) return;
+    exitedRef.current = true;
+    joinedRef.current = false;
+    setCleanupStatus("exiting");
+    console.info("[AnonymousSpace] Exit animation started", { reason, cleanupStatus: "exiting" });
+    window.setTimeout(() => {
+      setCleanupStatus("exited");
+      console.info("[AnonymousSpace] Exit animation completed", { reason });
+      console.info("[AnonymousSpace] Backdrop removed");
+      console.info("[AnonymousSpace] Modal removed");
+      console.info("[AnonymousSpace] Pointer events restored", { bodyPointerEvents: document.body.style.pointerEvents || "normal" });
+      onExit();
+    }, 160);
+  }, [onExit]);
 
   // If already joined (rejoining after refresh), skip identity picker.
   useEffect(() => {
@@ -47,18 +69,39 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
   // Destroyed → show a lightweight in-view farewell card, then auto-exit.
   useEffect(() => {
     if (!destroyed) return;
-    console.log("[AnonymousSpace] destroyed → auto-exit scheduled");
+    joinedRef.current = false;
+    setCleanupStatus("closed");
+    console.info("[AnonymousSpace] Anonymous Space closing", { spaceId, participantCount: participants.length, roomStatus: "closed" });
+    console.info("[AnonymousSpace] destroyed → auto-exit scheduled", { delayMs: 1000 });
     const t = window.setTimeout(() => {
-      console.log("[AnonymousSpace] auto-exit firing");
-      onExit();
-    }, 1600);
+      console.info("[AnonymousSpace] auto-exit firing");
+      finishExit("closed-auto-dismiss");
+    }, 1000);
     return () => window.clearTimeout(t);
-  }, [destroyed, onExit]);
+  }, [destroyed, finishExit, participants.length, spaceId]);
+
+  useEffect(() => {
+    console.info("[AnonymousSpace] Current modal state", {
+      spaceId,
+      phase,
+      isOpen: true,
+      isClosing: cleanupStatus === "leaving" || cleanupStatus === "exiting",
+      isDestroyed: destroyed,
+      isEnded: destroyed,
+      hasJoined,
+      hasExited: exitedRef.current,
+      isLoading: loading || joining,
+    });
+    console.info("[AnonymousSpace] Current button disabled value", { returnDisabled, sendDisabled: !input.trim() });
+    console.info("[AnonymousSpace] Current participant count", { count: participants.length });
+    console.info("[AnonymousSpace] Current room status", { roomStatus, destroyed_at: space?.destroyed_at ?? null });
+    console.info("[AnonymousSpace] Current cleanup status", { cleanupStatus });
+  }, [cleanupStatus, destroyed, hasJoined, input, joining, loading, participants.length, phase, returnDisabled, roomStatus, space?.destroyed_at, spaceId]);
 
   // Mount/unmount trace for debugging soft-lock reports.
   useEffect(() => {
-    console.log("[AnonymousSpace] mounted", spaceId);
-    return () => console.log("[AnonymousSpace] unmounted", spaceId);
+    console.info("[AnonymousSpace] mounted", spaceId);
+    return () => console.info("[AnonymousSpace] unmounted", spaceId);
   }, [spaceId]);
 
   useEffect(() => {
@@ -94,11 +137,13 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
 
   const handleLeave = async () => {
     try { navigator.vibrate?.(15); } catch { /* noop */ }
+    setCleanupStatus("leaving");
+    console.info("[AnonymousSpace] Anonymous Space closing", { spaceId, participantCount: participants.length, roomStatus });
     if (joinedRef.current) {
       await leave(spaceId);
       joinedRef.current = false;
     }
-    onExit();
+    finishExit("manual-leave");
   };
 
 
@@ -135,22 +180,36 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
             key="destroyed-overlay"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            onClick={() => { console.log("[AnonymousSpace] farewell dismissed by tap"); onExit(); }}
+            onClick={() => { console.info("[AnonymousSpace] farewell dismissed by tap"); finishExit("closed-tap"); }}
             role="button"
             tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                finishExit("closed-keyboard");
+              }
+            }}
             className="absolute inset-0 z-[80] bg-[#0B0B0D]/95 backdrop-blur-md flex items-center justify-center p-8 text-center cursor-pointer"
           >
             <motion.div
               initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.05, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="max-w-sm pointer-events-none"
+              className="max-w-sm"
+              onClick={(e) => e.stopPropagation()}
             >
               <p className="text-[10px] uppercase tracking-[0.4em] text-white/40">Space ended</p>
               <h2 className="mt-3 text-xl font-semibold text-white">Everyone has left</h2>
               <p className="mt-3 text-[13px] leading-relaxed text-white/55">
                 This anonymous space has been permanently destroyed. Nothing was saved.
               </p>
-              <p className="mt-6 text-[11px] text-white/40">Tap anywhere to return</p>
+              <button
+                type="button"
+                disabled={returnDisabled}
+                onClick={() => finishExit("closed-return-button")}
+                className="mt-6 h-10 rounded-full bg-white px-5 text-[13px] font-semibold text-black transition hover:bg-white/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Return to chat
+              </button>
             </motion.div>
           </motion.div>
         )}

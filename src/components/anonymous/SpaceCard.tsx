@@ -60,14 +60,19 @@ export function SpaceCard({ chatId, spaceIdHint, title, onEnter }: Props) {
           Anonymous conversations. No identities. No history. Everything disappears forever.
         </p>
 
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          disabled={!isLive || !activeId}
-          onClick={() => activeId && onEnter(activeId)}
-          className="mt-4 w-full rounded-xl bg-white text-black py-2.5 text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {isLive ? "Enter" : "Space closed"}
-        </motion.button>
+        {isLive && activeId ? (
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => onEnter(activeId)}
+            className="mt-4 w-full rounded-xl bg-white text-black py-2.5 text-sm font-semibold"
+          >
+            Enter
+          </motion.button>
+        ) : (
+          <div className="mt-4 w-full rounded-xl border border-white/10 bg-white/[0.04] py-2.5 text-center text-sm font-semibold text-white/45">
+            Space closed
+          </div>
+        )}
       </div>
     </motion.div>
   );
