@@ -56,6 +56,8 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const [chatPartner, setChatPartner] = useState<ProfileRow | null>(null);
   const [chatMeta, setChatMeta] = useState<ChatRow | null>(null);
   const [memberCount, setMemberCount] = useState<number>(0);
