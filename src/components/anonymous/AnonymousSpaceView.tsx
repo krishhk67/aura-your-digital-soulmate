@@ -388,20 +388,84 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
           </div>
 
           {/* Composer */}
-          <div className="px-3 py-3 border-t border-white/5 bg-[#0F0F13]"
+          <div className="px-3 py-3 border-t border-white/5 bg-[#0F0F13] relative"
             style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 12px) + 8px)" }}>
-            <div className="flex items-end gap-2">
-              <div className="flex-1">
+            {/* Features floating menu */}
+            <AnimatePresence>
+              {showFeatures && (
+                <>
+                  <motion.div
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[60]"
+                    onClick={() => setShowFeatures(false)}
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                    transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute right-3 bottom-full mb-2 z-[70] w-60 rounded-2xl border border-white/10 bg-[#141417]/95 backdrop-blur-xl shadow-2xl shadow-black/60 overflow-hidden"
+                  >
+                    {featureItems.map((item) => (
+                      <button
+                        key={item.label}
+                        onClick={() => { setShowFeatures(false); toast.info(`${item.label} — coming soon`); }}
+                        className="w-full flex items-center gap-3 px-3.5 py-2.5 text-left text-[13px] text-white/85 hover:bg-white/5 transition"
+                      >
+                        <span className="h-8 w-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/80">
+                          <item.icon className="h-4 w-4" />
+                        </span>
+                        <span className="flex-1">{item.label}</span>
+                      </button>
+                    ))}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+
+            <div className="flex items-center gap-2">
+              <div className="flex-1 relative">
                 <textarea
                   value={input} onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void handleSend(); } }}
                   placeholder={`Send as ${me.alias}...`}
                   rows={1}
-                  className="w-full rounded-2xl bg-[#1C1C20] border border-white/5 px-4 py-2.5 text-[14px] text-white placeholder:text-white/30 focus:outline-none focus:border-white/20 resize-none max-h-28"
+                  className="w-full rounded-full bg-[#1C1C20] border border-white/5 pl-4 pr-[84px] py-2.5 text-[14px] text-white placeholder:text-white/30 focus:outline-none focus:border-white/20 resize-none max-h-28 leading-[1.35]"
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => { fileInputRef.current?.click(); }}
+                    aria-label="Attach media"
+                    className="h-8 w-8 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 active:scale-95 transition"
+                  >
+                    <ImageIcon className="h-[17px] w-[17px]" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowFeatures(v => !v)}
+                    aria-label="Anonymous space features"
+                    className={`h-8 w-8 rounded-full flex items-center justify-center active:scale-95 transition ${
+                      showFeatures ? "bg-white/15 text-white" : "text-white/70 hover:text-white hover:bg-white/10"
+                    }`}
+                  >
+                    <Sparkles className="h-[17px] w-[17px]" />
+                  </button>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,video/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.length) toast.info("Media sending — coming soon");
+                    e.target.value = "";
+                  }}
                 />
               </div>
               <motion.button whileTap={{ scale: 0.9 }} onClick={handleSend} disabled={!input.trim()}
-                className="h-10 w-10 rounded-full bg-white text-black flex items-center justify-center disabled:opacity-40">
+                aria-label="Send message"
+                className="h-10 w-10 shrink-0 rounded-full bg-white text-black flex items-center justify-center disabled:opacity-40 shadow-lg shadow-black/40">
                 <Send className="h-4 w-4" />
               </motion.button>
             </div>
@@ -411,3 +475,4 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
     </motion.div>
   );
 }
+
