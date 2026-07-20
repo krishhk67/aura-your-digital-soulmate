@@ -65,12 +65,20 @@ export function useActiveSpaceForChat(chatId: string | null) {
 
   useEffect(() => {
     if (!chatId) return;
-    const ch = supabase
-      .channel(`anon-space-watch:${chatId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "anonymous_spaces", filter: `group_chat_id=eq.${chatId}` }, () => void load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "anonymous_participants" }, () => void load())
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    // Unique channel name per subscriber — multiple SpaceCards for the same
+    // chat, plus React StrictMode double-mount, must not share a channel.
+    const uniq = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    let ch: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      ch = supabase
+        .channel(`anon-space-watch:${chatId}:${uniq}`)
+        .on("postgres_changes", { event: "*", schema: "public", table: "anonymous_spaces", filter: `group_chat_id=eq.${chatId}` }, () => void load())
+        .on("postgres_changes", { event: "*", schema: "public", table: "anonymous_participants" }, () => void load())
+        .subscribe();
+    } catch (e) {
+      console.warn("[AnonymousSpace] watch subscribe failed", e);
+    }
+    return () => { if (ch) supabase.removeChannel(ch); };
   }, [chatId, load]);
 
   return { space, participantCount, refresh: load };
@@ -135,41 +143,49 @@ export function useAnonymousSpace(spaceId: string | null) {
 
   useEffect(() => {
     if (!spaceId) return;
-    const ch = supabase
-      .channel(`anon-space:${spaceId}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "anonymous_messages", filter: `space_id=eq.${spaceId}` },
-        (payload) => setMessages(prev => [...prev, payload.new as AnonMessage]))
-      .on("postgres_changes", { event: "DELETE", schema: "public", table: "anonymous_messages", filter: `space_id=eq.${spaceId}` },
-        (payload) => setMessages(prev => prev.filter(m => m.id !== (payload.old as { id: string }).id)))
-      .on("postgres_changes", { event: "*", schema: "public", table: "anonymous_participants", filter: `space_id=eq.${spaceId}` },
-        () => void load())
-      .on("postgres_changes", { event: "DELETE", schema: "public", table: "anonymous_spaces", filter: `id=eq.${spaceId}` },
-        () => {
-          console.info("[AnonymousSpace] room status changed", { spaceId, status: "deleted" });
-          setSpace(null);
-          setParticipants([]);
-          setMessages([]);
-          setMe(null);
-          setDestroyed(true);
-          setLoading(false);
-        })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "anonymous_spaces", filter: `id=eq.${spaceId}` },
-        (payload) => {
-          const next = payload.new as AnonSpace;
-          if (next.destroyed_at) {
-            console.info("[AnonymousSpace] room status changed", { spaceId, status: "destroyed", destroyed_at: next.destroyed_at });
-            setSpace(next);
+    // Unique channel name to survive StrictMode double-mount and any other
+    // concurrent subscribers to the same space.
+    const uniq = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    let ch: ReturnType<typeof supabase.channel> | null = null;
+    try {
+      ch = supabase
+        .channel(`anon-space:${spaceId}:${uniq}`)
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "anonymous_messages", filter: `space_id=eq.${spaceId}` },
+          (payload) => setMessages(prev => [...prev, payload.new as AnonMessage]))
+        .on("postgres_changes", { event: "DELETE", schema: "public", table: "anonymous_messages", filter: `space_id=eq.${spaceId}` },
+          (payload) => setMessages(prev => prev.filter(m => m.id !== (payload.old as { id: string }).id)))
+        .on("postgres_changes", { event: "*", schema: "public", table: "anonymous_participants", filter: `space_id=eq.${spaceId}` },
+          () => void load())
+        .on("postgres_changes", { event: "DELETE", schema: "public", table: "anonymous_spaces", filter: `id=eq.${spaceId}` },
+          () => {
+            console.info("[AnonymousSpace] room status changed", { spaceId, status: "deleted" });
+            setSpace(null);
             setParticipants([]);
             setMessages([]);
             setMe(null);
             setDestroyed(true);
             setLoading(false);
-          } else {
-            setSpace(next);
-          }
-        })
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+          })
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "anonymous_spaces", filter: `id=eq.${spaceId}` },
+          (payload) => {
+            const next = payload.new as AnonSpace;
+            if (next.destroyed_at) {
+              console.info("[AnonymousSpace] room status changed", { spaceId, status: "destroyed", destroyed_at: next.destroyed_at });
+              setSpace(next);
+              setParticipants([]);
+              setMessages([]);
+              setMe(null);
+              setDestroyed(true);
+              setLoading(false);
+            } else {
+              setSpace(next);
+            }
+          })
+        .subscribe();
+    } catch (e) {
+      console.warn("[AnonymousSpace] space subscribe failed", e);
+    }
+    return () => { if (ch) supabase.removeChannel(ch); };
   }, [spaceId, load]);
 
   const send = useCallback(async (content: string) => {
