@@ -553,7 +553,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
       </div>
 
 
-      {/* Attachment menu */}
+      {/* Attachment menu — WhatsApp-style with dedicated AI Tools row */}
       <AnimatePresence>
         {attachOpen && (
           <>
@@ -561,23 +561,80 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
               onClick={() => setAttachOpen(false)} className="fixed inset-0 z-30 bg-black/40" />
             <motion.div
               initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }}
-              className="absolute left-3 right-3 bottom-20 z-40 glass-panel rounded-2xl border border-glass-border p-3 grid grid-cols-3 gap-2"
+              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+              className="absolute left-3 right-3 bottom-[76px] z-40 glass-panel rounded-2xl border border-glass-border p-3 space-y-2"
             >
-              {[
-                { icon: ImageIcon, label: "Photo", accept: "image/*" },
-                { icon: Film, label: "Video", accept: "video/*" },
-                { icon: FileText, label: "Document", accept: "*/*" },
-              ].map(opt => (
-                <button key={opt.label} onClick={() => { setAcceptType(opt.accept); setAttachOpen(false); setTimeout(() => fileInputRef.current?.click(), 50); }}
-                  className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-secondary/60">
-                  <div className="h-11 w-11 rounded-full bg-primary/20 flex items-center justify-center text-neon"><opt.icon className="h-5 w-5" /></div>
-                  <span className="text-xs">{opt.label}</span>
-                </button>
-              ))}
+              <div className="grid grid-cols-3 gap-1">
+                {[
+                  { icon: Camera, label: "Camera", tone: "text-rose-400", bg: "bg-rose-500/15", action: "camera" as const },
+                  { icon: ImageIcon, label: "Gallery", tone: "text-violet-400", bg: "bg-violet-500/15", accept: "image/*,video/*" },
+                  { icon: FileText, label: "Document", tone: "text-indigo-400", bg: "bg-indigo-500/15", accept: "*/*" },
+                  { icon: Music, label: "Audio", tone: "text-orange-400", bg: "bg-orange-500/15", accept: "audio/*" },
+                  { icon: UserIcon, label: "Contact", tone: "text-sky-400", bg: "bg-sky-500/15", action: "soon" as const },
+                  { icon: MapPin, label: "Location", tone: "text-emerald-400", bg: "bg-emerald-500/15", action: "soon" as const },
+                ].map(opt => (
+                  <button key={opt.label}
+                    onClick={() => {
+                      setAttachOpen(false);
+                      if (opt.action === "camera") {
+                        setTimeout(() => cameraInputRef.current?.click(), 50);
+                      } else if (opt.action === "soon") {
+                        toast.info(`${opt.label} — coming soon`);
+                      } else if (opt.accept) {
+                        setAcceptType(opt.accept);
+                        setTimeout(() => fileInputRef.current?.click(), 50);
+                      }
+                    }}
+                    className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-secondary/60 active:scale-[0.97] transition">
+                    <div className={cn("h-12 w-12 rounded-full flex items-center justify-center", opt.bg, opt.tone)}>
+                      <opt.icon className="h-5 w-5" />
+                    </div>
+                    <span className="text-[11px] text-foreground/80">{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => { setAttachOpen(false); setAiOpen(true); }}
+                className="w-full flex items-center gap-3 rounded-xl border border-glass-border bg-gradient-to-r from-primary/15 via-primary/5 to-transparent px-3 py-2.5 hover:from-primary/25 active:scale-[0.99] transition"
+              >
+                <div className="h-9 w-9 rounded-full bg-primary/20 flex items-center justify-center text-neon">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-[13px] font-semibold text-foreground">AI Tools</p>
+                  <p className="text-[11px] text-muted-foreground">Rewrite, translate, summarize & more</p>
+                </div>
+              </button>
             </motion.div>
           </>
         )}
       </AnimatePresence>
+
+      {/* Emoji tray */}
+      <AnimatePresence>
+        {emojiOpen && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setEmojiOpen(false)} className="fixed inset-0 z-30" />
+            <motion.div
+              initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              className="absolute left-3 right-3 bottom-[76px] z-40 glass-panel rounded-2xl border border-glass-border p-2"
+            >
+              <div className="grid grid-cols-8 gap-1">
+                {["😀","😂","🥲","😍","😘","😎","🤔","😴","😭","😡","👍","👎","🙏","👏","🔥","💯","❤️","💔","🎉","✨","🥳","😅","🤝","🫶","🙌","💪","👀","🤯","🥺","😇","🤗","💀"].map(e => (
+                  <button key={e}
+                    onClick={() => { setInput(prev => prev + e); inputRef.current?.focus(); }}
+                    className="h-9 w-9 rounded-lg hover:bg-secondary/60 active:scale-90 transition text-xl leading-none">
+                    {e}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
 
       {/* Input bar — or blocked actions */}
       {blocked && !chatMeta?.is_group ? (
