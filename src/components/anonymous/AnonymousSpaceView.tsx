@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Send, Users, X } from "lucide-react";
+import { ArrowLeft, Check, Send, Users, X } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useAnonymousSpace, useAnonymousSpaceActions, type AnonParticipant } from "@/hooks/useAnonymousSpace";
 import { useAuth } from "@/hooks/useAuth";
 import { IdentityPicker } from "./IdentityPicker";
