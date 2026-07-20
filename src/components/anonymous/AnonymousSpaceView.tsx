@@ -204,9 +204,8 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
               </p>
               <button
                 type="button"
-                disabled={returnDisabled}
                 onClick={() => finishExit("closed-return-button")}
-                className="mt-6 h-10 rounded-full bg-white px-5 text-[13px] font-semibold text-black transition hover:bg-white/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                className="mt-6 h-10 rounded-full bg-white px-5 text-[13px] font-semibold text-black transition hover:bg-white/90 active:scale-[0.98]"
               >
                 Return to chat
               </button>
