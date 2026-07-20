@@ -188,21 +188,25 @@ export function useAnonymousSpace(spaceId: string | null) {
 
 export function useAnonymousSpaceActions() {
   const create = useCallback(async (args: { groupChatId: string; title?: string; maxParticipants?: number; autoCloseMinutes?: number }) => {
+    console.info("[AnonymousSpace] Create Space", { groupChatId: args.groupChatId, hasTitle: !!args.title, maxParticipants: args.maxParticipants ?? null });
     const { data, error } = await (supabase.rpc as unknown as Rpc)("create_anonymous_space", {
       _group_chat_id: args.groupChatId,
       _title: args.title ?? null,
       _max_participants: args.maxParticipants ?? null,
       _auto_close_minutes: args.autoCloseMinutes ?? null,
     });
+    console.info("[AnonymousSpace] Create Space result", { spaceId: (data as string | null) ?? null, ok: !error, error: error?.message ?? null });
     return { spaceId: (data as string | null) ?? null, error: error ? new Error(error.message) : null };
   }, []);
 
   const join = useCallback(async (spaceId: string, customAlias?: string) => {
+    console.info("[AnonymousSpace] Join", { spaceId, aliasMode: customAlias ? "custom" : "generated" });
     const { data, error } = await (supabase.rpc as unknown as Rpc)("join_anonymous_space", {
       _space_id: spaceId,
       _custom_alias: customAlias ?? null,
     });
     const rows = data as Array<{ participant_id: string; alias: string }> | null;
+    console.info("[AnonymousSpace] Join result", { spaceId, ok: !error, participantId: rows?.[0]?.participant_id ?? null, error: error?.message ?? null });
     return {
       participantId: rows?.[0]?.participant_id ?? null,
       alias: rows?.[0]?.alias ?? null,
@@ -211,7 +215,9 @@ export function useAnonymousSpaceActions() {
   }, []);
 
   const leave = useCallback(async (spaceId: string) => {
+    console.info("[AnonymousSpace] Close", { spaceId, action: "leave" });
     const { error } = await (supabase.rpc as unknown as Rpc)("leave_anonymous_space", { _space_id: spaceId });
+    console.info("[AnonymousSpace] Cleanup", { spaceId, ok: !error, error: error?.message ?? null });
     return { error: error ? new Error(error.message) : null };
   }, []);
 
