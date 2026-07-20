@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Users, EyeOff, Check } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useActiveSpaceForChat, type AnonSpace } from "@/hooks/useAnonymousSpace";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -14,13 +14,15 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
-/** Compact native chat-event card for an anonymous space. */
+/** Premium compact timeline event for an anonymous space. */
 export function SpaceCard({ chatId, spaceIdHint, title, onEnter }: Props) {
-  const { space: activeSpace, participantCount } = useActiveSpaceForChat(chatId);
+  const { space: activeSpace, participantCount: liveCount } = useActiveSpaceForChat(chatId);
   const [hintSpace, setHintSpace] = useState<AnonSpace | null>(null);
+  const [totalJoined, setTotalJoined] = useState<number>(0);
 
   const space = activeSpace ?? hintSpace;
   const isLive = !!activeSpace && (!spaceIdHint || activeSpace.id === spaceIdHint);
+  const spaceId = space?.id ?? spaceIdHint ?? null;
 
   useEffect(() => {
     if (activeSpace || !spaceIdHint) { setHintSpace(null); return; }
@@ -34,56 +36,78 @@ export function SpaceCard({ chatId, spaceIdHint, title, onEnter }: Props) {
     return () => { cancelled = true; };
   }, [activeSpace, spaceIdHint]);
 
+  useEffect(() => {
+    if (!spaceId) { setTotalJoined(0); return; }
+    let cancelled = false;
+    void supabase
+      .from("anonymous_participants")
+      .select("id", { count: "exact", head: true })
+      .eq("space_id", spaceId)
+      .then(({ count }) => { if (!cancelled) setTotalJoined(count ?? 0); });
+    return () => { cancelled = true; };
+  }, [spaceId, liveCount]);
+
   const startedAt = space?.created_at;
   const endedAt = space?.destroyed_at;
+  const participants = isLive ? Math.max(totalJoined, liveCount) : totalJoined;
 
   return (
-    <div className="my-2 mx-auto w-full max-w-[300px] rounded-2xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 backdrop-blur-sm">
-      <div className="flex items-center gap-2">
-        <div className="h-7 w-7 rounded-lg bg-white/[0.06] flex items-center justify-center">
-          <EyeOff className="h-3.5 w-3.5 text-white/70" />
+    <div className="my-2 mx-auto w-full max-w-[300px] rounded-2xl border border-white/[0.07] bg-gradient-to-b from-white/[0.04] to-white/[0.015] px-4 py-3 backdrop-blur-sm">
+      <div className="flex items-center gap-1.5 text-[11px] font-medium tracking-wide text-white/60">
+        <Sparkles className="h-3 w-3 text-emerald-300/80" />
+        Anonymous Space
+      </div>
+
+      {title && (
+        <div className="mt-1 text-[13px] font-medium text-white/85 truncate">{title}</div>
+      )}
+
+      <div className="mt-2 space-y-1 text-[12px] text-white/60 leading-snug">
+        <div className="flex items-center gap-1.5">
+          <span>👥</span>
+          <span className="tabular-nums text-white/80">{participants}</span>
+          <span className="text-white/45">
+            {participants === 1 ? "Participant" : "Participants"}
+          </span>
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="text-[13px] font-medium text-white/90 truncate">
-              {title || "Anonymous Space"}
+        <div className="flex items-center gap-1.5">
+          <span>🕘</span>
+          {isLive ? (
+            <span>
+              <span className="text-white/45">Started </span>
+              <span className="tabular-nums text-white/80">{startedAt ? formatTime(startedAt) : "—"}</span>
             </span>
-            <span
-              className={`inline-block h-1.5 w-1.5 rounded-full ${
-                isLive ? "bg-emerald-400 animate-pulse" : "bg-white/25"
-              }`}
-            />
-          </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-white/45 leading-tight">
-            {isLive ? (
-              <>
-                <Users className="h-3 w-3" />
-                <span>{participantCount} inside</span>
-                {startedAt && <span className="text-white/25">· {formatTime(startedAt)}</span>}
-              </>
-            ) : (
-              <span>
-                {startedAt && `${formatTime(startedAt)}`}
-                {startedAt && endedAt && " – "}
-                {endedAt && formatTime(endedAt)}
-              </span>
-            )}
-          </div>
+          ) : (
+            <span className="tabular-nums text-white/75">
+              {startedAt ? formatTime(startedAt) : "—"}
+              <span className="text-white/35"> → </span>
+              {endedAt ? formatTime(endedAt) : "—"}
+            </span>
+          )}
         </div>
       </div>
 
-      {isLive && activeSpace ? (
+      <div className="mt-2.5 flex items-center gap-1.5 text-[11.5px] font-medium">
+        {isLive ? (
+          <>
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.7)] animate-pulse" />
+            <span className="text-emerald-300/90">Active</span>
+          </>
+        ) : (
+          <>
+            <span className="text-white/40">✔</span>
+            <span className="text-white/45">Permanently erased</span>
+          </>
+        )}
+      </div>
+
+      {isLive && activeSpace && (
         <button
           onClick={() => onEnter(activeSpace.id)}
-          className="mt-2.5 w-full rounded-lg bg-white text-black py-1.5 text-[12.5px] font-semibold active:scale-[0.98] transition-transform"
+          className="mt-3 w-full rounded-lg bg-white text-black py-1.5 text-[12.5px] font-semibold active:scale-[0.98] transition-transform"
         >
-          Enter Space
+          Enter
         </button>
-      ) : (
-        <div className="mt-2 flex items-center gap-1.5 text-[11px] text-white/40">
-          <Check className="h-3 w-3" />
-          <span>Space ended · Permanently erased</span>
-        </div>
       )}
     </div>
   );
