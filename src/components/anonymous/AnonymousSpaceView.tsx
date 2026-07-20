@@ -69,6 +69,27 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
     }
   }, [loading, me, phase]);
 
+  // Look up any prior participant row (even if left_at is set) so we can offer
+  // "Welcome back — continue as <alias>" instead of the mask picker.
+  useEffect(() => {
+    if (!user || !spaceId || me) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("anonymous_participants")
+        .select("alias")
+        .eq("space_id", spaceId)
+        .eq("user_id", user.id)
+        .order("joined_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (cancelled) return;
+      setPriorAlias((data as { alias: string } | null)?.alias ?? null);
+      setPriorChecked(true);
+    })();
+    return () => { cancelled = true; };
+  }, [user, spaceId, me]);
+
   // Destroyed → show a lightweight in-view farewell card, then auto-exit.
   useEffect(() => {
     if (!destroyed) return;
