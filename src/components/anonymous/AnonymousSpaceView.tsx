@@ -31,6 +31,8 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
   const [showParticipants, setShowParticipants] = useState(false);
   const [input, setInput] = useState("");
   const [cleanupStatus, setCleanupStatus] = useState<"idle" | "leaving" | "closed" | "exiting" | "exited">("idle");
+  const [priorAlias, setPriorAlias] = useState<string | null>(null);
+  const [priorChecked, setPriorChecked] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Track whether we actually joined so unmount cleanup doesn't destroy a space
