@@ -87,21 +87,51 @@ export function useAnonymousSpace(spaceId: string | null) {
   const [destroyed, setDestroyed] = useState(false);
 
   const load = useCallback(async () => {
-    if (!spaceId) return;
+    if (!spaceId) {
+      setSpace(null);
+      setParticipants([]);
+      setMessages([]);
+      setMe(null);
+      setDestroyed(false);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     const [{ data: sp }, { data: parts }, { data: msgs }] = await Promise.all([
       supabase.from("anonymous_spaces").select("*").eq("id", spaceId).maybeSingle(),
       supabase.from("anonymous_participants").select("*").eq("space_id", spaceId).is("left_at", null),
       supabase.from("anonymous_messages").select("*").eq("space_id", spaceId).order("created_at", { ascending: true }),
     ]);
-    if (!sp) { setDestroyed(true); setLoading(false); return; }
-    setSpace(sp as AnonSpace);
-    setParticipants((parts ?? []) as AnonParticipant[]);
+    const nextSpace = sp as AnonSpace | null;
+    const isDestroyed = !nextSpace || !!nextSpace.destroyed_at;
+    if (isDestroyed) {
+      setSpace(nextSpace);
+      setParticipants([]);
+      setMessages([]);
+      setMe(null);
+      setDestroyed(true);
+      setLoading(false);
+      console.info("[AnonymousSpace] load detected closed space", { spaceId, found: !!nextSpace, destroyed_at: nextSpace?.destroyed_at ?? null });
+      return;
+    }
+    const activeParticipants = (parts ?? []) as AnonParticipant[];
+    setSpace(nextSpace);
+    setParticipants(activeParticipants);
     setMessages((msgs ?? []) as AnonMessage[]);
-    if (user) setMe(((parts ?? []) as AnonParticipant[]).find(p => p.user_id === user.id) ?? null);
+    setMe(user ? activeParticipants.find(p => p.user_id === user.id) ?? null : null);
+    setDestroyed(false);
     setLoading(false);
   }, [spaceId, user]);
 
-  useEffect(() => { setDestroyed(false); void load(); }, [load]);
+  useEffect(() => {
+    setSpace(null);
+    setParticipants([]);
+    setMessages([]);
+    setMe(null);
+    setDestroyed(false);
+    setLoading(true);
+    void load();
+  }, [load]);
 
   useEffect(() => {
     if (!spaceId) return;
@@ -114,7 +144,30 @@ export function useAnonymousSpace(spaceId: string | null) {
       .on("postgres_changes", { event: "*", schema: "public", table: "anonymous_participants", filter: `space_id=eq.${spaceId}` },
         () => void load())
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "anonymous_spaces", filter: `id=eq.${spaceId}` },
-        () => setDestroyed(true))
+        () => {
+          console.info("[AnonymousSpace] room status changed", { spaceId, status: "deleted" });
+          setSpace(null);
+          setParticipants([]);
+          setMessages([]);
+          setMe(null);
+          setDestroyed(true);
+          setLoading(false);
+        })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "anonymous_spaces", filter: `id=eq.${spaceId}` },
+        (payload) => {
+          const next = payload.new as AnonSpace;
+          if (next.destroyed_at) {
+            console.info("[AnonymousSpace] room status changed", { spaceId, status: "destroyed", destroyed_at: next.destroyed_at });
+            setSpace(next);
+            setParticipants([]);
+            setMessages([]);
+            setMe(null);
+            setDestroyed(true);
+            setLoading(false);
+          } else {
+            setSpace(next);
+          }
+        })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [spaceId, load]);
@@ -135,21 +188,25 @@ export function useAnonymousSpace(spaceId: string | null) {
 
 export function useAnonymousSpaceActions() {
   const create = useCallback(async (args: { groupChatId: string; title?: string; maxParticipants?: number; autoCloseMinutes?: number }) => {
+    console.info("[AnonymousSpace] Create Space", { groupChatId: args.groupChatId, hasTitle: !!args.title, maxParticipants: args.maxParticipants ?? null });
     const { data, error } = await (supabase.rpc as unknown as Rpc)("create_anonymous_space", {
       _group_chat_id: args.groupChatId,
       _title: args.title ?? null,
       _max_participants: args.maxParticipants ?? null,
       _auto_close_minutes: args.autoCloseMinutes ?? null,
     });
+    console.info("[AnonymousSpace] Create Space result", { spaceId: (data as string | null) ?? null, ok: !error, error: error?.message ?? null });
     return { spaceId: (data as string | null) ?? null, error: error ? new Error(error.message) : null };
   }, []);
 
   const join = useCallback(async (spaceId: string, customAlias?: string) => {
+    console.info("[AnonymousSpace] Join", { spaceId, aliasMode: customAlias ? "custom" : "generated" });
     const { data, error } = await (supabase.rpc as unknown as Rpc)("join_anonymous_space", {
       _space_id: spaceId,
       _custom_alias: customAlias ?? null,
     });
     const rows = data as Array<{ participant_id: string; alias: string }> | null;
+    console.info("[AnonymousSpace] Join result", { spaceId, ok: !error, participantId: rows?.[0]?.participant_id ?? null, error: error?.message ?? null });
     return {
       participantId: rows?.[0]?.participant_id ?? null,
       alias: rows?.[0]?.alias ?? null,
@@ -158,7 +215,9 @@ export function useAnonymousSpaceActions() {
   }, []);
 
   const leave = useCallback(async (spaceId: string) => {
+    console.info("[AnonymousSpace] Close", { spaceId, action: "leave" });
     const { error } = await (supabase.rpc as unknown as Rpc)("leave_anonymous_space", { _space_id: spaceId });
+    console.info("[AnonymousSpace] Cleanup", { spaceId, ok: !error, error: error?.message ?? null });
     return { error: error ? new Error(error.message) : null };
   }, []);
 

@@ -716,7 +716,13 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
       />
       <AnimatePresence>
         {activeSpaceId && (
-          <AnonymousSpaceView spaceId={activeSpaceId} onExit={() => setActiveSpaceId(null)} />
+          <AnonymousSpaceView
+            spaceId={activeSpaceId}
+            onExit={() => {
+              setActiveSpaceId(null);
+              window.setTimeout(() => inputRef.current?.focus(), 50);
+            }}
+          />
         )}
       </AnimatePresence>
       {reactionTarget && (
