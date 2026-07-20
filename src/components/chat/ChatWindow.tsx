@@ -278,6 +278,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
       )}
 
       <input ref={fileInputRef} type="file" accept={acceptType} onChange={handleFile} className="hidden" />
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleFile} className="hidden" />
 
       {/* Header */}
       <div className="flex items-center gap-2 px-2 py-2 border-b border-border glass-panel rounded-none flex-shrink-0"
