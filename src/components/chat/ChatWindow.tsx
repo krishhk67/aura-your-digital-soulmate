@@ -680,46 +680,58 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
           {recording ? (
             <VoiceRecorder onCancel={() => setRecording(false)} onSend={sendVoice} />
           ) : (
-            <div className="flex items-end gap-2">
-              <button onClick={() => setAttachOpen(v => !v)} disabled={uploading}
-                className="h-10 w-10 rounded-full flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground flex-shrink-0 disabled:opacity-50">
-                {attachOpen ? <X className="h-5 w-5" /> : <Paperclip className="h-5 w-5" />}
-              </button>
-              <button onClick={() => setAiOpen(true)} disabled={uploading}
-                className="h-10 w-10 rounded-full flex items-center justify-center hover:bg-secondary transition-colors text-neon flex-shrink-0 disabled:opacity-50"
-                title="AI tools">
-                <Sparkles className="h-5 w-5" />
-              </button>
-              <button onClick={() => setGhostPickerOpen(true)} disabled={uploading}
+            <div className="flex items-end gap-1.5">
+              {/* Emoji */}
+              <button onClick={() => { setEmojiOpen(v => !v); setAttachOpen(false); }} disabled={uploading}
                 className={cn(
-                  "h-10 w-10 rounded-full flex items-center justify-center hover:bg-secondary transition-colors flex-shrink-0 disabled:opacity-50",
-                  ghostSeconds ? "text-white bg-white/10" : "text-muted-foreground"
+                  "h-10 w-10 rounded-full flex items-center justify-center transition-colors flex-shrink-0 disabled:opacity-50",
+                  emojiOpen ? "bg-secondary text-foreground" : "hover:bg-secondary text-muted-foreground"
                 )}
-                title="Ghost message">
-                <Ghost className="h-5 w-5" />
+                aria-label="Emoji">
+                <Smile className="h-[22px] w-[22px]" />
               </button>
+
+              {/* Input */}
               <div className="flex-1 relative">
                 <textarea
                   ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                  placeholder={ghostSeconds ? `👻 Ghost · ${ghostSeconds}s after reveal` : uploading ? "Uploading..." : "Message..."}
+                  onFocus={() => { setEmojiOpen(false); setAttachOpen(false); }}
+                  placeholder={uploading ? "Uploading..." : "Message"}
                   rows={1}
                   disabled={uploading}
-                  className={cn(
-                    "w-full rounded-2xl border px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none max-h-24 disabled:opacity-60",
-                    ghostSeconds ? "bg-white/5 border-white/15" : "bg-secondary/50 border-border"
-                  )}
+                  className="w-full rounded-2xl border bg-secondary/50 border-border px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none max-h-24 disabled:opacity-60"
                 />
               </div>
+
+              {/* Attachment */}
+              <button onClick={() => { setAttachOpen(v => !v); setEmojiOpen(false); }} disabled={uploading}
+                className={cn(
+                  "h-10 w-10 rounded-full flex items-center justify-center transition-colors flex-shrink-0 disabled:opacity-50",
+                  attachOpen ? "bg-secondary text-foreground" : "hover:bg-secondary text-muted-foreground"
+                )}
+                aria-label="Attach">
+                {attachOpen ? <X className="h-5 w-5" /> : <Paperclip className="h-[22px] w-[22px]" />}
+              </button>
+
               {input.trim() ? (
                 <motion.button initial={{ scale: 0 }} animate={{ scale: 1 }} whileTap={{ scale: 0.85 }} onClick={handleSend}
+                  aria-label="Send"
                   className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground hover:shadow-[0_0_15px_var(--neon-glow)] transition-all flex-shrink-0">
                   <Send className="h-4 w-4" />
                 </motion.button>
               ) : (
-                <MicButton onClick={() => setRecording(true)} />
+                <>
+                  {/* Camera */}
+                  <button onClick={() => cameraInputRef.current?.click()} disabled={uploading}
+                    className="h-10 w-10 rounded-full flex items-center justify-center hover:bg-secondary transition-colors text-muted-foreground flex-shrink-0 disabled:opacity-50"
+                    aria-label="Camera">
+                    <Camera className="h-[22px] w-[22px]" />
+                  </button>
+                  <MicButton onClick={() => setRecording(true)} />
+                </>
               )}
             </div>
           )}
