@@ -47,9 +47,19 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
   // Destroyed → show a lightweight in-view farewell card, then auto-exit.
   useEffect(() => {
     if (!destroyed) return;
-    const t = window.setTimeout(() => onExit(), 2200);
+    console.log("[AnonymousSpace] destroyed → auto-exit scheduled");
+    const t = window.setTimeout(() => {
+      console.log("[AnonymousSpace] auto-exit firing");
+      onExit();
+    }, 1600);
     return () => window.clearTimeout(t);
   }, [destroyed, onExit]);
+
+  // Mount/unmount trace for debugging soft-lock reports.
+  useEffect(() => {
+    console.log("[AnonymousSpace] mounted", spaceId);
+    return () => console.log("[AnonymousSpace] unmounted", spaceId);
+  }, [spaceId]);
 
   useEffect(() => {
     if (phase === "welcome") {
@@ -118,31 +128,36 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
         <div className="absolute bottom-0 right-0 h-64 w-64 rounded-full bg-cyan-400/5 blur-3xl" />
       </div>
 
-      {/* Destroyed farewell — lightweight, auto-dismissing, non-blocking */}
+      {/* Destroyed farewell — click anywhere to dismiss, auto-dismisses too */}
       <AnimatePresence>
         {destroyed && (
           <motion.div
+            key="destroyed-overlay"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.35 }}
-            className="absolute inset-0 z-[80] bg-[#0B0B0D]/95 backdrop-blur-md flex items-center justify-center p-8 text-center"
+            transition={{ duration: 0.3 }}
+            onClick={() => { console.log("[AnonymousSpace] farewell dismissed by tap"); onExit(); }}
+            role="button"
+            tabIndex={0}
+            className="absolute inset-0 z-[80] bg-[#0B0B0D]/95 backdrop-blur-md flex items-center justify-center p-8 text-center cursor-pointer"
           >
             <motion.div
               initial={{ y: 8, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.05, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              className="max-w-sm"
+              transition={{ delay: 0.05, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+              className="max-w-sm pointer-events-none"
             >
               <p className="text-[10px] uppercase tracking-[0.4em] text-white/40">Space ended</p>
               <h2 className="mt-3 text-xl font-semibold text-white">Everyone has left</h2>
               <p className="mt-3 text-[13px] leading-relaxed text-white/55">
                 This anonymous space has been permanently destroyed. Nothing was saved.
               </p>
+              <p className="mt-6 text-[11px] text-white/40">Tap anywhere to return</p>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Phase: identity picker */}
-      {phase === "picking" && !loading && !me && (
+      {phase === "picking" && !loading && !me && !destroyed && (
         <div className="flex-1 relative flex flex-col items-center justify-center p-6">
           <IdentityPicker onPick={handlePickIdentity} busy={joining} />
           <button onClick={onExit} className="absolute top-4 right-4 h-9 w-9 rounded-full border border-white/10 flex items-center justify-center text-white/60">
