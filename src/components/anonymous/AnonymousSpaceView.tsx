@@ -35,6 +35,15 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
   const [priorAlias, setPriorAlias] = useState<string | null>(null);
   const [priorChecked, setPriorChecked] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showFeatures, setShowFeatures] = useState(false);
+  const featureItems = useMemo(() => ([
+    { label: "Ghost Message", icon: Ghost },
+    { label: "Timed Message", icon: Timer },
+    { label: "One-Time Photo", icon: Camera },
+    { label: "One-Time Voice", icon: Mic },
+    { label: "Self-Destruct File", icon: FileLock2 },
+  ]), []);
 
   // Track whether we actually joined so unmount cleanup doesn't destroy a space
   // we never entered (fixes StrictMode double-mount + quick-close races).
