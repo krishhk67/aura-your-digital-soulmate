@@ -681,7 +681,7 @@ export function ChatWindow({ chatId, onBack }: ChatWindowProps) {
           {recording ? (
             <VoiceRecorder onCancel={() => setRecording(false)} onSend={sendVoice} />
           ) : (
-            <div className="flex items-end gap-1.5">
+            <div className="flex items-center gap-1.5">
               {/* Emoji */}
               <button onClick={() => { setEmojiOpen(v => !v); setAttachOpen(false); }} disabled={uploading}
                 className={cn(
