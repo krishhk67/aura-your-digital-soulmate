@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Send, Users, X } from "lucide-react";
+import { ArrowLeft, Check, Send, Users, X } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useAnonymousSpace, useAnonymousSpaceActions, type AnonParticipant } from "@/hooks/useAnonymousSpace";
 import { useAuth } from "@/hooks/useAuth";
 import { IdentityPicker } from "./IdentityPicker";
@@ -30,6 +31,8 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
   const [showParticipants, setShowParticipants] = useState(false);
   const [input, setInput] = useState("");
   const [cleanupStatus, setCleanupStatus] = useState<"idle" | "leaving" | "closed" | "exiting" | "exited">("idle");
+  const [priorAlias, setPriorAlias] = useState<string | null>(null);
+  const [priorChecked, setPriorChecked] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Track whether we actually joined so unmount cleanup doesn't destroy a space
@@ -65,6 +68,27 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
       if (phase === "picking") setPhase("chat");
     }
   }, [loading, me, phase]);
+
+  // Look up any prior participant row (even if left_at is set) so we can offer
+  // "Welcome back — continue as <alias>" instead of the mask picker.
+  useEffect(() => {
+    if (!user || !spaceId || me) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("anonymous_participants")
+        .select("alias")
+        .eq("space_id", spaceId)
+        .eq("user_id", user.id)
+        .order("joined_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (cancelled) return;
+      setPriorAlias((data as { alias: string } | null)?.alias ?? null);
+      setPriorChecked(true);
+    })();
+    return () => { cancelled = true; };
+  }, [user, spaceId, me]);
 
   // Destroyed → show a lightweight in-view farewell card, then auto-exit.
   useEffect(() => {
@@ -214,15 +238,42 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
         )}
       </AnimatePresence>
 
-      {/* Phase: identity picker */}
-      {phase === "picking" && !loading && !me && !destroyed && (
+      {/* Phase: identity picker (or welcome-back for rejoins) */}
+      {phase === "picking" && !loading && !me && !destroyed && priorChecked && (
         <div className="flex-1 relative flex flex-col items-center justify-center p-6">
-          <IdentityPicker onPick={handlePickIdentity} busy={joining} />
+          {priorAlias ? (
+            <motion.div
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="w-full max-w-sm mx-auto text-center"
+            >
+              <p className="text-[10px] uppercase tracking-[0.3em] text-white/40">Welcome back</p>
+              <h2 className="mt-2 text-2xl font-semibold text-white">Your identity is restored</h2>
+              <p className="mt-1.5 text-[13px] text-white/50">
+                Your previous anonymous identity has been restored.
+              </p>
+              <div className="mt-8 text-3xl font-semibold tracking-wide" style={{ color: aliasAccent(priorAlias) }}>
+                {priorAlias}
+              </div>
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                disabled={joining}
+                onClick={() => handlePickIdentity(null)}
+                className="mt-8 inline-flex items-center gap-2 rounded-full bg-white text-black px-6 py-3 text-sm font-semibold disabled:opacity-50"
+              >
+                <Check className="h-4 w-4" />
+                Continue as {priorAlias}
+              </motion.button>
+            </motion.div>
+          ) : (
+            <IdentityPicker onPick={handlePickIdentity} busy={joining} />
+          )}
           <button onClick={onExit} className="absolute top-4 right-4 h-9 w-9 rounded-full border border-white/10 flex items-center justify-center text-white/60">
             <X className="h-4 w-4" />
           </button>
         </div>
       )}
+
 
       {/* Phase: transition */}
       <AnimatePresence>
