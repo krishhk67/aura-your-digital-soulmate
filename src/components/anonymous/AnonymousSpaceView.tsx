@@ -7,6 +7,7 @@ import { useAnonymousSpace, useAnonymousSpaceActions, type AnonParticipant } fro
 import { useAuth } from "@/hooks/useAuth";
 import { IdentityPicker } from "./IdentityPicker";
 import { EnterTransition } from "./EnterTransition";
+import { PrivacyGuard, privacyNoticeText } from "@/components/privacy/PrivacyGuard";
 
 interface Props {
   spaceId: string;
@@ -191,6 +192,11 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
       className="fixed inset-0 z-[70] bg-[#0B0B0D] flex flex-col"
       style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
     >
+      {/* Screenshot / screen-recording protection — scoped to this surface only.
+          Native (Capacitor) sets FLAG_SECURE on Android + app-switcher blur on iOS.
+          On plain web this only renders the background-shield overlay. */}
+      <PrivacyGuard label="Anonymous Space" />
+
       {/* Ambient depth */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -top-32 left-1/2 -translate-x-1/2 h-72 w-72 rounded-full bg-violet-500/10 blur-3xl" />
@@ -302,6 +308,10 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
               <motion.p initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.9 }}
                 className="mt-3 text-[13.5px] leading-relaxed text-white/60">
                 When everyone leaves, this space and everything inside it will be permanently erased.
+              </motion.p>
+              <motion.p initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 1.3 }}
+                className="mt-5 text-[11.5px] leading-relaxed text-white/45 border-t border-white/5 pt-4">
+                {privacyNoticeText()}
               </motion.p>
               <motion.p initial={{ opacity: 0 }} animate={{ opacity: 0.3 }} transition={{ delay: 2.4 }}
                 className="mt-8 text-[11px] text-white/40">Tap to continue</motion.p>
