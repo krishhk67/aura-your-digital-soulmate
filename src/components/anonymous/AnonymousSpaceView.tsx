@@ -47,9 +47,19 @@ export function AnonymousSpaceView({ spaceId, onExit }: Props) {
   // Destroyed → show a lightweight in-view farewell card, then auto-exit.
   useEffect(() => {
     if (!destroyed) return;
-    const t = window.setTimeout(() => onExit(), 2200);
+    console.log("[AnonymousSpace] destroyed → auto-exit scheduled");
+    const t = window.setTimeout(() => {
+      console.log("[AnonymousSpace] auto-exit firing");
+      onExit();
+    }, 1600);
     return () => window.clearTimeout(t);
   }, [destroyed, onExit]);
+
+  // Mount/unmount trace for debugging soft-lock reports.
+  useEffect(() => {
+    console.log("[AnonymousSpace] mounted", spaceId);
+    return () => console.log("[AnonymousSpace] unmounted", spaceId);
+  }, [spaceId]);
 
   useEffect(() => {
     if (phase === "welcome") {
