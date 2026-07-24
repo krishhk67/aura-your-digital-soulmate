@@ -532,20 +532,27 @@
   100% { transform: translateX(100%); }
 }
 
-/* Anonymous Space entry — gravitational collapse of the outgoing chat itself */
-[data-chat-surface] {
-  transform-origin: 50% 50%;
-  will-change: transform, filter, opacity;
-  transition:
-    transform 560ms cubic-bezier(0.55, 0, 0.75, 0),
-    filter   560ms cubic-bezier(0.55, 0, 0.75, 0),
-    opacity  560ms cubic-bezier(0.55, 0, 0.75, 0);
+/* Anonymous Space entry — per-element gravitational collapse.
+   The transition animates each visible child of [data-chat-surface] with
+   Web Animations API (see EnterTransition.tsx). This class only softens
+   the outgoing surface so nothing renders on top of the vortex. */
+body.aurix-gravity [data-chat-surface] {
+  overflow: hidden;
 }
-body.aurix-warping [data-chat-surface] {
-  transform: scale(0.012) rotate(6deg) translateZ(0);
-  filter: blur(24px) brightness(0.22) saturate(0.55) contrast(1.4);
+body.aurix-gravity [data-chat-surface]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.25) 45%, rgba(0,0,0,0.85) 90%);
   opacity: 0;
+  animation: aurix-gravity-veil 620ms cubic-bezier(0.55, 0, 0.75, 0) forwards;
 }
-body.aurix-warping-fast [data-chat-surface] {
-  transition-duration: 240ms;
+body.aurix-gravity-fast [data-chat-surface]::after {
+  animation-duration: 240ms;
+}
+@keyframes aurix-gravity-veil {
+  0%   { opacity: 0; }
+  60%  { opacity: 0.85; }
+  100% { opacity: 1; }
 }
