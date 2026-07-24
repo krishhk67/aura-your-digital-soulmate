@@ -532,20 +532,20 @@
   100% { transform: translateX(100%); }
 }
 
-/* Anonymous Space entry warp — animates the outgoing chat surface itself */
+/* Anonymous Space entry — gravitational collapse of the outgoing chat itself */
 [data-chat-surface] {
   transform-origin: 50% 50%;
   will-change: transform, filter, opacity;
   transition:
-    transform 720ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 720ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 720ms cubic-bezier(0.22, 1, 0.36, 1);
+    transform 560ms cubic-bezier(0.55, 0, 0.75, 0),
+    filter   560ms cubic-bezier(0.55, 0, 0.75, 0),
+    opacity  560ms cubic-bezier(0.55, 0, 0.75, 0);
 }
 body.aurix-warping [data-chat-surface] {
-  transform: scale(0.86) translateZ(0);
-  filter: blur(14px) brightness(0.35) saturate(0.7);
-  opacity: 0.55;
+  transform: scale(0.012) rotate(6deg) translateZ(0);
+  filter: blur(24px) brightness(0.22) saturate(0.55) contrast(1.4);
+  opacity: 0;
 }
 body.aurix-warping-fast [data-chat-surface] {
-  transition-duration: 220ms;
+  transition-duration: 240ms;
 }
