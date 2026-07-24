@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 
 interface Props {
@@ -6,128 +6,144 @@ interface Props {
 }
 
 /**
- * Signature Anonymous Space entry (~820ms).
- * The outgoing chat itself warps (scales, blurs, dims) via a global body class
- * that targets [data-chat-surface]. On top, a soft inward vignette, a faint
- * vortex sheen and a handful of particles drift from the message band toward
- * center, then everything collapses into black so the space can emerge.
- * Tap accelerates the remaining animation without cutting it.
+ * Anonymous Space entry — a single continuous transformation.
+ *
+ * Act 1 (0–200ms)   Tap feedback: a whisper-thin ring pulses from the touch point.
+ * Act 2 (200–500ms) Reality distortion: the outgoing chat (data-chat-surface) is
+ *                   pulled inward — scale, rotate, blur, desaturate — under
+ *                   gravitational easing. A faint lens ripple sits over it.
+ * Act 3 (500–700ms) Collapse: everything folds into a single luminous point,
+ *                   then the screen goes almost fully dark (~150ms of quiet).
+ * Act 4 (700–850ms) Reconstruction: that same point expands outward as an iris,
+ *                   handing off to the Anonymous Space rebuilding underneath.
+ *
+ * Tap anywhere → accelerate the remainder smoothly (never a hard cut).
+ * Reduced motion → compresses into a ~260ms cross-dissolve.
  */
 export function EnterTransition({ onDone }: Props) {
   const reduce = useReducedMotion();
   const [fast, setFast] = useState(false);
+  const [act, setAct] = useState<1 | 2 | 3 | 4>(1);
   const startRef = useRef<number>(performance.now());
   const doneRef = useRef(false);
 
-  const DURATION = reduce ? 260 : 820;
+  const TOTAL = reduce ? 260 : 850;
 
-  // Warp the underlying chat surface for the entire transition.
+  // Warp the underlying chat surface for the full distortion+collapse window.
   useEffect(() => {
-    document.body.classList.add("aurix-warping");
+    // Kick off distortion just after the tap-feedback beat.
+    const t2 = window.setTimeout(() => {
+      document.body.classList.add("aurix-warping");
+      setAct(2);
+    }, reduce ? 20 : 180);
+    const t3 = window.setTimeout(() => setAct(3), reduce ? 120 : 500);
+    const t4 = window.setTimeout(() => setAct(4), reduce ? 200 : 700);
     return () => {
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
+      window.clearTimeout(t4);
       document.body.classList.remove("aurix-warping");
       document.body.classList.remove("aurix-warping-fast");
     };
-  }, []);
+  }, [reduce]);
 
   useEffect(() => {
-    try { navigator.vibrate?.(8); } catch { /* noop */ }
+    try { navigator.vibrate?.(6); } catch { /* noop */ }
     const t = window.setTimeout(() => {
       if (!doneRef.current) { doneRef.current = true; onDone(); }
-    }, DURATION);
+    }, TOTAL);
     return () => window.clearTimeout(t);
-  }, [DURATION, onDone]);
+  }, [TOTAL, onDone]);
 
-  // Tap-to-accelerate: shorten the outgoing animation cleanly (no jump-cut).
+  // Tap-to-accelerate: shorten remainder, never jump-cut.
   useEffect(() => {
     if (!fast || doneRef.current) return;
     document.body.classList.add("aurix-warping-fast");
     const elapsed = performance.now() - startRef.current;
-    const remaining = Math.max(0, DURATION - elapsed);
-    const shortened = Math.min(remaining, 180);
+    const remaining = Math.max(0, TOTAL - elapsed);
+    const shortened = Math.min(remaining, 220);
     const t = window.setTimeout(() => {
       if (!doneRef.current) { doneRef.current = true; onDone(); }
     }, shortened);
     return () => window.clearTimeout(t);
-  }, [fast, DURATION, onDone]);
+  }, [fast, TOTAL, onDone]);
 
-  // Particles rise from a horizontal band (where messages live) and drift inward.
-  const particles = useMemo(
-    () =>
-      Array.from({ length: reduce ? 0 : 14 }).map((_, i) => {
-        const spread = 260;
-        return {
-          id: i,
-          x: (Math.random() - 0.5) * spread * 2,
-          y: (Math.random() - 0.5) * 220 + 40,
-          size: 1 + Math.random() * 1.4,
-          delay: Math.random() * 0.14,
-        };
-      }),
-    [reduce]
-  );
-
-  const speed = fast ? 0.35 : 1;
+  const speed = fast ? 0.4 : 1;
 
   return (
     <motion.div
       onClick={() => setFast(true)}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.2 * speed, ease: "easeOut" }}
+      initial={{ opacity: 1 }}
       className="fixed inset-0 z-[80] cursor-pointer overflow-hidden"
       aria-hidden
     >
-      {/* Soft inward vignette — pulls the eye to the focal point without a spinner */}
-      <motion.div
-        initial={{ opacity: 0, scale: 1.2 }}
-        animate={{ opacity: [0, 0.95, 1], scale: [1.2, 1, 0.82] }}
-        transition={{ duration: 0.75 * speed, ease: [0.22, 1, 0.36, 1] }}
-        className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 42%, rgba(0,0,0,0.95) 78%)",
-        }}
+      {/* Act 1 — tap-feedback ring. A single hairline pulse, gone by 220ms. */}
+      <motion.span
+        initial={{ scale: 0.2, opacity: 0.55 }}
+        animate={{ scale: 3.2, opacity: 0 }}
+        transition={{ duration: 0.42 * speed, ease: [0.16, 1, 0.3, 1] }}
+        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-24 w-24 rounded-full border border-white/25"
+        style={{ boxShadow: "0 0 30px rgba(255,255,255,0.08) inset" }}
       />
 
-      {/* Faint vortex sheen — a hint of rotation, never a ring */}
+      {/* Act 2 — reality distortion. A subtle lensing halo sitting over the
+          warping chat; conic sheen suggests refraction, never a spinner. */}
       <motion.div
-        initial={{ opacity: 0, scale: 1.35, rotate: 0 }}
-        animate={{ opacity: [0, 0.22, 0], scale: [1.35, 0.5, 0.18], rotate: 55 }}
-        transition={{ duration: 0.72 * speed, ease: [0.22, 1, 0.36, 1] }}
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[520px] w-[520px] rounded-full"
+        initial={{ opacity: 0, scale: 1.15, rotate: 0 }}
+        animate={
+          act >= 2
+            ? { opacity: [0, 0.28, 0.18, 0], scale: [1.15, 0.9, 0.5, 0.08], rotate: 24 }
+            : { opacity: 0 }
+        }
+        transition={{ duration: 0.62 * speed, ease: [0.55, 0, 0.75, 0] }}
+        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[560px] w-[560px] rounded-full"
         style={{
           background:
-            "conic-gradient(from 0deg, rgba(255,255,255,0.05), rgba(255,255,255,0) 35%, rgba(255,255,255,0.06) 68%, rgba(255,255,255,0) 100%)",
-          filter: "blur(10px)",
+            "conic-gradient(from 210deg, rgba(255,255,255,0.045), rgba(255,255,255,0) 30%, rgba(255,255,255,0.06) 62%, rgba(255,255,255,0) 100%)",
+          filter: "blur(14px)",
           mixBlendMode: "screen",
         }}
       />
 
-      {/* Particles drifting inward from the message band */}
-      <div className="absolute left-1/2 top-1/2 h-0 w-0">
-        {particles.map((p) => (
-          <motion.span
-            key={p.id}
-            initial={{ x: p.x, y: p.y, opacity: 0, scale: 1 }}
-            animate={{ x: 0, y: 0, opacity: [0, 0.6, 0], scale: 0.15 }}
-            transition={{
-              duration: 0.72 * speed,
-              delay: p.delay * speed,
-              ease: [0.4, 0, 0.2, 1],
-            }}
-            className="absolute rounded-full bg-white/70"
-            style={{ width: p.size, height: p.size }}
-          />
-        ))}
-      </div>
-
-      {/* Final collapse to black — the doorway closes before the space emerges */}
+      {/* Act 2/3 — gravitational vignette. Darkness deepens from the edges
+          inward as the chat implodes toward the focal point. */}
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: [0, 0, 1] }}
-        transition={{ duration: 0.82 * speed, ease: "easeInOut", times: [0, 0.72, 1] }}
+        animate={act >= 2 ? { opacity: [0, 0.55, 0.98, 1] } : { opacity: 0 }}
+        transition={{ duration: 0.6 * speed, ease: [0.55, 0, 0.75, 0], times: [0, 0.4, 0.85, 1] }}
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0%, rgba(0,0,0,0.35) 30%, rgba(0,0,0,0.92) 70%, #000 100%)",
+        }}
+      />
+
+      {/* Act 3 — the point. All remaining light collapses into a single
+          luminous pixel that lingers briefly in the dark before the rebirth. */}
+      <motion.span
+        initial={{ opacity: 0, scale: 0 }}
+        animate={
+          act >= 3
+            ? { opacity: [0, 1, 1, 0.9], scale: [0, 1, 1, 1.05] }
+            : { opacity: 0, scale: 0 }
+        }
+        transition={{ duration: 0.22 * speed, ease: "easeOut" }}
+        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+        style={{
+          width: 4,
+          height: 4,
+          background: "white",
+          boxShadow:
+            "0 0 12px 2px rgba(255,255,255,0.85), 0 0 40px 6px rgba(255,255,255,0.35), 0 0 90px 20px rgba(180,167,255,0.18)",
+        }}
+      />
+
+      {/* Act 4 — iris expansion. A radial mask opens outward from the point,
+          revealing the reconstructed Anonymous Space beneath. */}
+      <motion.div
+        initial={{ clipPath: "circle(100% at 50% 50%)" }}
+        animate={act >= 4 ? { clipPath: "circle(0% at 50% 50%)" } : { clipPath: "circle(100% at 50% 50%)" }}
+        transition={{ duration: 0.28 * speed, ease: [0.22, 1, 0.36, 1] }}
         className="absolute inset-0 bg-black"
       />
     </motion.div>
